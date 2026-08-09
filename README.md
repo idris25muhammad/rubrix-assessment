@@ -1,4 +1,4 @@
-# RubriX — Course Rubric Assessment & Portfolio Analytics
+# RubriX - Course Rubric Assessment & Portfolio Analytics
 
 RubriX is a web-based course assessment application designed to help lecturers evaluate student performance against hierarchical rubrics (categories and components mapped to CPL/SO-PI codes) and perform detailed course portfolio analytics.
 
