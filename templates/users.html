@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Manage Users &middot; RubriX{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1>Manage Users</h1>
+    <p>Create, edit, or remove accounts. Tim Kurikulum manages all users.</p>
+  </div>
+  <div class="head-actions">
+    <button class="btn btn-primary" id="btn-add-user">Add User</button>
+  </div>
+</section>
+
+<section class="card">
+  <div class="table-toolbar">
+    <input type="text" id="user-search" placeholder="Search by name…" class="search-input">
+  </div>
+  <div class="table-wrap">
+    <table class="table" id="user-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th class="actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="user-body">
+        <tr><td colspan="4" class="empty">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination" id="pagination"></div>
+</section>
+
+<div class="modal-overlay" id="user-modal" hidden>
+  <div class="modal modal-upload">
+    <div class="modal-head">
+      <h3 id="user-modal-title">Add User</h3>
+      <button class="modal-close" id="user-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label class="upload-field">
+        <span>Name</span>
+        <input type="text" id="user-name" maxlength="150">
+      </label>
+      <label class="upload-field">
+        <span>Email</span>
+        <input type="email" id="user-email" maxlength="150">
+      </label>
+      <label class="upload-field">
+        <span>Role</span>
+        <select id="user-role">
+          <option value="lecturer">Lecturer</option>
+          <option value="tim_kurikulum">Tim Kurikulum</option>
+        </select>
+      </label>
+      <label class="upload-field">
+        <span>Password <span class="weight">(leave blank to keep unchanged on edit)</span></span>
+        <input type="password" id="user-password" minlength="6">
+      </label>
+      <div id="user-status"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="user-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let editUserId = null;
+let usersCache = {};
+let currentPage = 1;
+let currentSearch = '';
+
+async function loadUsers() {
+  const params = new URLSearchParams({ page: currentPage, page_size: 10 });
+  if (currentSearch) params.set('q', currentSearch);
+  const res = await fetch(`${u('api_users')}?${params}`);
+  const data = await res.json();
+  const users = data.items || [];
+  usersCache = {};
+  users.forEach(x => usersCache[x.id] = x);
+  const body = document.getElementById('user-body');
+  if (!users.length) {
+    body.innerHTML = '<tr><td colspan="4" class="empty">No users found.</td></tr>';
+  } else {
+    body.innerHTML = users.map(u => `
+      <tr>
+        <td>${u.name}</td>
+        <td class="mono">${u.email}</td>
+        <td><span class="role-badge">${u.role}</span></td>
+        <td class="actions">
+          <button class="icon-btn" title="Edit" data-edit="${u.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
+          <button class="icon-btn icon-danger" title="Delete" data-del="${u.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        </td>
+      </tr>`).join('');
+  }
+  document.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openUserModal(b.dataset.edit)));
+  document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => deleteUser(b.dataset.del)));
+  renderPagination(data);
+}
+
+function renderPagination(data) {
+  const el = document.getElementById('pagination');
+  if (!data.pages || data.pages <= 1) { el.innerHTML = ''; return; }
+  const btns = [];
+  for (let p = 1; p <= data.pages; p++) {
+    btns.push(`<button class="page-btn ${p === data.page ? 'active' : ''}" data-page="${p}">${p}</button>`);
+  }
+  el.innerHTML = `<span class="page-info">${data.total} users · page ${data.page}/${data.pages}</span>` + btns.join('');
+  el.querySelectorAll('[data-page]').forEach(b => b.addEventListener('click', () => {
+    currentPage = parseInt(b.dataset.page, 10);
+    loadUsers();
+  }));
+}
+
+const searchInput = document.getElementById('user-search');
+let searchTimer;
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    currentSearch = searchInput.value.trim();
+    currentPage = 1;
+    loadUsers();
+  }, 300);
+});
+
+function openUserModal(id) {
+  editUserId = id || null;
+  document.getElementById('user-modal-title').textContent = id ? 'Edit User' : 'Add User';
+  document.getElementById('user-name').value = '';
+  document.getElementById('user-email').value = '';
+  document.getElementById('user-role').value = 'lecturer';
+  document.getElementById('user-password').value = '';
+  document.getElementById('user-status').innerHTML = '';
+  if (id && usersCache[id]) {
+    const u = usersCache[id];
+    document.getElementById('user-name').value = u.name;
+    document.getElementById('user-email').value = u.email;
+    document.getElementById('user-role').value = u.role;
+  }
+  document.getElementById('user-modal').hidden = false;
+  
+}
+function closeUserModal() {
+  document.getElementById('user-modal').hidden = true;
+  
+}
+
+async function saveUser() {
+  const payload = {
+    name: document.getElementById('user-name').value.trim(),
+    email: document.getElementById('user-email').value.trim(),
+    role: document.getElementById('user-role').value,
+    password: document.getElementById('user-password').value,
+  };
+  const statusEl = document.getElementById('user-status');
+  if (!payload.name || !payload.email) { statusEl.innerHTML = '<p class="alert-err">✗ Name and email are required.</p>'; return; }
+  const url = editUserId ? u('api_user', editUserId) : u('api_users');
+  const method = editUserId ? 'PUT' : 'POST';
+  const res = await fetch(url, {
+    method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+  });
+  const out = await res.json();
+  if (res.ok) {
+    closeUserModal();
+    showToast(editUserId ? 'User updated.' : 'User created.', 'success');
+    loadUsers();
+  } else {
+    statusEl.innerHTML = `<p class="alert-err">✗ ${out.error}</p>`;
+  }
+}
+
+async function deleteUser(id) {
+  if (!confirm('Delete this user?')) return;
+  const res = await fetch(u('api_user', id), { method: 'DELETE' });
+  if (res.ok) { showToast('User deleted.', 'success'); loadUsers(); }
+  else { showToast('Failed to delete user.', 'error'); }
+}
+
+document.getElementById('btn-add-user').addEventListener('click', () => openUserModal());
+document.getElementById('user-close').addEventListener('click', closeUserModal);
+document.getElementById('user-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('user-modal')) closeUserModal();
+});
+document.getElementById('user-save').addEventListener('click', saveUser);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !document.getElementById('user-modal').hidden) closeUserModal();
+});
+
+loadUsers();
+</script>
+{% endblock %}

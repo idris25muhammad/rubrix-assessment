@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}RubriX{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% if request.endpoint != 'auth.login' %}
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="{{ url_for('dashboard.index') }}">
+        <img class="brand-logo" src="{{ url_for('static', filename='images/rubrix_logo.png') }}" alt="RubriX">
+      </a>
+      <nav class="nav">
+        <a class="nav-link {{ 'active' if request.endpoint == 'dashboard.index' }}" href="{{ url_for('dashboard.index') }}">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          <span>Dashboard</span>
+        </a>
+        {% if user and user.role == 'tim_kurikulum' %}
+          <a class="nav-link {{ 'active' if request.endpoint == 'users.index' }}" href="{{ url_for('users.index') }}">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            <span>Users</span>
+          </a>
+  {% endif %}
+        {% if user %}
+          <div class="user-menu" id="user-menu">
+            <button class="avatar" id="avatar-btn" title="Account">
+              {{ (user.name.split(' ')[0][:1] ~ user.name.split(' ')[1][:1] if user.name.split(' ')|length > 1 else user.name[:2])|upper }}
+            </button>
+            <div class="user-dropdown" id="user-dropdown">
+              <div class="user-dropdown-head">
+                <div class="avatar avatar-lg">{{ user.name[:1]|upper }}</div>
+                <div>
+                  <div class="user-dropdown-name">{{ user.name }}</div>
+                  <div class="user-dropdown-email">{{ user.email }}</div>
+                  <span class="role-badge">{{ user.role }}</span>
+                </div>
+              </div>
+              <div class="user-dropdown-divider"></div>
+              <a class="user-dropdown-item" href="{{ url_for('auth.change_password') }}">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 1 1 6 0v3H9z"/></svg>
+                <span>Change Password</span>
+              </a>
+              <form method="post" action="{{ url_for('auth.logout') }}">
+                <button class="user-dropdown-item user-dropdown-logout" type="submit">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+                  <span>Logout</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+  {% endif %}
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="footer">
+    <p>&copy; 2026 RubriX. All rights reserved.</p>
+    <p class="footer-credit">made with
+      <svg class="heart" viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+      ID
+    </p>
+  </footer>
+  <div class="toast-container" id="toast-container"></div>
+  <script>
+    window.RKS_URLS = {{ urls | tojson }};
+    function u(name, id) {
+      return id === undefined ? RKS_URLS[name] : RKS_URLS[name].replace('{id}', id);
+    }
+    // Lightweight cookie helpers (wizard draft persistence).
+    function setCookie(name, value, days = 1) {
+      const d = new Date();
+      d.setTime(d.getTime() + days * 86400000);
+      document.cookie = `${name}=${encodeURIComponent(JSON.stringify(value))}; expires=${d.toUTCString()}; path=/`;
+    }
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+      if (!match) return null;
+      try { return JSON.parse(decodeURIComponent(match[1])); } catch (e) { return null; }
+    }
+    function removeCookie(name) {
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    }
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = `toast toast-${type}`;
+      el.textContent = message;
+      container.appendChild(el);
+      setTimeout(() => el.classList.add('show'), 10);
+      setTimeout(() => {
+        el.classList.remove('show');
+        setTimeout(() => el.remove(), 300);
+      }, 3500);
+    }
+    window.showToast = showToast;
+    (function () {
+      const btn = document.getElementById('avatar-btn');
+      const menu = document.getElementById('user-menu');
+      const dropdown = document.getElementById('user-dropdown');
+      if (btn && menu && dropdown) {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          dropdown.classList.toggle('open');
+        });
+        document.addEventListener('click', e => {
+          if (!menu.contains(e.target)) dropdown.classList.remove('open');
+        });
+        document.addEventListener('keydown', e => {
+          if (e.key === 'Escape') dropdown.classList.remove('open');
+        });
+      }
+    })();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,13 @@
+# secrets & config
+.env
+
+# runtime data
+rubrikrks.db
+*.db-journal
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+instance/

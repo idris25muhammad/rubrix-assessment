@@ -1,0 +1,459 @@
+{% extends "base.html" %}
+{% block title %}Assess &middot; RubriX{% endblock %}
+
+{% block content %}
+<!-- Logo hanya tampil saat print -->
+<div class="assess-print-logo" id="assess-print-logo" style="display:none;">
+  <img src="{{ url_for('static', filename='images/logo_polibatam.webp') }}" alt="Politeknik Negeri Batam" class="assess-print-logo-img">
+</div>
+
+<section class="page-head assess-page-head">
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb no-print" aria-label="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}" class="breadcrumb-item">Dashboard</a>
+    <span class="breadcrumb-sep">›</span>
+    <a href="#" class="breadcrumb-item" id="breadcrumb-classes">Classes</a>
+    <span class="breadcrumb-sep">›</span>
+    <span class="breadcrumb-item breadcrumb-current" id="breadcrumb-current">Assessment Sheet</span>
+  </nav>
+
+  <!-- Title row -->
+  <div class="assess-title-row">
+    <div>
+      <h1>Assessment Sheet</h1>
+      <p id="course-subtitle">Loading…</p>
+    </div>
+    <div class="head-actions">
+      <button class="btn btn-outline" id="btn-rubric">Rubric</button>
+      <button class="btn btn-primary" id="btn-print" style="display: inline-flex; align-items: center; gap: 6px;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/>
+        </svg>
+        Print PDF
+      </button>
+      <button class="btn btn-outline" id="btn-export" style="display: inline-flex; align-items: center; gap: 6px;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+        </svg>
+        Export to Excel
+      </button>
+      <button class="btn btn-outline" id="btn-import" style="display: inline-flex; align-items: center; gap: 6px;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M9 16h6V10h4L12 3 5 10h4v6zm-4 2h14v2H5v-2z"/>
+        </svg>
+        Import from Excel
+      </button>
+      <button class="btn btn-primary" id="btn-save">Save</button>
+      <input type="file" id="import-file" accept=".xlsx" hidden>
+    </div>
+  </div>
+</section>
+
+<!-- Rubrik inline: tersembunyi di layar (toggle via tombol Rubric), selalu tampil saat print -->
+<section class="card assess-rubric-inline" id="assess-rubric-inline" style="margin-bottom: 20px; display: none;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <div>
+      <h3 style="margin: 0; color: var(--primary);">Rubrik Penilaian</h3>
+      <p class="sub" style="margin: 4px 0 0 0;" id="rubric-inline-subtitle"></p>
+    </div>
+    <button class="btn btn-ghost no-print" id="btn-close-inline" style="padding: 6px 10px;">&#x2715; Tutup</button>
+  </div>
+  <div id="rubric-inline-body"></div>
+</section>
+
+<section class="card">
+  <div class="sheet-meta" id="sheet-meta"></div>
+  <div class="table-wrap scroll assess-table-wrap">
+    <table class="table sheet" id="sheet">
+      <thead id="sheet-head"></thead>
+      <tbody id="sheet-body"></tbody>
+    </table>
+  </div>
+  <div class="save-bar no-print">
+    <span id="save-status"></span>
+  </div>
+</section>
+
+<!-- Modal rubrik (hanya tampil di layar) -->
+<div class="modal-overlay" id="rubric-modal" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Rubric Penilaian</h3>
+      <button class="modal-close" id="rubric-close">&times;</button>
+    </div>
+    <div class="modal-body" id="rubric-body"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CLASS_ID = {{ class_id }};
+const MAX_ROWS = 40;
+
+let course = null;
+let klass = null;
+let categories = [];
+let components = [];
+let students = [];
+let scores = {};
+let cpls = [];
+
+function loadData() {
+  return fetch(u('api_class', CLASS_ID)).then(r => r.json()).then(async data => {
+    course = data.course;
+    klass = data.class;
+    document.getElementById('breadcrumb-classes').href = u('manage_classes', klass.course_id);
+    document.getElementById('breadcrumb-current').textContent =
+      `Kelas ${klass.name}`;
+    categories = data.categories;
+    components = categories.flatMap(c => c.components);
+    cpls = data.cpls || [];
+    students = data.students;
+    scores = {};
+    for (const s of data.scores) {
+      if (!scores[s.student_id]) scores[s.student_id] = {};
+      scores[s.student_id][s.component_id] = s.score;
+    }
+    renderAll();
+    renderRubricInline();
+  });
+}
+
+function renderMeta() {
+  document.getElementById('course-subtitle').textContent = `${course.course_code} - ${course.course_name} · Kelas ${klass.name}`;
+  const meta = document.getElementById('sheet-meta');
+  meta.innerHTML = `
+    <div class="meta-grid">
+      <div><span>Course</span><b>${course.course_code} · ${course.course_name}</b></div>
+      <div><span>Class</span><b>${klass.name}</b></div>
+      <div><span>Lecturer</span><b>${klass.lecturer || '-'}</b></div>
+      <div><span>SKS</span><b>${course.sks}</b></div>
+      <div><span>Semester</span><b>${course.semester}</b></div>
+      <div><span>Program</span><b>${course.study_program}</b></div>
+    </div>`;
+}
+
+function renderHead() {
+  const head = document.getElementById('sheet-head');
+  const groupRow = `
+    <tr class="group-row">
+      <th class="sticky-left no" rowspan="2">No</th>
+      <th class="sticky-left nim" rowspan="2">NIM</th>
+      <th class="sticky-left name" rowspan="2">Nama</th>
+      ${categories.map(c => `<th colspan="${c.components.length}" class="group">${c.label}</th>`).join('')}
+      <th class="total" rowspan="2">Total</th>
+      <th class="total" rowspan="2">Grade</th>
+    </tr>`;
+  const compRow = `<tr>${components.map(comp => `
+    <th class="indicator">
+      <div class="ind-title">${comp.name}</div>
+      <div class="ind-sub">
+        ${(comp.so_pi || comp.codes_pi).map(cd => `<span class="chip">${cd}</span>`).join('')}
+        <span class="weight">${comp.weight}%</span>
+      </div>
+    </th>`).join('')}</tr>`;
+  head.innerHTML = groupRow + compRow;
+}
+
+function totalFor(studentId) {
+  const m = scores[studentId] || {};
+  let s = 0;
+  for (const comp of components) {
+    const v = m[comp.id];
+    if (v !== undefined && v !== null && v !== '') {
+      s += Number(v) * (comp.weight / 100);
+    }
+  }
+  return s;
+}
+
+const gradeOf = (score) => score >= 85 ? 'A' : score >= 75 ? 'B' : score >= 65 ? 'C' : score >= 50 ? 'D' : 'E';
+
+function renderBody() {
+  const body = document.getElementById('sheet-body');
+  body.innerHTML = students.map((st, idx) => {
+    const m = scores[st.id] || {};
+    const total = totalFor(st.id);
+    const noCell = `<td class="sticky-left no">${st.row_no}</td>`;
+    const nimCell = `<td class="sticky-left nim"><input class="nim-input" data-sid="${st.id}" value="${st.nim}" placeholder="NIM"></td>`;
+    const nameCell = `<td class="sticky-left name"><input class="name-input" data-sid="${st.id}" value="${st.name}" placeholder="Nama"></td>`;
+    const cells = components.map(comp => {
+      const val = m[comp.id] !== undefined && m[comp.id] !== null ? m[comp.id] : '';
+      return `<td class="cell"><input class="score-input" type="number" min="0" max="100" step="0.5"
+        data-sid="${st.id}" data-ci="${idx}" data-ri="${idx}" data-iid="${comp.id}"
+        value="${val}" inputmode="numeric"></td>`;
+    }).join('');
+    const totalCell = `<td class="total"><b>${total.toFixed(1)}</b></td>`;
+    const grade = gradeOf(total);
+    const gradeCell = `<td class="total"><span class="grade-badge g-${grade}">${grade}</span></td>`;
+    return `<tr data-sid="${st.id}">${noCell}${nimCell}${nameCell}${cells}${totalCell}${gradeCell}</tr>`;
+  }).join('');
+
+  bindInputs();
+}
+
+function bindInputs() {
+  document.querySelectorAll('.score-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const sid = inp.dataset.sid, iid = inp.dataset.iid;
+      if (!scores[sid]) scores[sid] = {};
+      scores[sid][iid] = inp.value === '' ? null : inp.value;
+      updateRow(sid);
+    });
+    inp.addEventListener('keydown', onGridKey);
+  });
+  document.querySelectorAll('.name-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const sid = inp.dataset.sid;
+      const st = students.find(x => x.id == sid);
+      if (st) st.name = inp.value;
+    });
+  });
+  document.querySelectorAll('.nim-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const sid = inp.dataset.sid;
+      const st = students.find(x => x.id == sid);
+      if (st) st.nim = inp.value;
+    });
+  });
+}
+
+function onGridKey(e) {
+  const inp = e.target;
+  if (!inp.classList.contains('score-input')) return;
+  const ci = parseInt(inp.dataset.ci, 10);
+  const ri = parseInt(inp.dataset.ri, 10);
+  let target = null;
+  switch (e.key) {
+    case 'ArrowLeft': target = selCell(ri, ci - 1); break;
+    case 'ArrowRight': target = selCell(ri, ci + 1); break;
+    case 'ArrowUp': target = selCell(ri - 1, ci); break;
+    case 'ArrowDown':
+    case 'Enter': target = selCell(ri + 1, ci); break;
+    case 'Tab':
+      if (e.shiftKey) target = selCell(ri, ci - 1);
+      else target = selCell(ri, ci + 1);
+      if (target) e.preventDefault();
+      break;
+    default: return;
+  }
+  if (target && (e.key !== 'Tab')) e.preventDefault();
+  if (target) { target.focus(); target.select(); }
+}
+
+function selCell(ri, ci) {
+  if (ri < 0 || ri >= students.length || ci < 0 || ci >= components.length) return null;
+  return document.querySelector(`.score-input[data-ri="${ri}"][data-ci="${ci}"]`);
+}
+
+function updateRow(sid) {
+  const row = document.querySelector(`tr[data-sid="${sid}"]`);
+  const total = totalFor(sid);
+  const cells = row.querySelectorAll('.total');
+  cells[0].innerHTML = `<b>${total.toFixed(1)}</b>`;
+  const grade = gradeOf(total);
+  cells[1].innerHTML = `<span class="grade-badge g-${grade}">${grade}</span>`;
+}
+
+function renderAll() {
+  renderMeta();
+  renderHead();
+  renderBody();
+}
+
+function collectPayload() {
+  return {
+    rows: students.map(st => ({
+      student_id: st.id,
+      nim: st.nim || '',
+      name: st.name,
+      scores: (scores[st.id] || {})
+    }))
+  };
+}
+
+async function save() {
+  const btn = document.getElementById('btn-save');
+  const status = document.getElementById('save-status');
+  btn.disabled = true;
+  status.textContent = 'Saving…';
+  try {
+    const res = await fetch(u('api_save', CLASS_ID), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(collectPayload())
+    });
+    if (res.ok) {
+      status.textContent = '✓ Saved ' + new Date().toLocaleTimeString();
+      showToast('Assessment saved.', 'success');
+      loadData();
+    } else {
+      status.textContent = '✗ Failed to save';
+      showToast('Failed to save assessment.', 'error');
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ── Build rubric HTML (dipakai modal & inline) ── */
+function buildRubricHTML() {
+  const cloSection = cpls.length ? `
+    <div class="rubric-cat clo-section">
+      <h4>CPL / SO - Mapping</h4>
+      ${cpls.map(cl => `
+        <div class="rubric-clo">
+          <div class="rubric-clo-head">
+            <b class="clo-code">${cl.code}</b>
+            <span class="weight">L${cl.proficiency_level} · ${cl.description}</span>
+          </div>
+          <div class="rubric-clo-codes">
+            SO: ${(cl.so_codes || []).map(s => `<span class="chip">${s}</span>`).join('')}
+            → ${components.filter(co => (co.cpl_pis || []).some(m => m.cpl === cl.code))
+                .map(co => `<span class="clo-ind">${co.name} (${co.weight}%)</span>`).join(', ')}
+          </div>
+        </div>`).join('')}
+    </div>` : '';
+
+  return cloSection + categories.map(cat => `
+    <div class="rubric-cat">
+      <h4>${cat.label}</h4>
+      ${cat.components.map(comp => `
+        <div class="rubric-comp">
+          <div class="rubric-comp-head">
+            <b>${comp.name}</b>
+            ${(comp.so_pi || comp.codes_pi).map(cd => `<span class="chip">${cd}</span>`).join('')}
+            <span class="weight">weight ${comp.weight}%</span>
+          </div>
+          <div class="rubric-levels">
+            ${comp.criteria.map(cr => `
+              <div class="rubric-level">
+                <div class="rubric-level-head">
+                  <span class="lv-badge lv-${cr.level}">${cr.level}</span>
+                  <b>${cr.label}</b>
+                  <span class="weight">${cr.score_min}–${cr.score_max}</span>
+                </div>
+                <ul>
+                  ${cr.subjects.map(s => `<li>${s}</li>`).join('')}
+                </ul>
+              </div>`).join('')}
+          </div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+/* ── Render rubrik ke inline section ── */
+function renderRubricInline() {
+  document.getElementById('rubric-inline-subtitle').textContent =
+    `${course.course_code} - ${course.course_name} · Kelas ${klass.name}`;
+  document.getElementById('rubric-inline-body').innerHTML = buildRubricHTML();
+}
+
+/* ── Buka modal rubrik (hanya layar) ── */
+function openRubric() {
+  document.getElementById('rubric-body').innerHTML = buildRubricHTML();
+  document.getElementById('rubric-modal').hidden = false;
+}
+
+function closeRubric() {
+  document.getElementById('rubric-modal').hidden = true;
+}
+
+/* ── Print PDF ── */
+function printPDF() {
+  // Tampilkan logo Polibatam
+  document.getElementById('assess-print-logo').style.display = 'block';
+  // Pastikan rubrik inline tampil untuk dicetak
+  document.getElementById('assess-rubric-inline').style.display = 'block';
+
+  // Inject temporary landscape @page override
+  const styleEl = document.createElement('style');
+  styleEl.id = 'print-landscape-override';
+  styleEl.textContent = '@page { size: A4 landscape; margin: 10mm 12mm; }';
+  document.head.appendChild(styleEl);
+
+  // Auto-scale tabel agar semua kolom muat dalam 1 halaman landscape
+  // A4 landscape usable width: 297mm - 24mm (margins) = 273mm ≈ 1032px @96dpi
+  const PRINT_PX = 273 * (96 / 25.4); // ~1032px
+  const wrapper = document.querySelector('.assess-table-wrap');
+  const table  = document.getElementById('sheet');
+
+  // Reset dulu sebelum ukur
+  wrapper.style.transform = '';
+  wrapper.style.height    = '';
+  wrapper.style.overflow  = 'visible';
+
+  const tableW = table.scrollWidth;
+  if (tableW > PRINT_PX) {
+    const scale = PRINT_PX / tableW;
+    const origH = wrapper.scrollHeight;
+    wrapper.style.transform       = `scale(${scale})`;
+    wrapper.style.transformOrigin = 'top left';
+    // Kompensasi height agar tidak terpotong
+    wrapper.style.height          = `${origH * scale}px`;
+    wrapper.dataset.printScaled   = '1';
+  }
+
+  window.print();
+}
+
+document.getElementById('btn-save').addEventListener('click', save);
+document.getElementById('btn-print').addEventListener('click', printPDF);
+document.getElementById('btn-export').addEventListener('click', () => {
+  window.location.href = u('api_export', CLASS_ID);
+});
+document.getElementById('btn-import').addEventListener('click', () => {
+  document.getElementById('import-file').click();
+});
+document.getElementById('btn-close-inline').addEventListener('click', () => {
+  document.getElementById('assess-rubric-inline').style.display = 'none';
+});
+document.getElementById('import-file').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const status = document.getElementById('save-status');
+  status.textContent = 'Importing…';
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch(u('api_import', CLASS_ID), { method: 'POST', body: fd });
+    const out = await res.json();
+    if (res.ok) {
+      status.textContent = `✓ Imported ${out.imported} rows`;
+      showToast(`Imported ${out.imported} rows from Excel.`, 'success');
+    } else {
+      status.textContent = `✗ ${out.error || 'Import failed'}`;
+      showToast(out.error || 'Import failed.', 'error');
+    }
+    loadData();
+  } finally {
+    e.target.value = '';
+  }
+});
+document.getElementById('btn-rubric').addEventListener('click', openRubric);
+document.getElementById('rubric-close').addEventListener('click', closeRubric);
+document.getElementById('rubric-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('rubric-modal')) closeRubric();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !document.getElementById('rubric-modal').hidden) closeRubric();
+});
+
+// Setelah print, sembunyikan rubrik inline & logo, hapus landscape override, reset scale
+window.addEventListener('afterprint', () => {
+  document.getElementById('assess-print-logo').style.display = 'none';
+  document.getElementById('assess-rubric-inline').style.display = 'none';
+  const el = document.getElementById('print-landscape-override');
+  if (el) el.remove();
+  // Reset table scale
+  const wrapper = document.querySelector('.assess-table-wrap');
+  if (wrapper && wrapper.dataset.printScaled) {
+    wrapper.style.transform = '';
+    wrapper.style.height    = '';
+    wrapper.style.overflow  = '';
+    delete wrapper.dataset.printScaled;
+  }
+});
+
+loadData();
+</script>
+{% endblock %}

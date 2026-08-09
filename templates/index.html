@@ -1,0 +1,1329 @@
+{% extends "base.html" %}
+{% block title %}Courses &middot; RubriX{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1>Courses</h1>
+    <p>Set up courses, classes, and assessment components seamlessly via an interactive wizard or JSON file upload.</p>
+  </div>
+  <div class="head-actions">
+    <button class="btn btn-ghost" id="btn-refresh">Refresh</button>
+    <button class="btn btn-outline" id="btn-create">+ Create Rubric</button>
+    <button class="btn btn-teal" id="btn-upload">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+      Upload Course JSON
+    </button>
+  </div>
+</section>
+
+<section class="stat-grid" id="stat-grid"></section>
+
+<section class="card">
+  <div class="table-toolbar" style="margin-bottom: 16px; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+    <input type="text" id="course-search" class="search-input" placeholder="Cari kode atau nama matakuliah...">
+    <button class="btn btn-primary" id="btn-filter">Filter</button>
+    <button class="btn btn-outline" id="btn-show-all">Show All</button>
+  </div>
+  <div class="table-wrap">
+    <table class="table" id="course-table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Course Name</th>
+          {% if user.role == 'tim_kurikulum' %}
+          <th>Dosen Pembuat</th>
+          {% endif %}
+          <th>SKS</th>
+          <th>Semester</th>
+          <th class="num">Components</th>
+          <th class="num">Classes</th>
+          <th class="actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="course-body">
+        <tr><td colspan="{% if user.role == 'tim_kurikulum' %}8{% else %}7{% endif %}" class="empty">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination" id="course-pagination" style="margin-top: 16px;"></div>
+</section>
+
+<div class="modal-overlay" id="upload-modal" hidden>
+  <div class="modal modal-upload">
+    <div class="modal-head">
+      <h3>Upload Course JSON</h3>
+      <button class="modal-close" id="upload-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="upload-help">
+        The course file is exported from the <b>ProdiSync</b> app - or you can create it manually
+        following the <a href="{{ url_for('courses.api_course_template') }}" class="link-download">example JSON template</a>.
+        After uploading, create one or more classes to start assessing.
+      </p>
+
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="upload-file" accept=".json,application/json" hidden>
+        <div class="dropzone-icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <p class="dropzone-main">Drag &amp; drop your <b>.json</b> file here</p>
+        <p class="dropzone-sub">or click to browse files</p>
+      </div>
+
+      <div id="upload-status"></div>
+
+      <details class="upload-json-example">
+        <summary>See JSON structure example</summary>
+        <pre><code>{
+  "course_code": "INF2201",
+  "course_name": "Pengembangan Aplikasi Berbasis Web",
+  "sks": 3,
+  "semester": "Ganjil 2026/2027",
+  "study_program": "RKS",
+  "is_pbl": false,
+  "categories": [
+    {
+      "key": "tugas",
+      "label": "Tugas",
+      "components": [
+        {
+          "name": "Tugas 1 - Pengumpulan",
+          "weight": 10,
+          "cpl_pis": [
+            { "cpl": "CPL1", "so": "SO2", "pi": "2a" }
+          ],
+          "criteria": [
+            {
+              "level": 1, "label": "Sangat Kurang",
+              "score_min": 0, "score_max": 30,
+              "subjects": ["..."]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "cpls": [
+    {
+      "code": "CPL1",
+      "description": "Mampu menganalisis dan merancang solusi keamanan.",
+      "proficiency_level": 4,
+      "so_codes": ["SO2", "SO3"]
+    }
+  ]
+}</code></pre>
+      </details>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="wizard-modal" hidden>
+  <div class="modal modal-wizard">
+    <div class="modal-head">
+      <h3 id="wizard-title">Create Rubric</h3>
+      <button class="modal-close" id="wizard-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="wizard-steps" id="wizard-steps"></div>
+
+      <!-- Step 1: Course info -->
+      <div id="wizard-step-1">
+        <p class="wizard-hint">Isi informasi matakuliah. Semua dapat disesuaikan.</p>
+        <div class="wizard-grid">
+          <label class="upload-field">
+            <span>Kode Matakuliah</span>
+            <input type="text" id="wizard-code" placeholder="e.g. INF2201" maxlength="20">
+          </label>
+          <label class="upload-field">
+            <span>Nama Matakuliah</span>
+            <input type="text" id="wizard-name" placeholder="e.g. Pengembangan Aplikasi Web" maxlength="150">
+          </label>
+          <label class="upload-field">
+            <span>SKS</span>
+            <input type="number" id="wizard-sks" min="1" max="10" value="3">
+          </label>
+          <label class="upload-field">
+            <span>Semester</span>
+            <input type="text" id="wizard-semester" placeholder="e.g. Ganjil 2026/2027" maxlength="40">
+          </label>
+          <label class="upload-field">
+            <span>Program Studi</span>
+            <select id="wizard-program"></select>
+          </label>
+        </div>
+      </div>
+
+      <!-- Step 2: CPL / SO mapping -->
+      <div id="wizard-step-2" hidden>
+        <p class="wizard-hint">Masukkan CPL (harus sama dengan RPS), petakan ke SO, dan tentukan proficiency level.</p>
+        <div id="wizard-cpl-list"></div>
+        <button class="btn btn-outline btn-sm" id="wizard-add-cpl" type="button">+ Tambah CPL</button>
+      </div>
+
+      <!-- Step 3: Components + CPL/PI mapping -->
+      <div id="wizard-step-3" hidden>
+        <p class="wizard-hint">Untuk tiap kategori, tambahkan sub-komponen, pilih CPL, lalu pilih PI yang sesuai.</p>
+        <div id="wizard-categories"></div>
+      </div>
+
+      <!-- Step 4: PBL + Weights -->
+      <div id="wizard-step-4" hidden>
+        <div class="wizard-pbl">
+          <label class="wizard-check">
+            <input type="checkbox" id="wizard-pbl">
+            <span>Apakah matakuliah ini <b>PBL</b>?</span>
+          </label>
+          <p class="wizard-hint" id="wizard-pbl-hint">Jika PBL, total bobot Partisipatif + Proyek harus &ge; 50%.</p>
+        </div>
+        <div class="wizard-pbl-divider"></div>
+        <p class="wizard-hint">Masukkan bobot (%) tiap sub-komponen.</p>
+        <div class="wizard-total" id="wizard-total">Total bobot: <b>0%</b></div>
+        <div id="wizard-weights"></div>
+      </div>
+
+      <!-- Step 5: Criteria -->
+      <div id="wizard-step-5" hidden>
+        <p class="wizard-hint">Tentukan 5 level kriteria untuk tiap sub-komponen.</p>
+        <div id="wizard-criteria"></div>
+      </div>
+
+      <div id="wizard-status"></div>
+      <div class="modal-actions wizard-actions">
+        <div class="wizard-actions-left">
+          <button class="btn btn-ghost" id="wizard-cancel" type="button">Cancel</button>
+        </div>
+        <div class="wizard-actions-right">
+          <button class="btn btn-ghost" id="wizard-back" hidden>Back</button>
+          <button class="btn btn-primary" id="wizard-next">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="edit-modal" hidden>
+  <div class="modal modal-upload">
+    <div class="modal-head">
+      <h3>Edit Course</h3>
+      <button class="modal-close" id="edit-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label class="upload-field">
+        <span>Course code</span>
+        <input type="text" id="edit-code" maxlength="20">
+      </label>
+      <label class="upload-field">
+        <span>Course name</span>
+        <input type="text" id="edit-name" maxlength="150">
+      </label>
+      <label class="upload-field">
+        <span>SKS</span>
+        <input type="number" id="edit-sks" min="1" max="10">
+      </label>
+      <label class="upload-field">
+        <span>Semester</span>
+        <input type="text" id="edit-semester" maxlength="40">
+      </label>
+      <label class="upload-field">
+        <span>Study program</span>
+        <input type="text" id="edit-program" maxlength="80">
+      </label>
+      <div id="edit-status"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="edit-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadDashboard() {
+  const d = await fetch(u('api_dashboard')).then(r => r.json());
+  const svgIcon = {
+    courses: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+    classes: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+    students: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    assessed: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+  };
+  const cards = [
+    { label: 'Courses', value: d.course_count, icon: svgIcon.courses },
+    { label: 'Classes', value: d.class_count, icon: svgIcon.classes },
+    { label: 'Students', value: d.student_count, icon: svgIcon.students },
+    { label: 'Students assessed', value: d.assessed_count, icon: svgIcon.assessed },
+  ];
+  document.getElementById('stat-grid').innerHTML = cards.map(c => `
+    <div class="card stat">
+      <div class="stat-top">
+        <span class="stat-icon">${c.icon}</span>
+        <div>
+          <div class="stat-label">${c.label}</div>
+          <div class="stat-value">${c.value}</div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+const USER_ROLE = "{{ user.role }}";
+let currentSearch = '';
+let currentPage = 1;
+
+async function loadCourses(query = currentSearch, page = currentPage) {
+  currentSearch = query;
+  currentPage = page;
+
+  const res = await fetch(u('api_courses') + `?q=${encodeURIComponent(query)}&page=${page}`);
+  const data = await res.json();
+  const courses = data.courses || [];
+  const body = document.getElementById('course-body');
+  const colspan = USER_ROLE === 'tim_kurikulum' ? 8 : 7;
+
+  if (!courses.length) {
+    body.innerHTML = `<tr><td colspan="${colspan}" class="empty">No courses yet. Upload a course JSON to get started.</td></tr>`;
+    document.getElementById('course-pagination').innerHTML = '';
+    return;
+  }
+  body.innerHTML = courses.map(c => `
+    <tr>
+      <td class="mono">${c.course_code}</td>
+      <td>${c.course_name}</td>
+      ${USER_ROLE === 'tim_kurikulum' ? `<td>${c.owner_name}</td>` : ''}
+      <td class="num">${c.sks}</td>
+      <td>${c.semester}</td>
+      <td class="num">${c.component_count}</td>
+      <td class="num">${c.class_count}</td>
+      <td class="actions">
+        <a class="btn btn-primary btn-sm" href="${u('manage_classes', c.id)}">Manage Class</a>
+        <button class="icon-btn" title="Edit" data-edit="${c.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
+        <button class="icon-btn icon-danger" title="Delete" data-del="${c.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </td>
+    </tr>`).join('');
+  document.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openEdit(b.dataset.edit)));
+  document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => deleteCourse(b.dataset.del)));
+  renderPagination(data);
+}
+
+function renderPagination(data) {
+  const pag = document.getElementById('course-pagination');
+  if (!pag) return;
+  if (data.total_pages <= 1) {
+    pag.innerHTML = '';
+    return;
+  }
+  let html = `<span class="page-info">Showing page ${data.page} of ${data.total_pages} (${data.total_count} courses)</span>`;
+  html += `<button class="page-btn" ${data.page === 1 ? 'disabled' : ''} onclick="loadCourses(currentSearch, ${data.page - 1})">Prev</button>`;
+  for (let p = 1; p <= data.total_pages; p++) {
+    if (p === 1 || p === data.total_pages || (p >= data.page - 2 && p <= data.page + 2)) {
+      html += `<button class="page-btn ${p === data.page ? 'active' : ''}" onclick="loadCourses(currentSearch, ${p})">${p}</button>`;
+    } else if (p === 2 || p === data.total_pages - 1) {
+      html += `<span style="padding: 0 4px; color: var(--muted);">...</span>`;
+    }
+  }
+  html += `<button class="page-btn" ${data.page === data.total_pages ? 'disabled' : ''} onclick="loadCourses(currentSearch, ${data.page + 1})">Next</button>`;
+  pag.innerHTML = html;
+}
+
+async function deleteCourse(id) {
+  if (!confirm('Delete this course and all its classes?')) return;
+  const res = await fetch(u('api_course', id), { method: 'DELETE' });
+  if (res.ok) { showToast('Course deleted.', 'success'); loadCourses(); loadDashboard(); }
+  else {
+    let msg = 'Failed to delete.';
+    try { msg = (await res.json()).error || msg; } catch (e) {}
+    showToast(msg, 'error');
+  }
+}
+
+let wizardEditCourseId = null;
+
+async function openEdit(id) {
+  try {
+    const editCheck = await fetch(u('api_course_editable', id)).then(r => r.json());
+    if (!editCheck.editable) {
+      showToast(editCheck.error || 'Matakuliah tidak dapat diedit karena sudah ada mahasiswa/nilai yang diisi.', 'error');
+      return;
+    }
+  } catch (e) {
+    showToast('Gagal memverifikasi status edit matakuliah.', 'error');
+    return;
+  }
+
+  let d;
+  try {
+    d = await fetch(u('api_course', id)).then(r => r.json());
+  } catch (e) {
+    showToast('Gagal memuat data matakuliah.', 'error');
+    return;
+  }
+  if (!d) return;
+
+  wizardEditCourseId = id;
+  wizardStep = 1;
+  document.getElementById('wizard-title').textContent = 'Edit Rubric';
+  document.getElementById('wizard-status').innerHTML = '';
+
+  try {
+    soPi = await fetch(u('so_pi')).then(r => r.json());
+    soByCode = {};
+    soPi.student_outcome.forEach(so => soByCode[so.so_code] = so);
+  } catch (e) { soPi = { student_outcome: [], proficiency_levels: PROF_LEVELS }; }
+  try {
+    programs = await fetch(u('programs')).then(r => r.json());
+    const sel = document.getElementById('wizard-program');
+    sel.innerHTML = programs.map(p =>
+      `<option value="${p.code}" ${p.code === 'RKS' ? 'selected' : ''}>${esc(p.label)}</option>`
+    ).join('');
+  } catch (e) { programs = []; }
+
+  buildCplList();
+  buildWizardCategories();
+  buildWizardWeights();
+  buildWizardCriteria();
+
+  document.getElementById('wizard-code').value = d.course.course_code || '';
+  document.getElementById('wizard-name').value = d.course.course_name || '';
+  document.getElementById('wizard-sks').value = d.course.sks || 3;
+  document.getElementById('wizard-semester').value = d.course.semester || '';
+  document.getElementById('wizard-program').value = d.course.study_program || '';
+  document.getElementById('wizard-pbl').checked = !!d.course.is_pbl;
+
+  const cplWrap = document.getElementById('wizard-cpl-list');
+  cplWrap.innerHTML = '';
+  (d.cpls && d.cpls.length ? d.cpls : [null]).forEach(c => addCplRow(c));
+
+  const catData = {};
+  d.categories.forEach(cat => {
+    catData[cat.key] = cat.components || [];
+  });
+
+  WIZARD_CATEGORIES.forEach(cat => {
+    const card = document.querySelector(`.wizard-cat[data-cat="${cat.key}"]`);
+    const list = card.querySelector('.wizard-comp-list');
+    list.innerHTML = '';
+    const comps = catData[cat.key] || [];
+    if (!comps.length) addWizardComponent(cat.key);
+    else comps.forEach(c => addWizardComponent(cat.key, c));
+    renumberWizardComponents(card);
+  });
+
+  weightState = {};
+  criteriaDraft = {};
+  
+  d.categories.forEach(cat => {
+    (cat.components || []).forEach(comp => {
+      const ckey = `${cat.key}|${comp.name}`;
+      weightState[ckey] = comp.weight;
+      
+      criteriaDraft[ckey] = (comp.criteria || []).map(cr => {
+        const firstSubj = cr.subjects && cr.subjects.length ? cr.subjects[0] : '';
+        return {
+          label: cr.label,
+          score_min: cr.score_min,
+          score_max: cr.score_max,
+          subject: firstSubj
+        };
+      });
+    });
+  });
+
+  renderWizardStep();
+  wizardModal.hidden = false;
+}
+function closeEdit() {
+  document.getElementById('edit-modal').hidden = true;
+
+}
+document.getElementById('edit-close').addEventListener('click', closeEdit);
+document.getElementById('edit-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('edit-modal')) closeEdit();
+});
+document.getElementById('edit-save').addEventListener('click', async () => {
+  const payload = {
+    course_code: document.getElementById('edit-code').value.trim(),
+    course_name: document.getElementById('edit-name').value.trim(),
+    sks: parseInt(document.getElementById('edit-sks').value, 10) || 0,
+    semester: document.getElementById('edit-semester').value.trim(),
+    study_program: document.getElementById('edit-program').value.trim(),
+  };
+  const res = await fetch(u('api_course', editId), {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+  });
+  const out = await res.json();
+  if (res.ok) { closeEdit(); showToast('Course updated.', 'success'); loadCourses(); }
+  else document.getElementById('edit-status').innerHTML = `<p class="alert-err">✗ ${out.error}</p>`;
+});
+
+document.getElementById('btn-refresh').addEventListener('click', () => { loadCourses(); loadDashboard(); });
+
+function triggerFilter() {
+  const query = document.getElementById('course-search').value.trim();
+  loadCourses(query, 1);
+}
+
+document.getElementById('btn-filter').addEventListener('click', triggerFilter);
+document.getElementById('course-search').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    triggerFilter();
+  }
+});
+document.getElementById('btn-show-all').addEventListener('click', () => {
+  document.getElementById('course-search').value = '';
+  loadCourses('', 1);
+});
+
+loadCourses();
+loadDashboard();
+
+const modal = document.getElementById('upload-modal');
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('upload-file');
+const statusEl = document.getElementById('upload-status');
+
+function openModal() {
+  modal.hidden = false;
+
+  statusEl.innerHTML = '';
+  dropzone.classList.remove('is-dragover');
+}
+function closeModal() {
+  modal.hidden = true;
+
+}
+
+document.getElementById('btn-upload').addEventListener('click', openModal);
+document.getElementById('upload-close').addEventListener('click', closeModal);
+modal.addEventListener('click', e => {
+  if (e.target === modal) closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (!modal.hidden) closeModal(); if (!document.getElementById('edit-modal').hidden) closeEdit(); }
+});
+
+dropzone.addEventListener('click', () => fileInput.click());
+['dragenter', 'dragover'].forEach(ev => dropzone.addEventListener(ev, e => {
+  e.preventDefault();
+  dropzone.classList.add('is-dragover');
+}));
+['dragleave', 'drop'].forEach(ev => dropzone.addEventListener(ev, e => {
+  e.preventDefault();
+  dropzone.classList.remove('is-dragover');
+}));
+dropzone.addEventListener('drop', e => {
+  const files = e.dataTransfer.files;
+  if (files.length) handleFile(files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length) handleFile(e.target.files[0]);
+  e.target.value = '';
+});
+
+function validateStructure(data) {
+  const errors = [];
+  const top = ['course_code', 'course_name', 'categories'];
+  for (const k of top) if (!(k in data)) errors.push(`Missing required field "${k}"`);
+  const validCodes = new Set();
+  if (!Array.isArray(data.categories) || !data.categories.length) {
+    errors.push('"categories" must be a non-empty array');
+  } else {
+    let wsum = 0;
+    data.categories.forEach((cat, ci) => {
+      const label = cat && cat.label ? cat.label : `category #${ci + 1}`;
+      if (!cat || typeof cat !== 'object' || !cat.key || !cat.label) {
+        errors.push(`Category #${ci + 1} needs "key" and "label"`);
+        return;
+      }
+      if (!Array.isArray(cat.components) || !cat.components.length) {
+        errors.push(`Category "${label}" has no components`);
+        return;
+      }
+      cat.components.forEach((comp, ri) => {
+        const cname = comp && comp.name ? comp.name : `component #${ri + 1}`;
+        if (!comp || typeof comp !== 'object' || !('weight' in comp)) {
+          errors.push(`Component "${cname}" needs "weight"`);
+          return;
+        }
+        if (typeof comp.weight !== 'number' || comp.weight <= 0) {
+          errors.push(`Component "${cname}" weight must be a positive number`);
+        }
+        if (!Array.isArray(comp.cpl_pis) || !comp.cpl_pis.length) {
+          errors.push(`Component "${cname}" needs at least one "cpl_pis" mapping`);
+        }
+        wsum += comp.weight || 0;
+      });
+    });
+    if (Math.abs(wsum - 100) > 0.001) errors.push(`Total weight is ${wsum.toFixed(1)}% - must be 100%`);
+  }
+  if (!Array.isArray(data.cpls) || !data.cpls.length) {
+    errors.push('Course must define at least one "cpls" entry');
+  } else {
+    (data.cpls || []).forEach(clo => {
+      if (!clo.code) errors.push('Each CPL needs "code"');
+      if (![1, 2, 3, 4, 5].includes(Number(clo.proficiency_level))) {
+        errors.push(`CPL ${clo.code} proficiency_level must be 1-5`);
+      }
+    });
+  }
+  if (data.is_pbl) {
+    const byKey = {};
+    (data.categories || []).forEach(c => byKey[c.key] = c);
+    let pbl = 0;
+    ['partisipatif', 'proyek'].forEach(k => {
+      const cat = byKey[k];
+      if (cat) pbl += (cat.components || []).reduce((a, c) => a + (c.weight || 0), 0);
+    });
+    if (pbl < 50) errors.push(`PBL requires Partisipatif + Proyek >= 50%, currently ${pbl.toFixed(1)}%`);
+  }
+  return errors;
+}
+
+async function handleFile(file) {
+  statusEl.innerHTML = '<p class="alert-info">Reading file…</p>';
+  try {
+    const text = await file.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (err) {
+      statusEl.innerHTML = `<p class="alert-err">✗ Not valid JSON: ${err.message}</p>`;
+      return;
+    }
+    const errors = validateStructure(data);
+    if (errors.length) {
+      statusEl.innerHTML = `<p class="alert-err">✗ Invalid structure:</p><ul class="err-list">${errors.map(x => `<li>${x}</li>`).join('')}</ul>`;
+      return;
+    }
+    statusEl.innerHTML = '<p class="alert-info">Uploading…</p>';
+    const fd = new FormData();
+    fd.append('file', new File([text], file.name, { type: 'application/json' }));
+    const res = await fetch(u('api_upload'), { method: 'POST', body: fd });
+    const out = await res.json();
+    if (res.ok) {
+      closeModal();
+      showToast(`Course ${out.course_code} uploaded. Now create a class.`, 'success');
+      loadCourses();
+      loadDashboard();
+    } else {
+      statusEl.innerHTML = `<p class="alert-err">✗ ${out.error || 'Upload failed'}</p>`;
+    }
+  } catch (err) {
+    statusEl.innerHTML = `<p class="alert-err">✗ ${err.message}</p>`;
+  }
+}
+
+// ---------------- Create Rubric wizard (5 steps) ----------------
+const WIZARD_CATEGORIES = [
+  { key: 'partisipatif', label: 'Partisipatif' },
+  { key: 'tugas', label: 'Tugas' },
+  { key: 'kuis', label: 'Kuis' },
+  { key: 'ats', label: 'ATS' },
+  { key: 'aas', label: 'AAS' },
+  { key: 'proyek', label: 'Proyek' },
+];
+const STEP_NAMES = ['Course Info', 'CPL & SO', 'Komponen & PI', 'Bobot & PBL', 'Kriteria'];
+const PROF_LEVELS = [
+  { v: 1, t: 'to have experienced or been exposed to' },
+  { v: 2, t: 'to be able to participate in and contribute to' },
+  { v: 3, t: 'to be able to understand and explain' },
+  { v: 4, t: 'to be skilled in the practice or implementation of' },
+  { v: 5, t: 'to be able to lead or innovate in' },
+];
+
+let wizardStep = 1;
+let soPi = { student_outcome: [], proficiency_levels: [] };
+let soByCode = {};
+let programs = [];
+
+const wizardModal = document.getElementById('wizard-modal');
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+async function openWizard() {
+  wizardEditCourseId = null;
+  document.getElementById('wizard-title').textContent = 'Create Rubric';
+  wizardStep = 1;
+  document.getElementById('wizard-code').value = '';
+  document.getElementById('wizard-name').value = '';
+  document.getElementById('wizard-sks').value = 3;
+  document.getElementById('wizard-semester').value = '';
+  document.getElementById('wizard-pbl').checked = false;
+  document.getElementById('wizard-status').innerHTML = '';
+  weightState = {};
+  criteriaDraft = {};
+  try {
+    soPi = await fetch(u('so_pi')).then(r => r.json());
+    soByCode = {};
+    soPi.student_outcome.forEach(so => soByCode[so.so_code] = so);
+  } catch (e) { soPi = { student_outcome: [], proficiency_levels: PROF_LEVELS }; }
+  try {
+    programs = await fetch(u('programs')).then(r => r.json());
+    const sel = document.getElementById('wizard-program');
+    sel.innerHTML = programs.map(p =>
+      `<option value="${p.code}" ${p.code === 'RKS' ? 'selected' : ''}>${esc(p.label)}</option>`
+    ).join('');
+  } catch (e) { programs = []; }
+  buildCplList();
+  buildWizardCategories();
+  buildWizardWeights();
+  buildWizardCriteria();
+  restoreWizardDraft();
+  renderWizardStep();
+  wizardModal.hidden = false;
+}
+function closeWizard() {
+  wizardModal.hidden = true;
+  wizardEditCourseId = null;
+}
+
+// ---- Wizard draft persistence (cookies) ----
+function saveWizardDraft() {
+  const draft = {
+    course_code: document.getElementById('wizard-code').value,
+    course_name: document.getElementById('wizard-name').value,
+    sks: document.getElementById('wizard-sks').value,
+    semester: document.getElementById('wizard-semester').value,
+    study_program: document.getElementById('wizard-program').value,
+    is_pbl: document.getElementById('wizard-pbl').checked,
+    cpls: collectCpls(),
+    categories: collectComponents(),
+    weights: weightState,
+    criteria: criteriaDraft,
+    step: wizardStep,
+  };
+  setCookie('rubrix_wizard_draft', draft, 7);
+}
+
+function restoreWizardDraft() {
+  const d = getCookie('rubrix_wizard_draft');
+  if (!d) return false;
+  // Course fields
+  document.getElementById('wizard-code').value = d.course_code || '';
+  document.getElementById('wizard-name').value = d.course_name || '';
+  document.getElementById('wizard-sks').value = d.sks || 3;
+  document.getElementById('wizard-semester').value = d.semester || '';
+  if (d.study_program) document.getElementById('wizard-program').value = d.study_program;
+  document.getElementById('wizard-pbl').checked = !!d.is_pbl;
+  // CPL rows
+  const cplWrap = document.getElementById('wizard-cpl-list');
+  cplWrap.innerHTML = '';
+  (d.cpls && d.cpls.length ? d.cpls : [null]).forEach(c => addCplRow(c));
+  // Components per category
+  const catData = d.categories || {};
+  WIZARD_CATEGORIES.forEach(cat => {
+    const card = document.querySelector(`.wizard-cat[data-cat="${cat.key}"]`);
+    const list = card.querySelector('.wizard-comp-list');
+    list.innerHTML = '';
+    const comps = catData[cat.key] || [];
+    if (!comps.length) addWizardComponent(cat.key);
+    else comps.forEach(c => addWizardComponent(cat.key, c));
+    renumberWizardComponents(card);
+  });
+  // Weights + criteria
+  weightState = d.weights || {};
+  criteriaDraft = d.criteria || {};
+  // Resume at last step (or step 1 if invalid)
+  wizardStep = Math.min(5, Math.max(1, d.step || 1));
+  return true;
+}
+
+function clearWizardDraft() {
+  removeCookie('rubrix_wizard_draft');
+}
+
+// ---------- Step 2: CPL list ----------
+function buildCplList() {
+  const wrap = document.getElementById('wizard-cpl-list');
+  wrap.innerHTML = '';
+  addCplRow();
+}
+
+function addCplRow(cpl) {
+  const wrap = document.getElementById('wizard-cpl-list');
+  const idx = wrap.children.length + 1;
+  const row = document.createElement('div');
+  row.className = 'wizard-cpl';
+  row.dataset.cpl = (cpl && cpl.code) || `CPL${idx}`;
+  row.innerHTML = `
+    <div class="wizard-cpl-head">
+      <b class="wz-cpl-code">${row.dataset.cpl}</b>
+      <button class="icon-btn icon-danger" type="button" title="Hapus"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <label class="upload-field">
+      <span>Deskripsi CPL (sama dengan RPS)</span>
+      <textarea class="wz-cpl-desc" rows="2" maxlength="500" placeholder="Deskripsi capaian pembelajaran..."></textarea>
+    </label>
+    <label class="upload-field">
+      <span>Proficiency Level</span>
+      <select class="wz-cpl-level"></select>
+    </label>
+    <div class="upload-field">
+      <span>SO (boleh lebih dari satu)</span>
+      <div class="wz-so-list"></div>
+    </div>`;
+  const levelSel = row.querySelector('.wz-cpl-level');
+  levelSel.innerHTML = PROF_LEVELS.map(p =>
+    `<option value="${p.v}">${p.v}. ${esc(p.t)}</option>`
+  ).join('');
+  levelSel.value = (cpl && cpl.proficiency_level) || '3';
+  const soList = row.querySelector('.wz-so-list');
+  const sos = soPi && soPi.student_outcome ? soPi.student_outcome : [];
+  const selected = cpl && cpl.so_codes ? cpl.so_codes : [];
+  soList.innerHTML = sos.map(so =>
+    `<label class="wizard-check"><input type="checkbox" class="wz-so-cb" value="${so.so_code}" ${selected.includes(so.so_code) ? 'checked' : ''}> <span><b>${so.so_code}</b> - ${esc(so.so_description)}</span></label>`
+  ).join('') || '<p class="empty">Data SO tidak tersedia.</p>';
+  if (cpl) row.querySelector('.wz-cpl-desc').value = cpl.description || '';
+  row.querySelector('.icon-btn').addEventListener('click', () => {
+    row.remove();
+    renumberCpls();
+  });
+  wrap.appendChild(row);
+  renumberCpls();
+}
+
+function renumberCpls() {
+  const rows = [...document.querySelectorAll('.wizard-cpl')];
+  rows.forEach((row, i) => {
+    row.dataset.cpl = `CPL${i + 1}`;
+    row.querySelector('.wz-cpl-code').textContent = `CPL${i + 1}`;
+  });
+}
+
+function collectCpls() {
+  const cpls = [];
+  document.querySelectorAll('.wizard-cpl').forEach(row => {
+    const desc = row.querySelector('.wz-cpl-desc').value.trim();
+    const level = parseInt(row.querySelector('.wz-cpl-level').value, 10);
+    const soCodes = [...row.querySelectorAll('.wz-so-cb:checked')].map(cb => cb.value);
+    cpls.push({ code: row.dataset.cpl, description: desc, proficiency_level: level, so_codes: soCodes });
+  });
+  return cpls;
+}
+
+// ---------- Step 3: components per category with CPL/PI ----------
+function buildWizardCategories() {
+  const wrap = document.getElementById('wizard-categories');
+  wrap.innerHTML = WIZARD_CATEGORIES.map(cat => `
+    <div class="wizard-cat" data-cat="${cat.key}">
+      <div class="wizard-cat-head">
+        <b>${cat.label}</b>
+        <span class="wizard-cat-count">0 komponen</span>
+      </div>
+      <div class="wizard-cat-body">
+        <div class="wizard-comp-list"></div>
+        <button class="btn btn-outline btn-sm" type="button">+ Tambah komponen</button>
+      </div>
+    </div>`).join('');
+  wrap.querySelectorAll('.wizard-cat').forEach(card => {
+    const addBtn = card.querySelector('.wizard-cat-body > button');
+    addBtn.addEventListener('click', () => addWizardComponent(card.dataset.cat));
+    // Seed one default component named after the category (e.g. "Kuis").
+    addWizardComponent(card.dataset.cat, { name: card.dataset.cat === 'ats' ? 'ATS' : card.dataset.cat === 'aas' ? 'AAS' : card.querySelector('.wizard-cat-head b').textContent });
+  });
+}
+
+function addWizardComponent(catKey, comp) {
+  const card = document.querySelector(`.wizard-cat[data-cat="${catKey}"]`);
+  const list = card.querySelector('.wizard-comp-list');
+  const row = document.createElement('div');
+  row.className = 'wizard-comp wizard-comp-full';
+  row.innerHTML = `
+    <span class="wizard-comp-no"></span>
+    <input type="text" class="wz-comp-name" placeholder="Nama sub-komponen" maxlength="120">
+    <div class="wz-cpl-pi-area"></div>
+    <button class="btn btn-outline btn-sm wz-add-cpl" type="button">+ Pilih CPL</button>
+    <button class="icon-btn icon-danger" type="button" title="Hapus"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+  list.appendChild(row);
+  row.querySelector('.icon-btn').addEventListener('click', () => {
+    row.remove();
+    renumberWizardComponents(card);
+  });
+  row.querySelector('.wz-add-cpl').addEventListener('click', () => addCplPiRow(row));
+  if (comp) {
+    row.querySelector('.wz-comp-name').value = comp.name || '';
+    (comp.cpl_pis || []).forEach(m => addCplPiRow(row, m));
+    if (!comp.cpl_pis || !comp.cpl_pis.length) addCplPiRow(row);
+  } else {
+    addCplPiRow(row);
+  }
+  renumberWizardComponents(card);
+}
+
+function addCplPiRow(compRow, mapping) {
+  const area = compRow.querySelector('.wz-cpl-pi-area');
+  const cplRow = document.createElement('div');
+  cplRow.className = 'wz-cpl-pi-row';
+  cplRow.innerHTML = `
+    <select class="wz-comp-cpl"><option value="">Pilih CPL...</option></select>
+    <div class="wz-pi-list"></div>
+    <button class="icon-btn icon-danger" type="button" title="Hapus"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+  const sel = cplRow.querySelector('.wz-comp-cpl');
+  sel.innerHTML = '<option value="">Pilih CPL...</option>' +
+    collectCpls().map(c => `<option value="${c.code}">${c.code}</option>`).join('');
+  if (mapping) sel.value = mapping.cpl || '';
+  sel.addEventListener('change', () => renderPiOptions(cplRow, mapping));
+  cplRow.querySelector('.icon-btn').addEventListener('click', () => cplRow.remove());
+  area.appendChild(cplRow);
+  if (mapping) renderPiOptions(cplRow, mapping);
+}
+
+function renderPiOptions(cplRow, mapping) {
+  const cplCode = cplRow.querySelector('.wz-comp-cpl').value;
+  const piList = cplRow.querySelector('.wz-pi-list');
+  piList.innerHTML = '';
+  if (!cplCode) return;
+  const cpl = collectCpls().find(c => c.code === cplCode);
+  if (!cpl) return;
+  // Only PIs from the SOs chosen for this CPL.
+  const pis = [];
+  cpl.so_codes.forEach(soCode => {
+    const so = soByCode[soCode];
+    if (so) {
+      so.performance_indicator.forEach(pi => {
+        pis.push({ pi_code: pi.pi_code, pi_description: pi.pi_description, so: soCode });
+      });
+    }
+  });
+  const seen = new Set();
+  piList.innerHTML = pis.map(pi => {
+    const key = `${pi.so}-${pi.pi_code}`;
+    if (seen.has(key)) return '';
+    seen.add(key);
+    const checked = mapping && mapping.so === pi.so && mapping.pi === pi.pi_code;
+    return `<label class="wizard-check"><input type="checkbox" class="wz-pi-cb" value="${pi.so}|${pi.pi_code}" ${checked ? 'checked' : ''}> <span><b>${pi.pi_code}</b> - ${esc(pi.pi_description)}</span></label>`;
+  }).join('');
+}
+
+function renumberWizardComponents(card) {
+  card.querySelectorAll('.wizard-comp-no').forEach((el, i) => el.textContent = i + 1);
+  card.querySelector('.wizard-cat-count').textContent = card.querySelectorAll('.wizard-comp').length + ' komponen';
+}
+
+function collectComponents() {
+  const categories = {};
+  for (const cat of WIZARD_CATEGORIES) {
+    const comps = [];
+    document.querySelectorAll(`.wizard-cat[data-cat="${cat.key}"] .wizard-comp`).forEach(row => {
+      const nameEl = row.querySelector('.wz-comp-name');
+      if (!nameEl) return;
+      const name = nameEl.value.trim();
+      if (!name) return;
+      const cpl_pis = [];
+      row.querySelectorAll('.wz-cpl-pi-row').forEach(cplRow => {
+        const cplSel = cplRow.querySelector('.wz-comp-cpl');
+        if (!cplSel) return;
+        const cpl = cplSel.value;
+        if (!cpl) return;
+        cplRow.querySelectorAll('.wz-pi-cb:checked').forEach(cb => {
+          const [so, pi] = cb.value.split('|');
+          cpl_pis.push({ cpl, so, pi });
+        });
+      });
+      comps.push({ name, cpl_pis });
+    });
+    if (comps.length) categories[cat.key] = comps;
+  }
+  return categories;
+}
+
+// ---------- Step 4: PBL + weights ----------
+let weightState = {};
+
+function buildWizardWeights() {
+  const wrap = document.getElementById('wizard-weights');
+  wrap.innerHTML = WIZARD_CATEGORIES.map(cat => `
+    <div class="wizard-cat" data-cat="${cat.key}">
+      <div class="wizard-cat-head"><b>${cat.label}</b><span class="wizard-cat-count">0</span></div>
+      <div class="wizard-cat-body"><div class="wizard-weight-list"></div></div>
+    </div>`).join('');
+}
+
+function weightKey(cat, name) {
+  return `${cat.key}|${name}`;
+}
+
+function renderWeights() {
+  const components = collectComponents();
+  // Prune stale state keys for removed components.
+  const activeKeys = new Set();
+  for (const cat of WIZARD_CATEGORIES) {
+    (components[cat.key] || []).forEach(c => activeKeys.add(weightKey(cat, c.name)));
+  }
+  Object.keys(weightState).forEach(k => { if (!activeKeys.has(k)) delete weightState[k]; });
+
+  WIZARD_CATEGORIES.forEach(cat => {
+    const card = document.querySelector(`#wizard-weights .wizard-cat[data-cat="${cat.key}"]`);
+    const list = card.querySelector('.wizard-weight-list');
+    const comps = components[cat.key] || [];
+    card.querySelector('.wizard-cat-count').textContent = comps.length;
+    list.innerHTML = comps.map((c, i) => {
+      const label = c.cpl_pis.map(m => `${m.cpl}-${m.pi}`).join(', ');
+      const key = weightKey(cat, c.name);
+      const val = weightState[key] != null ? weightState[key] : '';
+      return `
+        <div class="wizard-comp">
+          <span class="wizard-comp-no">${i + 1}</span>
+          <span class="wz-w-name">${esc(c.name)} <small class="wz-w-label">(${esc(label)})</small></span>
+          <div class="wz-weight-wrap">
+            <input type="number" class="wz-comp-weight" data-key="${key}" min="0" max="100" step="0.5" placeholder="Bobot %" value="${val}">
+            <span>%</span>
+          </div>
+        </div>`;
+    }).join('');
+  });
+  document.querySelectorAll('#wizard-weights .wz-comp-weight').forEach(inp => {
+    inp.addEventListener('input', () => {
+      weightState[inp.dataset.key] = inp.value;
+      updateWizardTotals();
+      updatePblStatus();
+    });
+  });
+  updateWizardTotals();
+  updatePblStatus();
+}
+
+function updateWizardTotals() {
+  const el = document.getElementById('wizard-total');
+  const total = wizardTotalWeight();
+  const ok = Math.abs(total - 100) < 0.001;
+  el.innerHTML = `Total bobot: <b class="${ok ? 'ok' : 'bad'}">${total.toFixed(1)}%</b> <span class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '(harus 100%)'}</span>`;
+}
+
+function wizardTotalWeight() {
+  let total = 0;
+  document.querySelectorAll('#wizard-weights .wz-comp-weight').forEach(inp => {
+    const v = parseFloat(inp.value);
+    if (!isNaN(v)) total += v;
+  });
+  return total;
+}
+
+function pblWeight() {
+  let total = 0;
+  for (const cat of WIZARD_CATEGORIES) {
+    if (cat.key !== 'partisipatif' && cat.key !== 'proyek') continue;
+    document.querySelectorAll(`#wizard-weights .wizard-cat[data-cat="${cat.key}"] .wz-comp-weight`).forEach(inp => {
+      const v = parseFloat(inp.value);
+      if (!isNaN(v)) total += v;
+    });
+  }
+  return total;
+}
+
+function updatePblStatus() {
+  const hint = document.getElementById('wizard-pbl-hint');
+  if (!hint) return;
+  const isPbl = document.getElementById('wizard-pbl').checked;
+  hint.innerHTML = '';
+  if (isPbl) {
+    const p = pblWeight();
+    const ok = p >= 50;
+    hint.innerHTML = `PBL: Partisipatif + Proyek = <b class="${ok ? 'ok' : 'bad'}">${p.toFixed(1)}%</b> <span class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '(harus &ge; 50%)'}</span>`;
+  } else {
+    hint.innerHTML = 'Jika PBL, total bobot Partisipatif + Proyek harus &ge; 50%.';
+  }
+}
+
+function collectWeights() {
+  const categories = collectComponents();
+  const weights = [];
+  for (const cat of WIZARD_CATEGORIES) {
+    (categories[cat.key] || []).forEach(c => {
+      const key = weightKey(cat, c.name);
+      const v = weightState[key];
+      weights.push({ cat: cat.key, name: c.name, weight: parseFloat(v), cpl_pis: c.cpl_pis });
+    });
+  }
+  return weights;
+}
+
+// ---------- Step 5: criteria ----------
+let criteriaDraft = {};  // component key -> array of {label, score_min, score_max, subject}
+
+const CRIT_LABELS = ['Sangat Kurang', 'Kurang', 'Cukup', 'Baik', 'Sangat Baik'];
+const CRIT_DEFAULT = [
+  { score_min: 0, score_max: 30 },
+  { score_min: 31, score_max: 55 },
+  { score_min: 56, score_max: 70 },
+  { score_min: 75, score_max: 84 },
+  { score_min: 85, score_max: 100 },
+];
+
+function buildWizardCriteria() {
+  const wrap = document.getElementById('wizard-criteria');
+  wrap.innerHTML = '<p class="empty">Belum ada komponen. Kembali ke langkah sebelumnya.</p>';
+}
+
+function critRange(i, saved) {
+  const def = CRIT_DEFAULT[i];
+  if (saved && saved[i]) return { min: saved[i].score_min, max: saved[i].score_max };
+  return { min: def.score_min, max: def.score_max };
+}
+
+function renderCriteria() {
+  const weights = collectWeights();
+  const wrap = document.getElementById('wizard-criteria');
+  if (!weights.length) {
+    wrap.innerHTML = '<p class="empty">Belum ada komponen.</p>';
+    return;
+  }
+  wrap.innerHTML = weights.map((w, ci) => {
+    const ckey = weightKey({ key: w.cat }, w.name);
+    const saved = criteriaDraft[ckey];
+    return `
+    <div class="wizard-criteria-comp" data-ci="${ci}">
+      <div class="wizard-cat-head"><b>${esc(w.name)}</b><span class="chip">${w.cpl_pis.map(m => `${m.cpl}-${m.pi}`).join(', ')}</span></div>
+      <div class="wizard-criteria-levels">
+        ${[0, 1, 2, 3, 4].map(i => {
+          const r = critRange(i, saved);
+          return `
+          <div class="wizard-criteria-row">
+            <span class="wz-lv-badge">L${i + 1}</span>
+            <span class="wz-crit-label-readonly">${CRIT_LABELS[i]}</span>
+            <input type="number" class="wz-crit-min" value="${r.min}">
+            <span>-</span>
+            <input type="number" class="wz-crit-max" value="${r.max}">
+            <div class="wz-wysiwyg">
+              <div class="wz-wysiwyg-toolbar">
+                <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+                <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+                <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+                <button type="button" data-cmd="insertUnorderedList" title="List">•≡</button>
+              </div>
+              <div class="wz-wysiwyg-area" contenteditable="true" data-placeholder="Kriteria yang harus dipenuhi...">${saved && saved[i] && saved[i].subject ? saved[i].subject : ''}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Wire WYSIWYG toolbar buttons
+  wrap.querySelectorAll('.wz-wysiwyg-toolbar button').forEach(btn => {
+    btn.addEventListener('mousedown', e => e.preventDefault());
+    btn.addEventListener('click', () => {
+      document.execCommand(btn.dataset.cmd, false, null);
+      const area = btn.closest('.wz-wysiwyg').querySelector('.wz-wysiwyg-area');
+      area.focus();
+      grabCriteriaFor(area);
+    });
+  });
+
+  // Save criteria edits live
+  wrap.querySelectorAll('.wizard-criteria-comp').forEach((compEl) => {
+    const ci = parseInt(compEl.dataset.ci, 10);
+    const w = weights[ci];
+    if (!w) return;
+    const ckey = weightKey({ key: w.cat }, w.name);
+    criteriaDraft[ckey] = [];
+    compEl.querySelectorAll('.wizard-criteria-row').forEach((row, i) => {
+      const area = row.querySelector('.wz-wysiwyg-area');
+      criteriaDraft[ckey][i] = {
+        label: CRIT_LABELS[i],
+        score_min: parseInt(row.querySelector('.wz-crit-min').value, 10),
+        score_max: parseInt(row.querySelector('.wz-crit-max').value, 10),
+        subject: area ? area.innerHTML : '',
+      };
+      const grab = () => grabCriteriaFor(area);
+      row.querySelectorAll('.wz-crit-min, .wz-crit-max').forEach(inp => inp.addEventListener('input', () => { grab(); saveWizardDraft(); }));
+      if (area) area.addEventListener('input', () => { grab(); saveWizardDraft(); });
+    });
+  });
+}
+
+function grabCriteriaFor(area) {
+  if (!area) return;
+  const row = area.closest('.wizard-criteria-row');
+  const compEl = row.closest('.wizard-criteria-comp');
+  const ci = parseInt(compEl.dataset.ci, 10);
+  const i = [...compEl.querySelectorAll('.wizard-criteria-row')].indexOf(row);
+  const key = [...compEl.querySelectorAll('.wizard-criteria-row')];
+  // find component key from ci -> weights
+  const weights = collectWeights();
+  const w = weights[ci];
+  if (!w) return;
+  const ckey = weightKey({ key: w.cat }, w.name);
+  if (!criteriaDraft[ckey]) criteriaDraft[ckey] = [];
+  criteriaDraft[ckey][i] = {
+    label: CRIT_LABELS[i],
+    score_min: parseInt(row.querySelector('.wz-crit-min').value, 10),
+    score_max: parseInt(row.querySelector('.wz-crit-max').value, 10),
+    subject: area.innerHTML,
+  };
+}
+
+function collectCriteria() {
+  const weights = collectWeights();
+  const result = [];
+  document.querySelectorAll('.wizard-criteria-comp').forEach((compEl, ci) => {
+    const w = weights[ci];
+    if (!w) return;
+    const criteria = [];
+    compEl.querySelectorAll('.wizard-criteria-row').forEach((row, i) => {
+      const label = CRIT_LABELS[i];
+      const min = parseInt(row.querySelector('.wz-crit-min').value, 10);
+      const max = parseInt(row.querySelector('.wz-crit-max').value, 10);
+      const subjectHtml = row.querySelector('.wz-wysiwyg-area').innerHTML.trim();
+      const subjectText = row.querySelector('.wz-wysiwyg-area').innerText.trim();
+      const subjects = subjectText ? [subjectHtml, `Secara keseluruhan dinilai ${label.toLowerCase()} (skor ${isNaN(min) ? CRIT_DEFAULT[i].score_min : min}-${isNaN(max) ? CRIT_DEFAULT[i].score_max : max})`] : [`Secara keseluruhan dinilai ${label.toLowerCase()}`];
+      criteria.push({
+        level: i + 1,
+        label,
+        score_min: isNaN(min) ? CRIT_DEFAULT[i].score_min : min,
+        score_max: isNaN(max) ? CRIT_DEFAULT[i].score_max : max,
+        subjects,
+      });
+    });
+    result.push({ cat: w.cat, name: w.name, weight: w.weight, cpl_pis: w.cpl_pis, criteria });
+  });
+  return result;
+}
+
+// ---------- step navigation ----------
+function renderWizardStep() {
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById(`wizard-step-${i}`);
+    if (el) el.hidden = wizardStep !== i;
+  }
+  document.getElementById('wizard-back').hidden = wizardStep === 1;
+  document.getElementById('wizard-next').textContent = wizardStep === 5 ? (wizardEditCourseId ? 'Update Course' : '+ Create Course') : 'Next';
+  const steps = document.getElementById('wizard-steps');
+  steps.innerHTML = STEP_NAMES.map((s, i) => {
+    const n = i + 1;
+    return `<span class="wizard-step ${wizardStep === n ? 'active' : ''}">${n}. ${s}</span>`;
+  }).join('');
+  if (wizardStep === 4) renderWeights();
+  if (wizardStep === 5) renderCriteria();
+}
+
+function validateStep() {
+  const status = document.getElementById('wizard-status');
+  status.innerHTML = '';
+  if (wizardStep === 1) {
+    if (!document.getElementById('wizard-code').value.trim() || !document.getElementById('wizard-name').value.trim()) {
+      status.innerHTML = '<p class="alert-err">✗ Kode dan Nama matakuliah wajib diisi.</p>';
+      return false;
+    }
+  }
+  if (wizardStep === 2) {
+    const cpls = collectCpls();
+    if (!cpls.length || cpls.some(c => !c.description)) {
+      status.innerHTML = '<p class="alert-err">✗ Isi minimal 1 CPL beserta deskripsinya.</p>';
+      return false;
+    }
+    if (cpls.some(c => !c.so_codes.length)) {
+      status.innerHTML = '<p class="alert-err">✗ Setiap CPL harus memilih minimal 1 SO.</p>';
+      return false;
+    }
+  }
+  if (wizardStep === 3) {
+    const categories = collectComponents();
+    if (!Object.keys(categories).length) {
+      status.innerHTML = '<p class="alert-err">✗ Tambahkan minimal 1 sub-komponen.</p>';
+      return false;
+    }
+    let bad = false;
+    Object.values(categories).forEach(comps => comps.forEach(c => {
+      if (!c.cpl_pis.length) bad = true;
+    }));
+    if (bad) {
+      status.innerHTML = '<p class="alert-err">✗ Setiap sub-komponen harus dipetakan ke minimal 1 CPL/PI.</p>';
+      return false;
+    }
+  }
+  if (wizardStep === 4) {
+    const weights = collectWeights();
+    // Weights may be 0, but they must not be empty/NaN, total must be 100%,
+    // and PBL rule must hold.
+    if (weights.some(w => isNaN(w.weight))) {
+      status.innerHTML = '<p class="alert-err">✗ Isi bobot semua sub-komponen (boleh 0).</p>';
+      return false;
+    }
+    const total = wizardTotalWeight();
+    if (Math.abs(total - 100) > 0.001) {
+      status.innerHTML = `<p class="alert-err">✗ Total bobot harus 100%, sekarang ${total.toFixed(1)}%.</p>`;
+      return false;
+    }
+    if (document.getElementById('wizard-pbl').checked) {
+      const partisipatif = weights.filter(w => w.cat === 'partisipatif').reduce((a, w) => a + w.weight, 0);
+      const proyek = weights.filter(w => w.cat === 'proyek').reduce((a, w) => a + w.weight, 0);
+      if (partisipatif + proyek < 50) {
+        status.innerHTML = `<p class="alert-err">✗ Untuk PBL, Partisipatif + Proyek harus &ge; 50%, sekarang ${(partisipatif + proyek).toFixed(1)}%.</p>`;
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+async function submitWizard() {
+  const status = document.getElementById('wizard-status');
+  const cpls = collectCpls();
+  const criteriaList = collectCriteria();
+  const categories = {};
+  criteriaList.forEach(item => {
+    if (!item.cat) return;
+    if (!categories[item.cat]) categories[item.cat] = [];
+    categories[item.cat].push({ name: item.name, weight: item.weight, cpl_pis: item.cpl_pis, criteria: item.criteria });
+  });
+  const payload = {
+    course_code: document.getElementById('wizard-code').value.trim(),
+    course_name: document.getElementById('wizard-name').value.trim(),
+    sks: parseInt(document.getElementById('wizard-sks').value, 10) || 0,
+    semester: document.getElementById('wizard-semester').value.trim(),
+    study_program: document.getElementById('wizard-program').value,
+    is_pbl: document.getElementById('wizard-pbl').checked,
+    cpls,
+    categories,
+  };
+  const url = wizardEditCourseId ? u('api_course', wizardEditCourseId) : u('api_create');
+  const method = wizardEditCourseId ? 'PUT' : 'POST';
+  status.innerHTML = `<p class="alert-info">${wizardEditCourseId ? 'Updating' : 'Creating'} rubric…</p>`;
+  const res = await fetch(url, {
+    method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+  });
+  const out = await res.json();
+  if (res.ok) {
+    clearWizardDraft();
+    closeWizard();
+    showToast(wizardEditCourseId ? `Rubric ${out.course_code || payload.course_code} updated.` : `Rubric ${out.course_code} created. Now create a class.`, 'success');
+    loadCourses();
+    loadDashboard();
+  } else {
+    status.innerHTML = `<p class="alert-err">✗ ${out.error || 'Failed'}</p>`;
+  }
+}
+
+// Lock modal: no outside-click / Escape close (prevents losing input).
+document.getElementById('btn-create').addEventListener('click', openWizard);
+document.getElementById('wizard-cancel').addEventListener('click', () => {
+  if (confirm(wizardEditCourseId ? 'Batalkan pengeditan rubric?' : 'Batalkan pembuatan rubric?')) { closeWizard(); clearWizardDraft(); }
+});
+document.getElementById('wizard-close').addEventListener('click', () => {
+  if (confirm(wizardEditCourseId ? 'Batalkan pengeditan rubric?' : 'Batalkan pembuatan rubric?')) { closeWizard(); clearWizardDraft(); }
+});
+document.getElementById('wizard-add-cpl').addEventListener('click', () => { addCplRow(); saveWizardDraft(); });
+document.getElementById('wizard-next').addEventListener('click', () => {
+  if (!validateStep()) return;
+  if (wizardStep < 5) { wizardStep++; renderWizardStep(); }
+  else submitWizard();
+  saveWizardDraft();
+});
+document.getElementById('wizard-back').addEventListener('click', () => {
+  if (wizardStep > 1) { wizardStep--; renderWizardStep(); }
+  saveWizardDraft();
+});
+document.getElementById('wizard-pbl').addEventListener('change', () => {
+  if (wizardStep === 4) updatePblStatus();
+  saveWizardDraft();
+});
+
+// Save draft on any input/change inside the wizard.
+document.getElementById('wizard-modal').addEventListener('input', e => {
+  if (e.target.closest('#wizard-modal')) saveWizardDraft();
+});
+document.getElementById('wizard-modal').addEventListener('change', e => {
+  if (e.target.closest('#wizard-modal')) saveWizardDraft();
+});
+</script>
+{% endblock %}

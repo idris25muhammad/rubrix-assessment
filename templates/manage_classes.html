@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Manage Classes &middot; RubriX{% endblock %}
+
+{% block content %}
+<section class="page-head assess-page-head">
+  <nav class="breadcrumb" aria-label="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}" class="breadcrumb-item">Dashboard</a>
+    <span class="breadcrumb-sep">›</span>
+    <span class="breadcrumb-item breadcrumb-current" id="breadcrumb-current">Manage Classes</span>
+  </nav>
+  <div class="assess-title-row">
+    <div>
+      <h1>Manage Classes</h1>
+      <p id="course-subtitle">Loading course…</p>
+    </div>
+    <div class="head-actions">
+      <button class="btn btn-outline" id="btn-combined">Show Combined Portfolio</button>
+      <button class="btn btn-primary" id="btn-add-class">Add Class</button>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="sheet-meta" id="sheet-meta"></div>
+  <div class="table-wrap">
+    <table class="table" id="class-table">
+      <thead>
+        <tr>
+          <th>Class</th>
+          <th>Lecturer</th>
+          <th class="num">Students</th>
+          <th class="actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="class-body">
+        <tr><td colspan="4" class="empty">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div id="class-msg"></div>
+</section>
+
+<div class="modal-overlay" id="class-modal" hidden>
+  <div class="modal modal-upload">
+    <div class="modal-head">
+      <h3 id="class-modal-title">Add Class</h3>
+      <button class="modal-close" id="class-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label class="upload-field">
+        <span>Class name</span>
+        <input type="text" id="class-name" maxlength="60" placeholder="Pagi A">
+      </label>
+      <label class="upload-field">
+        <span>Lecturer</span>
+        <input type="text" id="class-lecturer" maxlength="120" placeholder="Fulan Fulltank">
+      </label>
+      <div id="class-status"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="class-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const COURSE_ID = {{ course_id }};
+let editClassId = null;
+
+async function loadCourse() {
+  const d = await fetch(u('api_classes', COURSE_ID)).then(r => r.json());
+  document.getElementById('course-subtitle').textContent =
+    `${d.course.course_code} - ${d.course.course_name}`;
+  document.getElementById('breadcrumb-current').textContent =
+    `${d.course.course_code} - ${d.course.course_name}`;
+  const meta = document.getElementById('sheet-meta');
+  meta.innerHTML = `
+    <div class="meta-grid">
+      <div><span>Course</span><b>${d.course.course_code} · ${d.course.course_name}</b></div>
+      <div><span>SKS</span><b>${d.course.sks}</b></div>
+      <div><span>Semester</span><b>${d.course.semester}</b></div>
+      <div><span>Program</span><b>${d.course.study_program}</b></div>
+    </div>`;
+  renderClasses(d.classes);
+}
+
+async function renderClasses(classes) {
+  const body = document.getElementById('class-body');
+  if (!classes.length) {
+    body.innerHTML = '<tr><td colspan="4" class="empty">No classes yet. Add one to start assessing.</td></tr>';
+    return;
+  }
+  body.innerHTML = classes.map(cl => `
+    <tr>
+      <td><b>${cl.name}</b></td>
+      <td>${cl.lecturer || '-'}</td>
+      <td class="num">${cl.student_count ?? '-'}</td>
+      <td class="actions">
+        <a class="btn btn-primary btn-sm" href="${u('assess', cl.id)}">Assess</a>
+        <a class="btn btn-outline btn-sm" href="${u('portfolio', cl.id)}">Show Portfolio</a>
+        <a class="btn btn-outline btn-sm" href="${u('api_export_sid', cl.id)}" title="Rubrik SID">Rubrik SID</a>
+        <button class="icon-btn" title="Edit" data-edit="${cl.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
+        <button class="icon-btn icon-danger" title="Delete" data-del="${cl.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </td>
+    </tr>`).join('');
+  document.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openClassModal(b.dataset.edit)));
+  document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => deleteClass(b.dataset.del)));
+}
+
+function openClassModal(id) {
+  editClassId = id || null;
+  document.getElementById('class-modal-title').textContent = id ? 'Edit Class' : 'Add Class';
+  document.getElementById('class-name').value = '';
+  document.getElementById('class-lecturer').value = '';
+  document.getElementById('class-status').innerHTML = '';
+  document.getElementById('class-modal').hidden = false;
+  
+}
+function closeClassModal() {
+  document.getElementById('class-modal').hidden = true;
+  
+}
+
+async function saveClass() {
+  const name = document.getElementById('class-name').value.trim();
+  const lecturer = document.getElementById('class-lecturer').value.trim();
+  const statusEl = document.getElementById('class-status');
+  if (!name) { statusEl.innerHTML = '<p class="alert-err">✗ Class name is required.</p>'; return; }
+  const url = editClassId ? u('api_class', editClassId) : u('api_classes', COURSE_ID);
+  const method = editClassId ? 'PUT' : 'POST';
+  const res = await fetch(url, {
+    method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, lecturer })
+  });
+  const out = await res.json();
+  if (res.ok) {
+    closeClassModal();
+    showToast(editClassId ? 'Class updated.' : `Class ${name} created.`, 'success');
+    loadCourse();
+  } else {
+    statusEl.innerHTML = `<p class="alert-err">✗ ${out.error}</p>`;
+  }
+}
+
+async function deleteClass(id) {
+  if (!confirm('Delete this class and all its students/scores?')) return;
+  const res = await fetch(u('api_class', id), { method: 'DELETE' });
+  if (res.ok) { showToast('Class deleted.', 'success'); loadCourse(); }
+  else {
+    let msg = 'Failed to delete.';
+    try { msg = (await res.json()).error || msg; } catch (e) {}
+    showToast(msg, 'error');
+  }
+}
+
+document.getElementById('btn-add-class').addEventListener('click', () => openClassModal());
+document.getElementById('btn-combined').addEventListener('click', () => {
+  window.location.href = u('portfolio_course', COURSE_ID);
+});
+document.getElementById('class-close').addEventListener('click', closeClassModal);
+document.getElementById('class-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('class-modal')) closeClassModal();
+});
+document.getElementById('class-save').addEventListener('click', saveClass);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !document.getElementById('class-modal').hidden) closeClassModal();
+});
+
+loadCourse();
+</script>
+{% endblock %}

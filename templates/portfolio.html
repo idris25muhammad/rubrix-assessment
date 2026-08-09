@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+{% block title %}Portfolio &middot; RubriX{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<section class="page-head assess-page-head">
+  <nav class="breadcrumb no-print" aria-label="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}" class="breadcrumb-item">Dashboard</a>
+    <span class="breadcrumb-sep">›</span>
+    <a href="#" class="breadcrumb-item" id="breadcrumb-classes">Classes</a>
+    <span class="breadcrumb-sep">›</span>
+    <span class="breadcrumb-item breadcrumb-current" id="breadcrumb-current">Portfolio</span>
+  </nav>
+  <div class="assess-title-row">
+    <div>
+      <h1>Portfolio - Rubric Evaluation</h1>
+      <p id="course-subtitle">Loading…</p>
+    </div>
+    <div class="head-actions" style="display: flex; gap: 8px;">
+      <button class="btn btn-primary" id="btn-print" style="display: inline-flex; align-items: center; gap: 6px;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/>
+        </svg>
+        Print PDF
+      </button>
+    </div>
+  </div>
+</section>
+
+<section class="card print-header-card" id="portfolio-print-header" style="margin-bottom: 24px;">
+  <div class="print-meta-section">
+    <h3 style="margin: 0 0 12px 0; color: var(--primary);">Informasi Matakuliah</h3>
+    <div class="meta-grid" id="print-meta-grid"></div>
+  </div>
+  
+  <div class="print-rubric-section" style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 style="margin: 0; color: var(--primary);">Rubrik Penilaian</h3>
+      <button class="btn btn-outline btn-sm no-print" id="btn-toggle-rubric">Tampilkan Rubrik</button>
+    </div>
+    <div id="print-rubric-body" style="display: none;"></div>
+  </div>
+</section>
+
+<section class="stat-grid" id="stat-grid"></section>
+
+<section class="chart-grid">
+  <div class="card chart-card col-3">
+    <h3>Grade Distribution</h3>
+    <p class="sub">Student final grade (A–E) breakdown.</p>
+    <canvas id="chart-grade"></canvas>
+  </div>
+  <div class="card chart-card col-7">
+    <h3>Component Mean Scores</h3>
+    <p class="sub">Average score per component (0–100). Low means = hard/over-strict rubric.</p>
+    <canvas id="chart-component"></canvas>
+  </div>
+  <div class="card chart-card wide">
+    <h3>Final Score Distribution</h3>
+    <p class="sub">Overall totals (0–100) bucketed by the 5 rubric levels.</p>
+    <canvas id="chart-total"></canvas>
+  </div>
+  <div class="card chart-card wide">
+    <h3>Level Breakdown per Component</h3>
+    <p class="sub">Stacked counts of rubric levels per component. Shows whether one item is skewed vs. the rest.</p>
+    <canvas id="chart-breakdown"></canvas>
+  </div>
+  <div class="card chart-card wide">
+    <h3>Weight vs. Spread (discrimination)</h3>
+    <p class="sub">Weight % vs. standard deviation of each component. High weight + low spread = the rubric item barely differentiates students.</p>
+    <canvas id="chart-discrimination"></canvas>
+  </div>
+  <div class="card chart-card wide">
+    <h3>CPL / SO → Indicator Mapping</h3>
+    <p class="sub">Course learning outcomes and which assessment indicators (level-2 components) cover their code-PI.</p>
+    <div class="table-wrap" id="clo-table"></div>
+  </div>
+</section>
+
+<section class="card chart-card wide" id="pi-code-card">
+  <h3>Breakdown by PI Code</h3>
+  <p class="sub">Statistics per SO-PI code, aggregated across every component carrying that code.</p>
+  <div class="chart-grid">
+    <div class="card chart-card wide">
+      <h4>PI Code Mean Scores</h4>
+      <canvas id="chart-code"></canvas>
+    </div>
+    <div class="card chart-card wide">
+      <h4>PI Code Grade Breakdown</h4>
+      <canvas id="chart-code-grade"></canvas>
+    </div>
+  </div>
+</section>
+
+<section class="card print-landscape" id="code-table-card">
+  <h3>Breakdown by PI Code Details</h3>
+  <p class="sub">Details for each SO-PI code evaluated.</p>
+  <div class="table-wrap code-table" id="code-table-wrap"></div>
+</section>
+
+<section class="card print-landscape" id="indicator-table-card"></section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CLASS_ID = {{ class_id }};
+const LEVEL_COLORS = ['#cbd5e1', '#d64545', '#e07b3f', '#f0b429', '#2f7fd1', '#2e9e5b'];
+const GRADES = ['A', 'B', 'C', 'D', 'E'];
+const PALETTE = { A: '#2e9e5b', B: '#2f7fd1', C: '#f0b429', D: '#e07b3f', E: '#d64545' };
+let charts = [];
+
+async function loadPortfolio() {
+  const data = await fetch(u('api_class_portfolio', CLASS_ID)).then(r => r.json());
+  document.getElementById('course-subtitle').textContent =
+    `${data.course.course_code} - ${data.course.course_name} · Kelas ${data.class.name}`;
+  document.getElementById('breadcrumb-classes').href = u('manage_classes', data.course.id);
+  document.getElementById('breadcrumb-current').textContent =
+    `Kelas ${data.class.name}`;
+  renderStats(data);
+  renderCharts(data);
+  renderComponentTable(data);
+  renderCloTable(data);
+  renderPrintHeader(data);
+
+  const toggleBtn = document.getElementById('btn-toggle-rubric');
+  const rubricBody = document.getElementById('print-rubric-body');
+  toggleBtn.addEventListener('click', () => {
+    if (rubricBody.style.display === 'none') {
+      rubricBody.style.display = 'block';
+      toggleBtn.textContent = 'Sembunyikan Rubrik';
+    } else {
+      rubricBody.style.display = 'none';
+      toggleBtn.textContent = 'Tampilkan Rubrik';
+    }
+  });
+
+  document.getElementById('btn-print').addEventListener('click', () => {
+    window.print();
+  });
+}
+
+function renderStats(data) {
+  const cards = [
+    { label: 'Students assessed', value: `${data.n_students_assessed}/${data.total_students}`, hint: 'rows with ≥1 score' },
+    { label: 'Avg total score', value: data.avg_total === null ? '-' : data.avg_total.toFixed(1), hint: '0 – 100 scale' },
+    { label: 'Median total', value: data.median_total === null ? '-' : data.median_total.toFixed(1), hint: 'middle of distribution' },
+    { label: 'Weight sum', value: data.weight_sum.toFixed(0) + '%', hint: data.weight_sum === 100 ? '✓ balanced' : '⚠ should be 100%' },
+  ];
+  document.getElementById('stat-grid').innerHTML = cards.map(c => `
+    <div class="card stat">
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-value">${c.value}</div>
+      <div class="stat-hint">${c.hint}</div>
+    </div>`).join('');
+}
+
+function renderCharts(data) {
+  charts.forEach(c => c.destroy());
+  charts = [];
+  const levels = data.criteria_levels;
+
+  const grades = ['A', 'B', 'C', 'D', 'E'];
+  const gradeCounts = grades.map(g => data.grade_dist[g] || 0);
+  const totalGrades = gradeCounts.reduce((a, b) => a + b, 0);
+  const gradeLabels = grades.map((g, i) => {
+    const count = gradeCounts[i];
+    const pct = totalGrades > 0 ? ((count / totalGrades) * 100).toFixed(1) : '0.0';
+    return `${g} (${pct}%)`;
+  });
+
+  charts.push(new Chart(document.getElementById('chart-grade'), {
+    type: 'doughnut',
+    data: {
+      labels: gradeLabels,
+      datasets: [{
+        label: 'Grades',
+        data: gradeCounts,
+        backgroundColor: grades.map(g => PALETTE[g]),
+        borderWidth: 2,
+        borderColor: '#ffffff',
+      }]
+    },
+    options: {
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const val = context.raw || 0;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+              return ` ${val} student${val !== 1 ? 's' : ''} (${pct}%)`;
+            }
+          }
+        },
+        legend: {
+          position: 'right',
+          labels: {
+            boxWidth: 12,
+            font: { size: 12, weight: 600 }
+          }
+        }
+      },
+      cutout: '60%',
+    }
+  }));
+
+  charts.push(new Chart(document.getElementById('chart-total'), {
+    type: 'bar',
+    data: {
+      labels: levels.map(l => `L${l.level} · ${l.label}\n(${l.score_min}–${l.score_max})`),
+      datasets: [{
+        label: 'Students',
+        data: levels.map(l => data.total_level_dist[l.level] || 0),
+        backgroundColor: levels.map(l => LEVEL_COLORS[l.level] || '#cbd5e1'),
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'students' } } }
+    }
+  }));
+
+  charts.push(new Chart(document.getElementById('chart-component'), {
+    type: 'bar',
+    data: {
+      labels: data.component_stats.map(s => s.name),
+      datasets: [{
+        label: 'Mean score',
+        data: data.component_stats.map(s => s.mean),
+        backgroundColor: '#3b82f6',
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: { x: { min: 0, max: 100, title: { display: true, text: 'mean (0–100)' } } }
+    }
+  }));
+
+  charts.push(new Chart(document.getElementById('chart-breakdown'), {
+    type: 'bar',
+    data: {
+      labels: data.component_stats.map(s => s.code_pi),
+      datasets: levels.map(l => ({
+        label: `L${l.level} ${l.label}`,
+        data: data.component_stats.map(s => s.level_counts[l.level] || 0),
+        backgroundColor: LEVEL_COLORS[l.level] || '#cbd5e1',
+        stack: 's',
+      })),
+    },
+    options: {
+      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'students' } } },
+      plugins: { legend: { position: 'bottom' } }
+    }
+  }));
+
+  charts.push(new Chart(document.getElementById('chart-discrimination'), {
+    type: 'bar',
+    data: {
+      labels: data.component_stats.map(s => s.code_pi),
+      datasets: [
+        { label: 'Weight %', data: data.component_stats.map(s => s.weight), backgroundColor: '#94a3b8', borderRadius: 4 },
+        { label: 'Std dev', data: data.component_stats.map(s => s.std || 0), backgroundColor: '#f59e0b', borderRadius: 4 },
+      ]
+    },
+    options: {
+      scales: { y: { beginAtZero: true, title: { display: true, text: 'value' } } },
+      plugins: { legend: { position: 'bottom' } }
+    }
+  }));
+
+  const GRADES = ['A', 'B', 'C', 'D', 'E'];
+  charts.push(new Chart(document.getElementById('chart-code'), {
+    type: 'bar',
+    data: {
+      labels: data.code_stats.map(s => s.code_pi),
+      datasets: [{
+        label: 'Mean score',
+        data: data.code_stats.map(s => s.mean),
+        backgroundColor: '#8b5cf6',
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { y: { min: 0, max: 100, title: { display: true, text: 'mean (0–100)' } } }
+    }
+  }));
+
+  charts.push(new Chart(document.getElementById('chart-code-grade'), {
+    type: 'bar',
+    data: {
+      labels: data.code_stats.map(s => `${s.code_pi}\n(${s.n_components} comp, ${s.total_weight}%)`),
+      datasets: GRADES.map(g => ({
+        label: g,
+        data: data.code_stats.map(s => s.grade_counts[g] || 0),
+        backgroundColor: PALETTE[g],
+        stack: 's',
+      })),
+    },
+    options: {
+      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'students' } } },
+      plugins: { legend: { position: 'bottom' } }
+    }
+  }));
+}
+
+function renderComponentTable(data) {
+  const levels = data.criteria_levels;
+  document.getElementById('indicator-table-card').innerHTML = `
+    <h3>Component Details</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Category</th><th>Component</th><th>Codes</th><th class="num">Weight</th>
+            <th class="num">n</th><th class="num">Mean</th><th class="num">Std</th>
+            <th class="num">Min</th><th class="num">Max</th>
+            ${levels.map(l => `<th>L${l.level}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${data.component_stats.map(s => `
+            <tr>
+              <td>${s.category}</td>
+              <td>${s.name}</td>
+              <td class="mono">${(s.so_pi || s.codes_pi).map(c => `<span class="chip">${c}</span>`).join(' ')}</td>
+              <td class="num">${s.weight}%</td>
+              <td class="num">${s.n}</td>
+              <td class="num">${s.mean ?? '-'}</td>
+              <td class="num">${s.std ?? '-'}</td>
+              <td class="num">${s.min ?? '-'}</td>
+              <td class="num">${s.max ?? '-'}</td>
+              ${levels.map(l => `<td class="num"><span class="mini-dot" style="background:${LEVEL_COLORS[l.level]}"></span>${s.level_counts[l.level] || 0}</td>`).join('')}
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  document.getElementById('code-table-wrap').innerHTML = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Code</th><th class="num">Components</th><th class="num">Total Weight</th>
+          <th class="num">n</th><th class="num">Mean</th><th class="num">Std</th>
+          <th class="num">Min</th><th class="num">Max</th>
+          ${['A', 'B', 'C', 'D', 'E'].map(g => `<th>${g}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${data.code_stats.map(s => `
+          <tr>
+            <td class="mono">${s.code_pi}</td>
+            <td class="num">${s.n_components}</td>
+            <td class="num">${s.total_weight}%</td>
+            <td class="num">${s.n}</td>
+            <td class="num">${s.mean ?? '-'}</td>
+            <td class="num">${s.std ?? '-'}</td>
+            <td class="num">${s.min ?? '-'}</td>
+            <td class="num">${s.max ?? '-'}</td>
+            ${['A', 'B', 'C', 'D', 'E'].map(g => `<td class="num"><span class="mini-dot" style="background:${PALETTE[g]}"></span>${s.grade_counts[g] || 0}</td>`).join('')}
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function renderCloTable(data) {
+  const el = document.getElementById('clo-table');
+  if (!data.cpls || !data.cpls.length) {
+    el.innerHTML = '<p class="empty">No CPL defined for this course.</p>';
+    return;
+  }
+  const compNames = {};
+  for (const cat of data.categories) {
+    for (const co of cat.components) {
+      compNames[co.id] = co.name;
+    }
+  }
+  el.innerHTML = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>CPL</th><th>Description</th><th>Prof. Level</th><th>SO</th>
+          <th>Assessment Indicators (level 2)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.cpls.map(cl => `
+          <tr>
+            <td class="mono"><b>${cl.code}</b></td>
+            <td>${cl.description}</td>
+            <td>L${cl.proficiency_level}</td>
+            <td class="mono">${(cl.so_codes || []).map(s => `<span class="chip">${s}</span>`).join(' ')}</td>
+            <td>${cl.indicators.map(i => `<span class="chip ind-chip">${i.label} · ${i.component} (${i.weight}%)</span>`).join(' ') || '-'}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function renderPrintHeader(data) {
+  const grid = document.getElementById('print-meta-grid');
+  grid.innerHTML = `
+    <div><span>Kode Matakuliah</span><b>${data.course.course_code}</b></div>
+    <div><span>Nama Matakuliah</span><b>${data.course.course_name}</b></div>
+    <div><span>SKS</span><b>${data.course.sks} SKS</b></div>
+    <div><span>Semester</span><b>${data.course.semester || '-'}</b></div>
+    <div><span>Program Studi</span><b>${data.course.study_program || '-'}</b></div>
+    <div><span>Jenis Matakuliah</span><b>${data.course.is_pbl ? 'Project-Based Learning (PBL)' : 'Reguler'}</b></div>
+    <div><span>Kelas</span><b>Kelas ${data.class.name}</b></div>
+    <div><span>Dosen Pengampu</span><b>${data.class.lecturer || '-'}</b></div>
+  `;
+
+  const body = document.getElementById('print-rubric-body');
+  const cloSection = (data.cpls || []).length ? `
+    <div class="rubric-cat clo-section" style="margin-bottom: 20px;">
+      <h4 style="margin: 0 0 8px 0; border-bottom: 1px solid var(--border); padding-bottom: 4px;">CPL / SO - Mapping</h4>
+      ${data.cpls.map(cl => `
+        <div class="rubric-clo" style="margin-bottom: 10px;">
+          <div class="rubric-clo-head" style="display: flex; gap: 10px;">
+            <b class="clo-code" style="color: var(--primary);">${cl.code}</b>
+            <span class="weight">L${cl.proficiency_level} · ${cl.description}</span>
+          </div>
+          <div class="rubric-clo-codes" style="font-size: 13px; color: var(--muted); margin-top: 4px;">
+            SO: ${(cl.so_codes || []).map(s => `<span class="chip" style="font-size: 11px; padding: 1px 4px; margin-right: 4px;">${s}</span>`).join('')}
+            → ${(data.categories || []).flatMap(cat => cat.components || []).filter(co => (co.cpl_pis || []).some(m => m.cpl === cl.code))
+                .map(co => `<span class="clo-ind">${co.name} (${co.weight}%)</span>`).join(', ')}
+          </div>
+        </div>`).join('')}
+    </div>` : '';
+
+  body.innerHTML = cloSection + (data.categories || []).map(cat => `
+    <div class="rubric-cat" style="margin-bottom: 20px; page-break-inside: avoid;">
+      <h4 style="margin: 0 0 10px 0; color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 6px;">${cat.label}</h4>
+      ${(cat.components || []).map(comp => `
+        <div class="rubric-comp" style="margin-bottom: 15px; padding-left: 10px; border-left: 2px solid #cbd5e1;">
+          <div class="rubric-comp-head" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+            <b style="font-size: 14px;">${comp.name}</b>
+            ${(comp.so_pi || comp.codes_pi || []).map(cd => `<span class="chip" style="font-size: 11px; padding: 1px 4px;">${cd}</span>`).join('')}
+            <span class="weight" style="font-size: 12px; color: var(--muted);">weight ${comp.weight}%</span>
+          </div>
+          <div class="rubric-levels" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 6px;">
+            ${(comp.criteria || []).map(cr => `
+              <div class="rubric-level" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px;">
+                <div class="rubric-level-head" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                  <span class="lv-badge lv-${cr.level}" style="font-size: 10px; padding: 1px 6px;">L${cr.level}</span>
+                  <span class="weight" style="font-size: 11px; font-weight: 600; color: var(--muted);">${cr.score_min}–${cr.score_max}</span>
+                </div>
+                <div style="font-size: 12px; font-weight: 600; margin-bottom: 4px;">${cr.label}</div>
+                <ul style="margin: 0; padding-left: 15px; font-size: 11px; color: #475569;">
+                  ${(cr.subjects || []).map(s => `<li>${s}</li>`).join('')}
+                </ul>
+              </div>`).join('')}
+          </div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+loadPortfolio();
+</script>
+{% endblock %}
