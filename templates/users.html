@@ -13,8 +13,10 @@
 </section>
 
 <section class="card">
-  <div class="table-toolbar">
+  <div class="table-toolbar" style="margin-bottom: 16px; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
     <input type="text" id="user-search" placeholder="Search by name…" class="search-input">
+    <button class="btn btn-primary" id="btn-filter">Filter</button>
+    <button class="btn btn-outline" id="btn-show-all">Show All</button>
   </div>
   <div class="table-wrap">
     <table class="table" id="user-table">
@@ -118,15 +120,23 @@ function renderPagination(data) {
   }));
 }
 
-const searchInput = document.getElementById('user-search');
-let searchTimer;
-searchInput.addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => {
-    currentSearch = searchInput.value.trim();
-    currentPage = 1;
-    loadUsers();
-  }, 300);
+function triggerUserFilter() {
+  currentSearch = document.getElementById('user-search').value.trim();
+  currentPage = 1;
+  loadUsers();
+}
+
+document.getElementById('btn-filter').addEventListener('click', triggerUserFilter);
+document.getElementById('user-search').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    triggerUserFilter();
+  }
+});
+document.getElementById('btn-show-all').addEventListener('click', () => {
+  document.getElementById('user-search').value = '';
+  currentSearch = '';
+  currentPage = 1;
+  loadUsers();
 });
 
 function openUserModal(id) {
