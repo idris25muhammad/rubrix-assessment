@@ -1,0 +1,375 @@
+{
+  "rubrik_penilaian_pbl": {
+    "1_partisipatif": {
+      "bobot_total": "20%",
+      "sub_komponen": [
+        {
+          "nama": "Teamwork",
+          "bobot": "10%",
+          "kriteria_level": {
+            "level_1": [
+              "Sama sekali tidak berpartisipasi dan pasif dalam kegiatan kelompok.",
+              "Sering memicu konflik atau enggan berkomunikasi dengan tim.",
+              "Tidak mau menerima masukan maupun pembagian tugas dari tim."
+            ],
+            "level_2": [
+              "Jarang hadir/berkontribusi dalam diskusi kelompok tanpa alasan jelas.",
+              "Hanya bekerja jika ditegur atau diperintah secara eksplisit oleh anggota lain.",
+              "Kurang terbuka terhadap kritik dan masukan dari rekan setim."
+            ],
+            "level_3": [
+              "Hadir dan berkontribusi sesuai pembagian tugas minimal yang disepakati.",
+              "Dapat berkomunikasi dengan cukup baik meskipun jarang mengambil inisiatif.",
+              "Menerima masukan tim dengan kooperatif."
+            ],
+            "level_4": [
+              "Aktif berpartisipasi dan menyelesaikan tanggung jawab kelompok dengan tepat waktu.",
+              "Membangun komunikasi positif dan membantu anggota tim yang mengalami kesulitan.",
+              "Mampu menerima serta memberikan umpan balik secara konstruktif."
+            ],
+            "level_5": [
+              "Menunjukkan kepemimpinan positif dan mendorong kolaborasi secara proaktif.",
+              "Menjadi penengah dan penyelesai masalah saat terjadi perbedaan pendapat.",
+              "Secara konsisten menjaga dinamika dan produktivitas kelompok di tingkat tertinggi."
+            ]
+          }
+        },
+        {
+          "nama": "Profesionalitas",
+          "bobot": "10%",
+          "kriteria_level": {
+            "level_1": [
+              "Sering melanggar etika akademis dan tata tertib.",
+              "Tidak menghargai dosen maupun sesama mahasiswa dalam proses pembelajaran.",
+              "Sering terlambat dan tidak bertanggung jawab atas tugas yang diberikan."
+            ],
+            "level_2": [
+              "Kurang disiplin terkait tenggat waktu dan aturan perkuliahan.",
+              "Menunjukkan sikap kurang peduli terhadap etika akademik dan kerja.",
+              "Respon lambat dan cenderung acuh ketika dikontak terkait tugas."
+            ],
+            "level_3": [
+              "Mematuhi tata tertib dan etika akademis dasar dengan baik.",
+              "Hadir tepat waktu dan menyelesaikan tanggung jawab secara memadai.",
+              "Bersikap sopan dan menghargai lingkungan belajar."
+            ],
+            "level_4": [
+              "Konsisten menunjukkan kedisiplinan tinggi dalam waktu dan komitmen tugas.",
+              "Menjaga integritas akademis dan etika kerja yang tinggi.",
+              "Menunjukkan inisiatif dan kemandirian dalam proses belajar."
+            ],
+            "level_5": [
+              "Menjadi teladan dalam hal integritas, etika, dan keandalan.",
+              "Mampu mengelola waktu dan prioritas secara mandiri dengan sangat matang.",
+              "Proaktif dan adaptif terhadap tantangan atau perubahan instruksi."
+            ]
+          }
+        }
+      ]
+    },
+    "2_tugas": {
+      "bobot_total": "15%",
+      "sub_komponen": [
+        {
+          "nama": "Laporan Tugas Praktikum",
+          "bobot": "15%",
+          "kriteria_level": {
+            "level_1": [
+              "Laporan tidak dikumpulkan atau jauh melenceng dari format/instruksi.",
+              "Terindikasi kuat melakukan pelanggaran etika penulisan karya akademik.",
+              "Data, analisis, dan kesimpulan sama sekali tidak relevan."
+            ],
+            "level_2": [
+              "Format laporan tidak rapi dan banyak komponen utama yang hilang.",
+              "Sajian data praktikum tidak lengkap dan analisis minim/tanpa dasar teoritis.",
+              "Pengumpulan keterlambatan tanpa konfirmasi."
+            ],
+            "level_3": [
+              "Format laporan sesuai panduan dengan struktur yang memadai.",
+              "Data praktikum disajikan lengkap, meski analisis masih bersifat mendasar.",
+              "Kesimpulan mencakup poin utama praktikum walau kurang mendalam."
+            ],
+            "level_4": [
+              "Laporan disusun rapi, terstruktur, dan menggunakan bahasa teknis yang baik.",
+              "Analisis data logis, mengaitkan hasil praktik dengan konsep teoritis.",
+              "Kesimpulan tepat dan didukung oleh pembahasan yang runtut."
+            ],
+            "level_5": [
+              "Sangat komprehensif, terstruktur profesional, dan menyajikan visualisasi data yang jelas.",
+              "Analisis sangat mendalam dengan evaluasi kritis dan referensi yang relevan.",
+              "Memberikan rekomendasi atau wawasan kritis dari temuan praktikum."
+            ]
+          }
+        }
+      ]
+    },
+    "3_kuis": {
+      "bobot_total": "5%",
+      "sub_komponen": [
+        {
+          "nama": "Kuis Teoritis",
+          "bobot": "5%",
+          "kriteria_level": {
+            "level_1": [
+              "Sebagian besar atau seluruh jawaban salah.",
+              "Sama sekali tidak memahami konsep dasar yang diuji.",
+              "Tidak menyelesaikan kuis atau terindikasi kecurangan."
+            ],
+            "level_2": [
+              "Hanya menguasai sedikit materi dasar.",
+              "Banyak terjadi miskonsepsi pada istilah dan prinsip utama.",
+              "Jawaban tidak runtut atau meragukan."
+            ],
+            "level_3": [
+              "Menguasai konsep dasar dengan cukup baik.",
+              "Mampu menjawab soal-soal tingkat pemahaman/aplikasi sederhana.",
+              "Masih ada beberapa kekeliruan pada materi yang lebih kompleks."
+            ],
+            "level_4": [
+              "Menguasai sebagian besar materi dengan akurat.",
+              "Penjelasan jawaban runtut dan menggunakan istilah teknis yang tepat.",
+              "Sedikit kekeliruan hanya pada detail kecil/soal analisis tinggi."
+            ],
+            "level_5": [
+              "Menguasai seluruh materi kuis secara sempurna/hampir sempurna.",
+              "Mampu menjawab soal-soal analisis kompleks dengan tepat dan logis.",
+              "Pemahaman konsep sangat kokoh tanpa miskonsepsi."
+            ]
+          }
+        }
+      ]
+    },
+    "4_ats": {
+      "bobot_total": "15%",
+      "sub_komponen": [
+        {
+          "nama": "Pemahaman Teoritis / Konseptual",
+          "bobot": "10%",
+          "kriteria_level": {
+            "level_1": [
+              "Gagal menjelaskan konsep-konsep utama materi perkuliahan.",
+              "Jawaban tidak relevan dengan pertanyaan yang diberikan.",
+              "Tidak mampu menghubungkan antar konsep dasar."
+            ],
+            "level_2": [
+              "Pemahaman konsep bersifat hafalan tanpa pemahaman mendalam.",
+              "Sering keliru dalam menerapkan definisi, rumusan, atau teori.",
+              "Penjelasan kurang terstruktur dan membingungkan."
+            ],
+            "level_3": [
+              "Memahami definisi dan konsep utama dengan benar.",
+              "Mampu menjelaskan ulang konsep dengan kalimat sendiri secara cukup jelas.",
+              "Dapat mengidentifikasi penerapan konsep pada kasus sederhana."
+            ],
+            "level_4": [
+              "Memahami konsep secara komprehensif dan runtut.",
+              "Mampu mengorelasikan beberapa konsep untuk memecahkan masalah.",
+              "Menggunakan argumen teoritis yang tepat dan berbasis logika."
+            ],
+            "level_5": [
+              "Penguasaan konsep sangat mendalam dan kritis.",
+              "Mampu menganalisis masalah kompleks serta memberikan solusi teoritis yang presisi.",
+              "Menunjukkan sintesis pemikiran yang orisinal dan komprehensif."
+            ]
+          }
+        },
+        {
+          "nama": "Praktik Lab Terstruktur",
+          "bobot": "5%",
+          "kriteria_level": {
+            "level_1": [
+              "Tidak mampu menjalankan prosedur praktikum dasar atau terjadi kesalahan fatal.",
+              "Tidak selesai dan tidak mampu menyelesaikan masalah secara mandiri.",
+              "Mengabaikan standar operasional dan aturan keselamatan kerja."
+            ],
+            "level_2": [
+              "Membutuhkan bimbingan konstan untuk mengikuti prosedur standar.",
+              "Proses pengerjaan lambat dan sering melakukan kesalahan teknis mendasar.",
+              "Hasil praktik belum sesuai dengan spesifikasi yang ditentukan."
+            ],
+            "level_3": [
+              "Mampu menjalankan prosedur praktikum sesuai langkah-langkah panduan.",
+              "Dapat menyelesaikan tugas praktik tepat waktu dengan bimbingan minim.",
+              "Hasil praktik memenuhi spesifikasi/kriteria minimal."
+            ],
+            "level_4": [
+              "Melakukan praktik dengan terampil, mandiri, dan efisien.",
+              "Mampu melakukan penanganan kendala awal jika terjadi masalah teknis.",
+              "Hasil praktik akurat dan sesuai dengan standar yang diharapkan."
+            ],
+            "level_5": [
+              "Penguasaan keterampilan praktik sangat mahir dan presisi.",
+              "Cepat dan tepat dalam mendiagnosis serta memecahkan masalah teknis kompleks.",
+              "Bekerja sangat sistematis, rapi, dan mematuhi standar terbaik."
+            ]
+          }
+        }
+      ]
+    },
+    "5_aas": {
+      "bobot_total": "15%",
+      "sub_komponen": [
+        {
+          "nama": "Pemahaman Teoritis / Konseptual",
+          "bobot": "10%",
+          "kriteria_level": {
+            "level_1": [
+              "Gagal menjelaskan konsep-konsep utama materi perkuliahan.",
+              "Jawaban tidak relevan dengan pertanyaan yang diberikan.",
+              "Tidak mampu menghubungkan antar konsep dasar."
+            ],
+            "level_2": [
+              "Pemahaman konsep bersifat hafalan tanpa pemahaman mendalam.",
+              "Sering keliru dalam menerapkan definisi, rumusan, atau teori.",
+              "Penjelasan kurang terstruktur dan membingungkan."
+            ],
+            "level_3": [
+              "Memahami definisi dan konsep utama dengan benar.",
+              "Mampu menjelaskan ulang konsep dengan kalimat sendiri secara cukup jelas.",
+              "Dapat mengidentifikasi penerapan konsep pada kasus sederhana."
+            ],
+            "level_4": [
+              "Memahami konsep secara komprehensif dan runtut.",
+              "Mampu mengorelasikan beberapa konsep untuk memecahkan masalah.",
+              "Menggunakan argumen teoritis yang tepat dan berbasis logika."
+            ],
+            "level_5": [
+              "Penguasaan konsep sangat mendalam dan kritis.",
+              "Mampu menganalisis masalah kompleks serta memberikan solusi teoritis yang presisi.",
+              "Menunjukkan sintesis pemikiran yang orisinal dan komprehensif."
+            ]
+          }
+        },
+        {
+          "nama": "Praktik Lab Terstruktur",
+          "bobot": "5%",
+          "kriteria_level": {
+            "level_1": [
+              "Tidak mampu menjalankan prosedur praktikum dasar atau terjadi kesalahan fatal.",
+              "Tidak selesai dan tidak mampu menyelesaikan masalah secara mandiri.",
+              "Mengabaikan standar operasional dan aturan keselamatan kerja."
+            ],
+            "level_2": [
+              "Membutuhkan bimbingan konstan untuk mengikuti prosedur standar.",
+              "Proses pengerjaan lambat dan sering melakukan kesalahan teknis mendasar.",
+              "Hasil praktik belum sesuai dengan spesifikasi yang ditentukan."
+            ],
+            "level_3": [
+              "Mampu menjalankan prosedur praktikum sesuai langkah-langkah panduan.",
+              "Dapat menyelesaikan tugas praktik tepat waktu dengan bimbingan minim.",
+              "Hasil praktik memenuhi spesifikasi/kriteria minimal."
+            ],
+            "level_4": [
+              "Melakukan praktik dengan terampil, mandiri, dan efisien.",
+              "Mampu melakukan penanganan kendala awal jika terjadi masalah teknis.",
+              "Hasil praktik akurat dan sesuai dengan standar yang diharapkan."
+            ],
+            "level_5": [
+              "Penguasaan keterampilan praktik sangat mahir dan presisi.",
+              "Cepat dan tepat dalam mendiagnosis serta memecahkan masalah teknis kompleks.",
+              "Bekerja sangat sistematis, rapi, dan mematuhi standar terbaik."
+            ]
+          }
+        }
+      ]
+    },
+    "6_proyek": {
+      "bobot_total": "30%",
+      "sub_komponen": [
+        {
+          "nama": "Perancangan",
+          "bobot": "5%",
+          "kriteria_level": {
+            "level_1": [
+              "Dokumen perancangan tidak memuat analisis kebutuhan dasar proyek.",
+              "Desain atau arsitektur proyek tidak jelas, tidak realistis, atau asal-asalan.",
+              "Tidak ada penjadwalan atau alokasi sumber daya yang logis."
+            ],
+            "level_2": [
+              "Analisis masalah dan kebutuhan proyek masih dangkal.",
+              "Spesifikasi rancangan kurang detail dan masih banyak celah logika.",
+              "Perencanaan proyek kurang terstruktur dan sulit dieksekusi."
+            ],
+            "level_3": [
+              "Dokumen memuat kebutuhan dasar dan rancangan yang cukup jelas.",
+              "Metodologi atau tahapan perancangan masuk akal dan dapat diimplementasikan.",
+              "Penjadwalan proyek cukup terstruktur walau kurang detail pada estimasi risiko."
+            ],
+            "level_4": [
+              "Rancangan detail, terstruktur, dan didukung analisis kebutuhan yang kuat.",
+              "Arsitektur atau desain sistem fleksibel dan berfokus pada solusi.",
+              "Memuat rencana kerja, alokasi tugas, dan mitigasi risiko yang baik."
+            ],
+            "level_5": [
+              "Dokumen perancangan berstandar profesional, komprehensif, dan sangat matang.",
+              "Solusi desain sangat inovatif, efisien, dan memperhitungkan batasan sistem.",
+              "Perencanaan proyek sangat realistis, detail, dan mencakup kontinjensi risiko."
+            ]
+          }
+        },
+        {
+          "nama": "Presentasi",
+          "bobot": "5%",
+          "kriteria_level": {
+            "level_1": [
+              "Tidak siap berpresentasi, materi slide tidak terbaca atau asal buat.",
+              "Penyampaian sangat membingungkan dan tidak mampu menjawab pertanyaan.",
+              "Tidak ada pembagian peran yang jelas antar anggota tim saat presentasi."
+            ],
+            "level_2": [
+              "Materi presentasi terlalu padat teks dan tidak menarik secara visual.",
+              "Penyampaian terkesan membaca slide tanpa pemahaman mendalam.",
+              "Jawaban atas pertanyaan penguji atau audiens kurang relevan."
+            ],
+            "level_3": [
+              "Slide presentasi informatif dan terstruktur dengan cukup baik.",
+              "Penyampaian jelas dan dapat dipahami oleh audiens.",
+              "Mampu menjawab sebagian besar pertanyaan dengan cukup baik."
+            ],
+            "level_4": [
+              "Media presentasi dibuat menarik, komunikatif, dan profesional.",
+              "Penyampaian sangat lugas, percaya diri, dan manajemen waktu tepat.",
+              "Mampu menjawab pertanyaan secara kritis dan mempertahankan argumen dengan baik."
+            ],
+            "level_5": [
+              "Presentasi sangat persuasif, komunikatif, dan menarik perhatian audiens.",
+              "Penguasaan panggung dan kolaborasi tim saat presentasi sangat solid.",
+              "Mampu merespons pertanyaan sulit dengan jawaban solutif dan akademis."
+            ]
+          }
+        },
+        {
+          "nama": "Hasil Produk",
+          "bobot": "20%",
+          "kriteria_level": {
+            "level_1": [
+              "Hasil akhir tidak selesai, tidak berfungsi, atau tidak diserahkan sesuai tenggat waktu.",
+              "Sama sekali tidak memenuhi spesifikasi teknis maupun batasan masalah proyek yang disepakati.",
+              "Kualitas pengerjaan sangat buruk dengan banyak kesalahan fatal pada hasil akhir."
+            ],
+            "level_2": [
+              "Hasil akhir hanya selesai sebagian; fitur utama, tahapan konfigurasi, atau elemen analisis penting belum terpenuhi.",
+              "Banyak terdapat kesalahan teknis mendasar pada luaran yang dihasilkan.",
+              "Kualitas penyajian luaran atau dokumentasi kurang rapi, membingungkan, atau belum layak guna."
+            ],
+            "level_3": [
+              "Hasil akhir selesai dan berhasil memenuhi seluruh kriteria serta spesifikasi minimal yang ditentukan.",
+              "Prosedur, sistem, atau dokumen menyajikan data dan fungsi secara benar walau belum mendalam.",
+              "Kualitas pengerjaan cukup rapi dan akurat, meskipun masih terdapat kendala atau kekurangan minor."
+            ],
+            "level_4": [
+              "Hasil akhir selesai dengan kualitas tinggi, teruji, dan siap digunakan atau ditindaklanjuti secara teknis.",
+              "Mengikuti standar acuan industri dan metodologi kerja dengan sangat baik.",
+              "Penyajian, dokumentasi, atau visualisasi luaran disusun secara profesional, sistematis, dan mudah dipahami."
+            ],
+            "level_5": [
+              "Hasil akhir bekerja sempurna dan lengkap, memiliki kedalaman teknis luar biasa, serta memberikan nilai tambah atau inovasi.",
+              "Menerapkan standar dan metodologi profesional tingkat lanjut secara konsisten.",
+              "Hasil luaran berpotensi langsung diterapkan pada lingkungan riil atau dijadikan acuan referensi."
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

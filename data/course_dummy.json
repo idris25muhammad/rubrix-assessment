@@ -5,6 +5,7 @@
   "semester": "Ganjil 2026/2027",
   "study_program": "RKS",
   "is_pbl": false,
+  "target_attainment": 80,
   "categories": [
     {
       "key": "partisipatif",

@@ -1400,4 +1400,14 @@ td.nim .nim-input:focus, td.name .name-input:focus {
   .assess-table-wrap.scroll {
     max-height: none !important;
   }
+
+  /* Force grades table to start on a new page and prevent row split */
+  #assess-sheet-card {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+  .table.sheet tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
 }

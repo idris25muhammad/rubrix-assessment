@@ -150,6 +150,48 @@ function renderCharts(data) {
   charts = [];
   const levels = data.criteria_levels;
 
+  const targetVal = data.course.target_attainment !== undefined ? data.course.target_attainment : 80;
+
+  const targetVerticalLinePlugin = {
+    id: 'targetVerticalLine',
+    afterDraw(chart) {
+      const { ctx, chartArea: { top, bottom }, scales: { x } } = chart;
+      const xCoor = x.getPixelForValue(targetVal);
+      ctx.save();
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(xCoor, top);
+      ctx.lineTo(xCoor, bottom);
+      ctx.stroke();
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(`Target: ${targetVal}`, xCoor + 4, top + 15);
+      ctx.restore();
+    }
+  };
+
+  const targetHorizontalLinePlugin = {
+    id: 'targetHorizontalLine',
+    afterDraw(chart) {
+      const { ctx, chartArea: { left, right }, scales: { y } } = chart;
+      const yCoor = y.getPixelForValue(targetVal);
+      ctx.save();
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(left, yCoor);
+      ctx.lineTo(right, yCoor);
+      ctx.stroke();
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(`Target: ${targetVal}`, left + 5, yCoor - 5);
+      ctx.restore();
+    }
+  };
+
   const grades = ['A', 'B', 'C', 'D', 'E'];
   const gradeCounts = grades.map(g => data.grade_dist[g] || 0);
   const totalGrades = gradeCounts.reduce((a, b) => a + b, 0);
@@ -227,7 +269,8 @@ function renderCharts(data) {
       indexAxis: 'y',
       plugins: { legend: { display: false } },
       scales: { x: { min: 0, max: 100, title: { display: true, text: 'mean (0–100)' } } }
-    }
+    },
+    plugins: [targetVerticalLinePlugin]
   }));
 
   charts.push(new Chart(document.getElementById('chart-breakdown'), {
@@ -277,7 +320,8 @@ function renderCharts(data) {
     options: {
       plugins: { legend: { display: false } },
       scales: { y: { min: 0, max: 100, title: { display: true, text: 'mean (0–100)' } } }
-    }
+    },
+    plugins: [targetHorizontalLinePlugin]
   }));
 
   charts.push(new Chart(document.getElementById('chart-code-grade'), {

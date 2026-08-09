@@ -149,6 +149,17 @@
             <span>Program Studi</span>
             <select id="wizard-program"></select>
           </label>
+          <label class="upload-field" style="grid-column: span 2; margin-top: 10px;">
+            <span>Target Attainment (Skor): <b id="wizard-target-attainment-val">80</b></span>
+            <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; margin-bottom: 2px;">
+              <span style="font-size: 13px; color: var(--muted);">0</span>
+              <input type="range" id="wizard-target-attainment" min="0" max="100" step="5" value="80" style="flex: 1; cursor: pointer; accent-color: var(--primary);">
+              <span style="font-size: 13px; color: var(--muted);">100</span>
+            </div>
+            <p class="wizard-hint" style="margin-top: 4px; font-size: 12.5px; color: var(--muted); line-height: 1.4;">
+              * Skor target minimum mahasiswa pada suatu CPL/PI agar dinilai telah mencapai kompetensi.
+            </p>
+          </label>
         </div>
       </div>
 
@@ -386,6 +397,10 @@ async function openEdit(id) {
   document.getElementById('wizard-semester').value = d.course.semester || '';
   document.getElementById('wizard-program').value = d.course.study_program || '';
   document.getElementById('wizard-pbl').checked = !!d.course.is_pbl;
+  
+  const targetVal = d.course.target_attainment !== undefined ? d.course.target_attainment : 80;
+  document.getElementById('wizard-target-attainment').value = targetVal;
+  document.getElementById('wizard-target-attainment-val').textContent = targetVal;
 
   const cplWrap = document.getElementById('wizard-cpl-list');
   cplWrap.innerHTML = '';
@@ -471,8 +486,20 @@ document.getElementById('btn-show-all').addEventListener('click', () => {
   loadCourses('', 1);
 });
 
+async function loadDefaultInstruments() {
+  try {
+    const res = await fetch('/static/data/default-instrument-asesment.json');
+    if (res.ok) {
+      defaultInstruments = await res.json();
+    }
+  } catch (e) {
+    console.error('Failed to load default instruments:', e);
+  }
+}
+
 loadCourses();
 loadDashboard();
+loadDefaultInstruments();
 
 const modal = document.getElementById('upload-modal');
 const dropzone = document.getElementById('dropzone');
@@ -632,6 +659,18 @@ let wizardStep = 1;
 let soPi = { student_outcome: [], proficiency_levels: [] };
 let soByCode = {};
 let programs = [];
+let defaultInstruments = null;
+let weightState = {};
+let criteriaDraft = {}; // component key -> array of {label, score_min, score_max, subject}
+
+const CRIT_LABELS = ['Sangat Kurang', 'Kurang', 'Cukup', 'Baik', 'Sangat Baik'];
+const CRIT_DEFAULT = [
+  { score_min: 0, score_max: 30 },
+  { score_min: 31, score_max: 55 },
+  { score_min: 56, score_max: 70 },
+  { score_min: 75, score_max: 84 },
+  { score_min: 85, score_max: 100 },
+];
 
 const wizardModal = document.getElementById('wizard-modal');
 
@@ -649,8 +688,15 @@ async function openWizard() {
   document.getElementById('wizard-semester').value = '';
   document.getElementById('wizard-pbl').checked = false;
   document.getElementById('wizard-status').innerHTML = '';
+  document.getElementById('wizard-target-attainment').value = 80;
+  document.getElementById('wizard-target-attainment-val').textContent = '80';
   weightState = {};
   criteriaDraft = {};
+  
+  if (!defaultInstruments) {
+    await loadDefaultInstruments();
+  }
+
   try {
     soPi = await fetch(u('so_pi')).then(r => r.json());
     soByCode = {};
@@ -685,6 +731,7 @@ function saveWizardDraft() {
     semester: document.getElementById('wizard-semester').value,
     study_program: document.getElementById('wizard-program').value,
     is_pbl: document.getElementById('wizard-pbl').checked,
+    target_attainment: document.getElementById('wizard-target-attainment').value,
     cpls: collectCpls(),
     categories: collectComponents(),
     weights: weightState,
@@ -704,6 +751,11 @@ function restoreWizardDraft() {
   document.getElementById('wizard-semester').value = d.semester || '';
   if (d.study_program) document.getElementById('wizard-program').value = d.study_program;
   document.getElementById('wizard-pbl').checked = !!d.is_pbl;
+  
+  const targetVal = d.target_attainment !== undefined ? d.target_attainment : 80;
+  document.getElementById('wizard-target-attainment').value = targetVal;
+  document.getElementById('wizard-target-attainment-val').textContent = targetVal;
+
   // CPL rows
   const cplWrap = document.getElementById('wizard-cpl-list');
   cplWrap.innerHTML = '';
@@ -814,11 +866,53 @@ function buildWizardCategories() {
         <button class="btn btn-outline btn-sm" type="button">+ Tambah komponen</button>
       </div>
     </div>`).join('');
+
+  const mapping = {
+    'partisipatif': '1_partisipatif',
+    'tugas': '2_tugas',
+    'kuis': '3_kuis',
+    'ats': '4_ats',
+    'aas': '5_aas',
+    'proyek': '6_proyek'
+  };
+
   wrap.querySelectorAll('.wizard-cat').forEach(card => {
+    const catKey = card.dataset.cat;
     const addBtn = card.querySelector('.wizard-cat-body > button');
-    addBtn.addEventListener('click', () => addWizardComponent(card.dataset.cat));
-    // Seed one default component named after the category (e.g. "Kuis").
-    addWizardComponent(card.dataset.cat, { name: card.dataset.cat === 'ats' ? 'ATS' : card.dataset.cat === 'aas' ? 'AAS' : card.querySelector('.wizard-cat-head b').textContent });
+    addBtn.addEventListener('click', () => addWizardComponent(catKey));
+
+    const jsonKey = mapping[catKey];
+    const pblData = defaultInstruments && defaultInstruments.rubrik_penilaian_pbl;
+    const catData = pblData && pblData[jsonKey];
+    
+    if (catData && Array.isArray(catData.sub_komponen) && catData.sub_komponen.length > 0) {
+      catData.sub_komponen.forEach(sub => {
+        // Seed the component
+        addWizardComponent(catKey, { name: sub.nama });
+        
+        // Seed the weight (convert "10%" -> 10)
+        const ckey = `${catKey}|${sub.nama}`;
+        const weightVal = parseFloat(sub.bobot) || 0;
+        weightState[ckey] = weightVal;
+
+        // Seed the criteria (levels 1-5)
+        const levels = ['level_1', 'level_2', 'level_3', 'level_4', 'level_5'];
+        criteriaDraft[ckey] = levels.map((lvlKey, idx) => {
+          const bulletPoints = sub.kriteria_level[lvlKey] || [];
+          const subjectHtml = bulletPoints.length ? `<ul>${bulletPoints.map(p => `<li>${p}</li>`).join('')}</ul>` : '';
+          return {
+            label: CRIT_LABELS[idx],
+            score_min: CRIT_DEFAULT[idx].score_min,
+            score_max: CRIT_DEFAULT[idx].score_max,
+            subject: subjectHtml
+          };
+        });
+      });
+    } else {
+      // Fallback to default single component
+      const defName = catKey === 'ats' ? 'ATS' : catKey === 'aas' ? 'AAS' : card.querySelector('.wizard-cat-head b').textContent;
+      addWizardComponent(catKey, { name: defName });
+    }
   });
 }
 
@@ -927,7 +1021,6 @@ function collectComponents() {
 }
 
 // ---------- Step 4: PBL + weights ----------
-let weightState = {};
 
 function buildWizardWeights() {
   const wrap = document.getElementById('wizard-weights');
@@ -1038,16 +1131,6 @@ function collectWeights() {
 }
 
 // ---------- Step 5: criteria ----------
-let criteriaDraft = {};  // component key -> array of {label, score_min, score_max, subject}
-
-const CRIT_LABELS = ['Sangat Kurang', 'Kurang', 'Cukup', 'Baik', 'Sangat Baik'];
-const CRIT_DEFAULT = [
-  { score_min: 0, score_max: 30 },
-  { score_min: 31, score_max: 55 },
-  { score_min: 56, score_max: 70 },
-  { score_min: 75, score_max: 84 },
-  { score_min: 85, score_max: 100 },
-];
 
 function buildWizardCriteria() {
   const wrap = document.getElementById('wizard-criteria');
@@ -1273,6 +1356,7 @@ async function submitWizard() {
     semester: document.getElementById('wizard-semester').value.trim(),
     study_program: document.getElementById('wizard-program').value,
     is_pbl: document.getElementById('wizard-pbl').checked,
+    target_attainment: parseInt(document.getElementById('wizard-target-attainment').value, 10) || 80,
     cpls,
     categories,
   };
@@ -1324,6 +1408,11 @@ document.getElementById('wizard-modal').addEventListener('input', e => {
 });
 document.getElementById('wizard-modal').addEventListener('change', e => {
   if (e.target.closest('#wizard-modal')) saveWizardDraft();
+});
+
+// Target Attainment slider listener
+document.getElementById('wizard-target-attainment').addEventListener('input', e => {
+  document.getElementById('wizard-target-attainment-val').textContent = e.target.value;
 });
 </script>
 {% endblock %}

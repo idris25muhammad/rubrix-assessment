@@ -207,6 +207,7 @@ def build_rubric_from_wizard(payload):
         "semester": str(payload.get("semester", "")).strip(),
         "study_program": str(payload.get("study_program", "")).strip(),
         "is_pbl": is_pbl,
+        "target_attainment": int(payload.get("target_attainment", 80)),
         "cpls": cpls,
         "categories": categories,
     }

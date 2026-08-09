@@ -45,6 +45,11 @@ class Course(db.Model):
     owner = relationship("User", backref="courses")
 
     def to_dict(self):
+        try:
+            data = json.loads(self.raw_json)
+            target = int(data.get("target_attainment", 80))
+        except Exception:
+            target = 80
         return {
             "id": self.id,
             "owner_id": self.owner_id,
@@ -54,6 +59,7 @@ class Course(db.Model):
             "semester": self.semester,
             "study_program": self.study_program,
             "is_pbl": bool(self.is_pbl),
+            "target_attainment": target,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
