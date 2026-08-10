@@ -1,0 +1,23 @@
+# VCS
+.git
+
+# secrets & local config
+.env
+.env.example
+
+# runtime / local data
+instance/
+*.db
+*.db-journal
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# NOTE: data/ and static/data/ are intentionally kept (course template + SO-PI seed).

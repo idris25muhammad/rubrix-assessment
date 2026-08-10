@@ -42,91 +42,17 @@ sudo usermod -aG docker $USER
 
 ## 2. Project Deployment Configuration Files
 
-Create these files in the root of your project directory (`rubrix-assessment`).
+The deployment files already live in the repository root:
+- `Dockerfile` — Python 3.11 image; installs dependencies and Gunicorn; on startup runs
+  `flask db upgrade` (applies all migrations, including the SO-PI / sharing schema) and
+  boots the app via the `app:create_app()` factory (which also seeds the default accounts
+  and the RKS SO-PI set).
+- `docker-compose.yml` — `mysql:8.0` service + `web` service. The MySQL port is **not**
+  exposed to the host for security; it is only reachable inside the Docker network.
+- `.dockerignore` — keeps `venv`, `instance/`, `.env`, and build artifacts out of the image.
 
-### `Dockerfile`
-Create a `Dockerfile` file in your project root:
-```dockerfile
-# Use official slim Python runtime
-FROM python:3.11-slim
-
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV FLASK_APP=app.py
-ENV FLASK_ENV=production
-
-# Set work directory
-WORKDIR /app
-
-# Install system dependencies (required for compiling PyMySQL/Argon2 if needed)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libmariadb-dev \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir gunicorn
-
-# Copy project source code
-COPY . .
-
-# Expose port
-EXPOSE 5000
-
-# Startup script to run migrations and start gunicorn
-CMD ["sh", "-c", "flask db upgrade && gunicorn --bind 0.0.0.0:5000 --workers 4 app:create_app\\(\\)"]
-```
-
-### `docker-compose.yml`
-Create a `docker-compose.yml` file in your project root:
-```yaml
-version: '3.8'
-
-services:
-  db:
-    image: mysql:8.0
-    container_name: rubrix_mysql
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: root_password_here
-      MYSQL_DATABASE: rubrikrks
-      MYSQL_USER: rubrikrks
-      MYSQL_PASSWORD: rubrikrks_prod_password
-    volumes:
-      - mysql_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
-
-  web:
-    build: .
-    container_name: rubrix_web
-    restart: always
-    ports:
-      - "80:5000"
-    environment:
-      - RKS_SECRET_KEY=production-secret-key-change-me
-      - RKS_PORT=5000
-      - RKS_DB_ENGINE=mysql
-      - RKS_MYSQL_HOST=db
-      - RKS_MYSQL_PORT=3306
-      - RKS_MYSQL_USER=rubrikrks
-      - RKS_MYSQL_PASSWORD=rubrikrks_prod_password
-      - RKS_MYSQL_DB=rubrikrks
-    depends_on:
-      db:
-        condition: service_healthy
-
-volumes:
-  mysql_data:
-```
+Secret values come from a `.env` file in the project root (see Step 2 below) via
+`${VAR:-default}` substitution — you only need to edit `.env`, not the compose file.
 
 ---
 
@@ -141,21 +67,19 @@ cd rubrix-assessment
 ```
 
 ### Step 2: Set Up Production Environment Variables
-If you want to configure variables outside `docker-compose.yml`, create a `.env` file in the root directory:
+Create a `.env` file in the project root (Docker Compose reads it automatically):
 ```bash
 nano .env
 ```
 Add your production values:
 ```env
 RKS_SECRET_KEY=your_very_secure_random_key_here
-RKS_PORT=5000
-RKS_DB_ENGINE=mysql
-RKS_MYSQL_HOST=db
-RKS_MYSQL_PORT=3306
-RKS_MYSQL_USER=rubrikrks
-RKS_MYSQL_PASSWORD=rubrikrks_prod_password
-RKS_MYSQL_DB=rubrikrks
+MYSQL_ROOT_PASSWORD=your_root_db_password
+MYSQL_USER=rubrikrks
+MYSQL_PASSWORD=your_db_password
+MYSQL_DB=rubrikrks
 ```
+Generate a strong secret key with: `openssl rand -hex 32`
 
 ### Step 3: Run the Containers
 Start the services in the background using Docker Compose:
@@ -214,7 +138,7 @@ docker compose up -d --build web
 ```
 
 ### Backup Database (MySQL dump)
-To backup your production data, run:
+To backup your production data, run (use the password from your `.env` `MYSQL_PASSWORD`):
 ```bash
-docker exec rubrix_mysql mysqldump -u rubrikrks -prubrikrks_prod_password rubrikrks > backup.sql
+docker exec rubrix_mysql mysqldump -u rubrikrks -pYOUR_MYSQL_PASSWORD rubrikrks > backup.sql
 ```
