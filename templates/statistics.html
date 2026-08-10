@@ -432,5 +432,12 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
+
+  @media print {
+    @page {
+      size: A4 landscape;
+      margin: 10mm 12mm;
+    }
+  }
 </style>
 {% endblock %}
