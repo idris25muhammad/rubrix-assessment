@@ -151,7 +151,7 @@
           "name": "Ujian Teori AAS",
           "weight": 10,
           "cpl_pis": [
-            { "cpl": "CPL4", "so": "SO5", "pi": "5c" }
+            { "cpl": "CPL4", "so": "SO5", "pi": "5a" }
           ],
           "criteria": [
             { "level": 1, "label": "Sangat Kurang", "score_min": 0, "score_max": 30, "subjects": ["Gagal menjelaskan konsep-konsep utama materi ujian teori.", "Secara keseluruhan dinilai sangat kurang."] },
@@ -165,12 +165,12 @@
           "name": "Ujian Praktik AAS",
           "weight": 10,
           "cpl_pis": [
-            { "cpl": "CPL4", "so": "SO5", "pi": "5d" }
+            { "cpl": "CPL4", "so": "SO5", "pi": "5b" }
           ],
           "criteria": [
             { "level": 1, "label": "Sangat Kurang", "score_min": 0, "score_max": 30, "subjects": ["Tidak mampu menjalankan prosedur praktikum dasar atau terjadi kesalahan fatal.", "Secara keseluruhan dinilai sangat kurang."] },
             { "level": 2, "label": "Kurang", "score_min": 31, "score_max": 55, "subjects": ["Langkah praktikum kurang lengkap dan hasil akhir program tidak berfungsi.", "Secara keseluruhan dinilai kurang."] },
-            { "level": 3, "label": "Cukup", "score_min": 56, "score_max": 70, "subjects": ["Prosedur praktikum diselesaikan secara mandiri dan program berjalan cukup baik.", "Secara keseluruhan dinilai cukup."] },
+            { "level": 3, "label": "Cukup", "score_min": 56, "score_max": 70, "subjects": ["Prosedur praktikum diselesaikan secara mandiri and program berjalan cukup baik.", "Secara keseluruhan dinilai cukup."] },
             { "level": 4, "label": "Baik", "score_min": 71, "score_max": 89, "subjects": ["Praktikum diselesaikan dengan terstruktur dan program bebas dari kesalahan utama.", "Secara keseluruhan dinilai baik."] },
             { "level": 5, "label": "Sangat Baik", "score_min": 90, "score_max": 100, "subjects": ["Penguasaan keterampilan praktik sangat mahir, presisi, dan program dioptimalkan dengan baik.", "Secara keseluruhan dinilai sangat baik."] }
           ]
