@@ -112,16 +112,9 @@
 let chartCpl = null;
 let chartGrade = null;
 
-function u(route, ...args) {
-  const parts = ['/rubrix/sopi'];
-  if (route) parts.push(route);
-  if (args.length) parts.push(...args);
-  return parts.join('/').replace(/\/+/g, '/');
-}
-
 async function loadSemesters() {
   try {
-    const res = await fetch(u('api/statistics/semesters'));
+    const res = await fetch(u('sopi_api_statistics_semesters'));
     const semesters = await res.json();
     const select = document.getElementById('stats-semester');
     
@@ -152,7 +145,7 @@ async function loadSemesters() {
 async function loadStatistics(semester) {
   if (!semester) return;
   try {
-    const res = await fetch(u('api/statistics') + '?semester=' + encodeURIComponent(semester));
+    const res = await fetch(u('sopi_api_statistics') + '?semester=' + encodeURIComponent(semester));
     const data = await res.json();
     
     // Update labels and summary cards
