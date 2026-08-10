@@ -130,19 +130,24 @@ server {
 }
 ```
 
-If you need to serve the app under a **sub-path** (e.g.
-`https://rks.polibatam.ac.id/rubrix/`), tell Flask the script prefix via the
-`X-Script-Name` header and `location /rubrix/`:
+If the domain already hosts another site (e.g. a landing page on port 443), serve
+the app on a **dedicated HTTPS port** instead of a sub-path — that avoids prefix
+rewriting entirely. Add a separate `server` block that proxies to the loopback
+port:
 
 ```nginx
 server {
-    listen 80;
+    listen 2021 ssl;
     server_name rks.polibatam.ac.id;
 
-    location /rubrix/ {
-        proxy_pass http://127.0.0.1:5000/;
+    ssl_certificate /etc/letsencrypt/live/rks.polibatam.ac.id/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/rks.polibatam.ac.id/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
         proxy_set_header Host $host;
-        proxy_set_header X-Script-Name /rubrix;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -150,9 +155,8 @@ server {
 }
 ```
 
-**Note:** the app already enables `ProxyFix(..., x_prefix=1)` in
-`modules/__init__.py`, so the `X-Script-Name` header is honored and all `url_for`
-URLs are generated with the `/rubrix` prefix.
+This exposes the app at `https://rks.polibatam.ac.id:2021` without touching the
+landing page. Open the port in the firewall: `sudo ufw allow 2021/tcp`.
 
 ### Default Seeded Accounts
 On first startup the app seeds one `tim_kurikulum` account per study program

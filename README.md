@@ -200,25 +200,29 @@ server {
 }
 ```
 
-**Under a sub-path (e.g. `rks.polibatam.ac.id/rubrix`):**
+**On a dedicated HTTPS port (when the domain already hosts another site):**
 ```nginx
 server {
-    listen 80;
+    listen 2021 ssl;
     server_name rks.polibatam.ac.id;
 
-    location /rubrix/ {
-        proxy_pass http://127.0.0.1:5000/;
+    ssl_certificate /etc/letsencrypt/live/rks.polibatam.ac.id/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/rks.polibatam.ac.id/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
         proxy_set_header Host $host;
-        proxy_set_header X-Script-Name /rubrix;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
-> The app already enables `ProxyFix(x_for=1, x_proto=1, x_host=1, x_prefix=1)`,
-> so the `X-Script-Name` header above is honored and all `url_for` URLs are
-> prefixed with `/rubrix`.
+This serves the app at `https://rks.polibatam.ac.id:2021` without interfering
+with the existing site on port 443. Open the port in the firewall
+(`sudo ufw allow 2021/tcp`).
 
 Enable the site and reload nginx:
 ```bash

@@ -3,7 +3,6 @@ import re
 
 from flask import Flask, url_for
 from flask_migrate import Migrate
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import SECRET_KEY, SQLALCHEMY_DATABASE_URI
 from modules.models import db
@@ -26,12 +25,6 @@ def create_app():
     app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
     app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-    # Honor X-Forwarded-* and X-Script-Name headers from nginx (needed when the
-    # app is served under a sub-path such as https://host/rubrix).
-    app.wsgi_app = ProxyFix(
-        app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
-    )
 
     db.init_app(app)
     Migrate(app, db)
