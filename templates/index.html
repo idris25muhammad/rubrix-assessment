@@ -151,10 +151,10 @@
             <select id="wizard-program"></select>
           </label>
           <label class="upload-field" style="grid-column: span 2; margin-top: 10px;">
-            <span>Target Attainment (Skor): <b id="wizard-target-attainment-val">80</b></span>
+            <span>Target Attainment (Skor): <b id="wizard-target-attainment-val">70</b></span>
             <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; margin-bottom: 2px;">
               <span style="font-size: 13px; color: var(--muted);">0</span>
-              <input type="range" id="wizard-target-attainment" min="0" max="100" step="5" value="80" style="flex: 1; cursor: pointer; accent-color: var(--primary);">
+              <input type="range" id="wizard-target-attainment" min="0" max="100" step="5" value="70" style="flex: 1; cursor: pointer; accent-color: var(--primary);">
               <span style="font-size: 13px; color: var(--muted);">100</span>
             </div>
             <p class="wizard-hint" style="margin-top: 4px; font-size: 12.5px; color: var(--muted); line-height: 1.4;">
@@ -485,7 +485,7 @@ async function openEdit(id) {
   buildWizardCriteria();
   document.getElementById('wizard-pbl').checked = !!d.course.is_pbl;
   
-  const targetVal = d.course.target_attainment !== undefined ? d.course.target_attainment : 80;
+  const targetVal = d.course.target_attainment !== undefined ? d.course.target_attainment : 70;
   document.getElementById('wizard-target-attainment').value = targetVal;
   document.getElementById('wizard-target-attainment-val').textContent = targetVal;
 
@@ -867,8 +867,8 @@ async function openWizard() {
   setSemesterValue('');
   document.getElementById('wizard-pbl').checked = false;
   document.getElementById('wizard-status').innerHTML = '';
-  document.getElementById('wizard-target-attainment').value = 80;
-  document.getElementById('wizard-target-attainment-val').textContent = '80';
+  document.getElementById('wizard-target-attainment').value = 70;
+  document.getElementById('wizard-target-attainment-val').textContent = '70';
   weightState = {};
   criteriaDraft = {};
   
@@ -929,7 +929,7 @@ function restoreWizardDraft() {
   if (d.study_program) document.getElementById('wizard-program').value = d.study_program;
   document.getElementById('wizard-pbl').checked = !!d.is_pbl;
   
-  const targetVal = d.target_attainment !== undefined ? d.target_attainment : 80;
+  const targetVal = d.target_attainment !== undefined ? d.target_attainment : 70;
   document.getElementById('wizard-target-attainment').value = targetVal;
   document.getElementById('wizard-target-attainment-val').textContent = targetVal;
 
@@ -1586,7 +1586,7 @@ async function submitWizard() {
     semester: document.getElementById('wizard-semester').value.trim(),
     study_program: document.getElementById('wizard-program').value,
     is_pbl: document.getElementById('wizard-pbl').checked,
-    target_attainment: parseInt(document.getElementById('wizard-target-attainment').value, 10) || 80,
+    target_attainment: parseInt(document.getElementById('wizard-target-attainment').value, 10) || 70,
     cpls,
     categories,
   };
