@@ -50,12 +50,12 @@ RubriX is a web-based course assessment application designed to help lecturers e
 ├── requirements.txt        # Backend dependencies
 ├── migrations/             # Database migrations schema
 ├── modules/                # Core application package
-│   ├── blueprints/         # Flask routes (courses, auth, etc.)
+│   ├── blueprints/         # Flask route blueprints (courses, sopi, etc.)
 │   ├── auth.py             # Authentication middleware & helpers
 │   ├── excel.py            # Excel export/import logic
 │   ├── models.py           # SQLAlchemy database models
 │   ├── portfolio.py        # Analytics calculations
-│   └── seeder.py           # Seeder helper for course data
+│   └── seed.py             # Seeds default accounts & RKS SO-PI set
 ├── static/                 # Static assets (CSS, JS, fonts, images)
 │   ├── css/style.css       # Core stylesheets
 │   └── data/so-pi.json     # Seed source for the RKS SO-PI set
@@ -64,17 +64,20 @@ RubriX is a web-based course assessment application designed to help lecturers e
 
 ---
 
-## Installation & Setup
+## Installation & Setup (Development)
 
 ### 1. Clone the Project & Set Up Virtual Environment
 ```bash
-# Navigate to the project directory
-cd rubrikrks
+git clone https://github.com/idris25muhammad/rubrix-assessment.git
+cd rubrix-assessment
 
 # Create virtual environment
-python -m venv venv
+python3 -m venv venv
 
-# Activate virtual environment (Windows Powershell)
+# Activate virtual environment
+# Linux/macOS:
+source venv/bin/activate
+# Windows PowerShell:
 .\venv\Scripts\Activate.ps1
 ```
 
@@ -91,7 +94,6 @@ cp .env.example .env
 
 ### 4. Initialize Database & Run Migrations
 ```bash
-# Run migrations to update database schema
 flask db upgrade
 ```
 
@@ -101,6 +103,134 @@ Run the Flask development server:
 flask run --debug
 ```
 Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your web browser.
+
+---
+
+## Production Deployment (without Docker)
+
+The app is a plain Python/Flask app, so it can be deployed directly on the server with
+`gunicorn` behind nginx — no Docker required. The steps below target an Ubuntu/Debian
+server.
+
+### 1. Install System Dependencies
+```bash
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip git nginx mysql-server
+```
+
+### 2. Clone the Project & Create a venv
+```bash
+sudo mkdir -p /opt/rubrix
+sudo chown -R $USER:$USER /opt/rubrix
+cd /opt/rubrix
+git clone https://github.com/idris25muhammad/rubrix-assessment.git .
+python3 -m venv venv
+venv/bin/pip install -r requirements.txt
+venv/bin/pip install gunicorn
+```
+
+### 3. Create the Database
+```sql
+mysql -u root -p
+CREATE DATABASE rubrikrks CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'rubrikrks'@'localhost' IDENTIFIED BY 'your_db_password';
+GRANT ALL PRIVILEGES ON rubrikrks.* TO 'rubrikrks'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+### 4. Configure Environment Variables
+Create `/opt/rubrix/.env`:
+```env
+RKS_SECRET_KEY=your_very_secure_random_key_here
+RKS_PORT=5000
+RKS_DB_ENGINE=mysql
+RKS_MYSQL_HOST=localhost
+RKS_MYSQL_PORT=3306
+RKS_MYSQL_USER=rubrikrks
+RKS_MYSQL_PASSWORD=your_db_password
+RKS_MYSQL_DB=rubrikrks
+```
+Generate a strong secret key with `openssl rand -hex 32`.
+
+### 5. Apply Migrations
+```bash
+cd /opt/rubrix
+venv/bin/flask db upgrade
+```
+
+### 6. Create a systemd Service
+Create `/etc/systemd/system/rubrix.service`:
+```ini
+[Unit]
+Description=RubriX Gunicorn Server
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/rubrix
+EnvironmentFile=/opt/rubrix/.env
+ExecStart=/opt/rubrix/venv/bin/gunicorn --workers 4 --bind 127.0.0.1:5000 'app:create_app()'
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+Then:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now rubrix
+```
+
+### 7. Configure nginx
+
+**At the domain root:**
+```nginx
+server {
+    listen 80;
+    server_name rubrix.example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Under a sub-path (e.g. `rks.polibatam.ac.id/rubrix`):**
+```nginx
+server {
+    listen 80;
+    server_name rks.polibatam.ac.id;
+
+    location /rubrix/ {
+        proxy_pass http://127.0.0.1:5000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Script-Name /rubrix;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+> **Important:** for the sub-path setup, the app must be wrapped with
+> `ProxyFix(..., x_script=1)` in `modules/__init__.py` so Flask honors the
+> `X-Script-Name` header and prefixes all `url_for` URLs with `/rubrix`.
+
+Enable the site and reload nginx:
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### 8. Verify
+```bash
+sudo systemctl status rubrix
+curl -I http://127.0.0.1:5000/login
+```
 
 ---
 
