@@ -370,15 +370,17 @@ def get_prodi_semester_statistics(study_program, semester):
             "pass_rate": pass_rate
         })
 
-    # SO averages
+    # SO averages (Get all master SOs for the study program, show None if not assessed)
     so_stats = []
-    for code, vals in so_scores.items():
+    all_sos = So.query.filter_by(study_program=study_program).order_by(So.sort_order, So.so_code).all()
+    for s_item in all_sos:
+        code = s_item.so_code
+        vals = so_scores.get(code, [])
         avg = round(sum(vals) / len(vals), 2) if vals else None
         so_stats.append({
             "so_code": code,
             "avg_score": avg
         })
-    so_stats.sort(key=lambda x: x["so_code"])
 
     return {
         "total_courses": len(courses),
@@ -442,26 +444,30 @@ def api_statistics():
             semester = latest_course.semester
             
     if not semester:
+        all_sos = So.query.filter_by(study_program=study_program).order_by(So.sort_order, So.so_code).all()
+        so_stats = [{"so_code": s.so_code, "avg_score": None} for s in all_sos]
         return jsonify({
             "total_courses": 0,
             "total_classes": 0,
             "total_students": 0,
             "total_assessed": 0,
             "grade_distribution": {"A": 0, "B": 0, "C": 0, "D": 0, "E": 0},
-            "cpl_stats": [],
+            "so_stats": so_stats,
             "course_stats": [],
             "semester": ""
         })
         
     stats = get_prodi_semester_statistics(study_program, semester)
     if stats is None:
+        all_sos = So.query.filter_by(study_program=study_program).order_by(So.sort_order, So.so_code).all()
+        so_stats = [{"so_code": s.so_code, "avg_score": None} for s in all_sos]
         return jsonify({
             "total_courses": 0,
             "total_classes": 0,
             "total_students": 0,
             "total_assessed": 0,
             "grade_distribution": {"A": 0, "B": 0, "C": 0, "D": 0, "E": 0},
-            "cpl_stats": [],
+            "so_stats": so_stats,
             "course_stats": [],
             "semester": semester
         })

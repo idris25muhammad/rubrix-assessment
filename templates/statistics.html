@@ -207,9 +207,23 @@
     const labels = soStats.map(x => x.so_code);
     const scores = soStats.map(x => x.avg_score || 0);
 
-    // Custom HSL/Teal colors: green/teal if >= 60, coral/red if < 60
-    const backgroundColors = scores.map(s => s >= 60 ? 'rgba(20, 184, 166, 0.85)' : 'rgba(239, 68, 68, 0.85)');
-    const borderColors = scores.map(s => s >= 60 ? 'rgb(20, 184, 166)' : 'rgb(239, 68, 68)');
+    // Different premium color per SO bar
+    const colorPalette = [
+      { bg: 'rgba(59, 130, 246, 0.75)', border: 'rgb(59, 130, 246)' },   // Blue
+      { bg: 'rgba(16, 185, 129, 0.75)', border: 'rgb(16, 185, 129)' },   // Emerald
+      { bg: 'rgba(245, 158, 11, 0.75)', border: 'rgb(245, 158, 11)' },   // Amber
+      { bg: 'rgba(139, 92, 246, 0.75)', border: 'rgb(139, 92, 246)' },   // Violet
+      { bg: 'rgba(236, 72, 153, 0.75)', border: 'rgb(236, 72, 153)' },   // Pink
+      { bg: 'rgba(20, 184, 166, 0.75)', border: 'rgb(20, 184, 166)' },   // Teal
+      { bg: 'rgba(249, 115, 22, 0.75)', border: 'rgb(249, 115, 22)' },   // Orange
+      { bg: 'rgba(99, 102, 241, 0.75)', border: 'rgb(99, 102, 241)' },   // Indigo
+      { bg: 'rgba(14, 165, 233, 0.75)', border: 'rgb(14, 165, 233)' },   // Sky
+      { bg: 'rgba(168, 85, 247, 0.75)', border: 'rgb(168, 85, 247)' },   // Purple
+      { bg: 'rgba(234, 179, 8, 0.75)', border: 'rgb(234, 179, 8)' },     // Yellow
+      { bg: 'rgba(244, 63, 94, 0.75)', border: 'rgb(244, 63, 94)' }      // Rose
+    ];
+    const backgroundColors = scores.map((_, idx) => colorPalette[idx % colorPalette.length].bg);
+    const borderColors = scores.map((_, idx) => colorPalette[idx % colorPalette.length].border);
 
     chartSo = new Chart(ctx, {
       type: 'bar',
