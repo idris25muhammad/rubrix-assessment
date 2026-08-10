@@ -1408,6 +1408,25 @@ function collectCriteria() {
 }
 
 // ---------- step navigation ----------
+function refreshWizardCplDropdowns() {
+  const cpls = collectCpls();
+  document.querySelectorAll('.wz-comp-cpl').forEach(sel => {
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">Pilih CPL...</option>' +
+      cpls.map(c => `<option value="${c.code}">${c.code}</option>`).join('');
+    if (cpls.some(c => c.code === currentVal)) {
+      sel.value = currentVal;
+    } else {
+      sel.value = '';
+      const cplRow = sel.closest('.wz-cpl-pi-row');
+      if (cplRow) {
+        const piList = cplRow.querySelector('.wz-pi-list');
+        if (piList) piList.innerHTML = '';
+      }
+    }
+  });
+}
+
 function renderWizardStep() {
   for (let i = 1; i <= 5; i++) {
     const el = document.getElementById(`wizard-step-${i}`);
@@ -1420,6 +1439,7 @@ function renderWizardStep() {
     const n = i + 1;
     return `<span class="wizard-step ${wizardStep === n ? 'active' : ''}">${n}. ${s}</span>`;
   }).join('');
+  if (wizardStep === 3) refreshWizardCplDropdowns();
   if (wizardStep === 4) renderWeights();
   if (wizardStep === 5) renderCriteria();
 }
