@@ -596,7 +596,11 @@ async function loadDefaultInstruments() {
 function populateSemesterSelect() {
   const sel = document.getElementById('wizard-semester');
   if (!sel) return;
-  const startYear = 2025;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0 is January, 6 is July
+  // If July (6) or later, start from current year. Otherwise, start from last year to include the current active term.
+  const startYear = currentMonth >= 6 ? currentYear : currentYear - 1;
   const numYears = 5;
   let html = '<option value="">Pilih Semester...</option>';
   for (let i = 0; i < numYears; i++) {
