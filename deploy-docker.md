@@ -60,11 +60,19 @@ Secret values come from a `.env` file in the project root (see Step 2 below) via
 
 On your Ubuntu server, perform the following steps:
 
-### Step 1: Clone the Repository
+### Step 1: Create the Deployment Directory and Clone the Repository
+Create a deployment directory (e.g. under `/opt`) and clone the project there:
 ```bash
+# Create the deploy directory (adjust the path if you prefer)
+sudo mkdir -p /opt/rubrix
+sudo chown -R $USER:$USER /opt/rubrix
+
+cd /opt/rubrix
 git clone https://github.com/idris25muhammad/rubrix-assessment.git
 cd rubrix-assessment
 ```
+> Docker Compose must be able to read the `.env` file in this directory (Step 2),
+> so the directory must be writable by your user (done above via `chown`).
 
 ### Step 2: Set Up Production Environment Variables
 Create a `.env` file in the project root (Docker Compose reads it automatically):
