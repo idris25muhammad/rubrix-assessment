@@ -24,6 +24,9 @@
   <div class="table-toolbar"
     style="margin-bottom: 16px; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
     <input type="text" id="course-search" class="search-input" placeholder="Cari kode atau nama matakuliah...">
+    <select id="course-semester-filter" class="search-input" style="width: 220px; height: 38px; border-radius: 8px; border: 1px solid var(--border); padding: 0 10px; font-size: 14px; background: var(--card); color: var(--text);">
+      <option value="">Semua Semester</option>
+    </select>
     <button class="btn btn-primary" id="btn-filter">Filter</button>
     <button class="btn btn-outline" id="btn-show-all">Show All</button>
   </div>
@@ -315,8 +318,9 @@
   async function loadCourses(query = currentSearch, page = currentPage) {
     currentSearch = query;
     currentPage = page;
+    const semester = document.getElementById('course-semester-filter') ? document.getElementById('course-semester-filter').value : '';
 
-    const res = await fetch(u('api_courses') + `?q=${encodeURIComponent(query)}&page=${page}`);
+    const res = await fetch(u('api_courses') + `?q=${encodeURIComponent(query)}&semester=${encodeURIComponent(semester)}&page=${page}`);
     const data = await res.json();
     const courses = data.courses || [];
     const body = document.getElementById('course-body');
@@ -588,8 +592,16 @@
   });
   document.getElementById('btn-show-all').addEventListener('click', () => {
     document.getElementById('course-search').value = '';
+    const semesterFilter = document.getElementById('course-semester-filter');
+    if (semesterFilter) semesterFilter.value = '';
     loadCourses('', 1);
   });
+
+  if (document.getElementById('course-semester-filter')) {
+    document.getElementById('course-semester-filter').addEventListener('change', () => {
+      triggerFilter();
+    });
+  }
 
   async function loadDefaultInstruments() {
     try {
@@ -637,8 +649,27 @@
     sel.value = val;
   }
 
+  async function loadFilterSemesters() {
+    try {
+      const res = await fetch(u('api_semesters'));
+      const semesters = await res.json();
+      const select = document.getElementById('course-semester-filter');
+      if (!select) return;
+      
+      let html = '<option value="">Semua Semester</option>';
+      semesters.forEach(s => {
+        html += `<option value="${s}">${s}</option>`;
+      });
+      select.innerHTML = html;
+    } catch (e) {
+      console.error('Failed to load filter semesters:', e);
+    }
+  }
+
   populateSemesterSelect();
-  loadCourses();
+  loadFilterSemesters().then(() => {
+    loadCourses();
+  });
   loadDashboard();
   loadDefaultInstruments();
 

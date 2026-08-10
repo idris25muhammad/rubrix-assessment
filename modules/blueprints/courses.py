@@ -15,7 +15,7 @@ bp = Blueprint("courses", __name__)
 MAX_STUDENTS = 40
 
 
-def _courses_for_user(user, q_param="", page=1, per_page=10):
+def _courses_for_user(user, q_param="", semester="", page=1, per_page=10):
     q = Course.query
     if user["role"] == "tim_kurikulum":
         program = (user.get("study_program") or "").strip() or "RKS"
@@ -34,6 +34,9 @@ def _courses_for_user(user, q_param="", page=1, per_page=10):
                 Course.course_name.ilike(f"%{q_param}%")
             )
         )
+
+    if semester:
+        q = q.filter(Course.semester == semester)
 
     total_count = q.count()
     total_pages = max(1, (total_count + per_page - 1) // per_page)
@@ -115,8 +118,28 @@ def portfolio_course_page(course_id):
 def api_courses():
     user = current_user()
     q_param = request.args.get("q", "").strip()
+    semester = request.args.get("semester", "").strip()
     page = int(request.args.get("page", 1))
-    return jsonify(_courses_for_user(user, q_param, page))
+    return jsonify(_courses_for_user(user, q_param, semester, page))
+
+
+@bp.route("/api/semesters")
+@api_login_required
+def api_semesters():
+    user = current_user()
+    if user["role"] == "tim_kurikulum":
+        program = (user.get("study_program") or "").strip() or "RKS"
+        semesters = db.session.query(Course.semester).filter(Course.study_program == program).distinct().all()
+    else:
+        accessible_ids = {
+            c.id for c in Course.query.all()
+            if c.owner_id == user["id"] or user["id"] in c.get_shared_with()
+        }
+        semesters = db.session.query(Course.semester).filter(Course.id.in_(accessible_ids)).distinct().all()
+
+    sem_list = [s[0] for s in semesters if s[0] and s[0].strip()]
+    sem_list.sort(reverse=True)
+    return jsonify(sem_list)
 
 
 @bp.route("/api/courses/create", methods=["POST"])

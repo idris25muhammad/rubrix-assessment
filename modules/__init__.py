@@ -75,6 +75,7 @@ def create_app():
             "portfolio": _url_pat("courses.portfolio_page", "class_id"),
             "portfolio_course": _url_pat("courses.portfolio_course_page", "course_id"),
             "api_courses": url_for("courses.api_courses"),
+            "api_semesters": url_for("courses.api_semesters"),
             "api_dashboard": url_for("courses.api_dashboard"),
             "api_upload": url_for("courses.api_upload_course"),
             "api_create": url_for("courses.api_create_course"),
