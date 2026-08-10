@@ -7,7 +7,10 @@
 <section class="page-head">
   <div>
     <h1>Statistik Kurikulum (<span id="program-label">-</span>)</h1>
-    <p>Visualisasi capaian CPL, sebaran nilai akhir, dan perbandingan matakuliah per semester.</p>
+    <p class="no-print">Visualisasi capaian SO, sebaran nilai akhir, dan perbandingan matakuliah per semester.</p>
+    <div class="print-visible-only" style="display: none; font-size: 16px; font-weight: 600; margin-top: 4px; color: #475569;">
+      Semester: <span id="stats-semester-print-label">-</span>
+    </div>
   </div>
   <div class="head-actions" style="display: flex; align-items: center; gap: 12px;">
     <div style="display: flex; align-items: center; gap: 8px;">
@@ -175,6 +178,7 @@
 
       // Update labels and summary cards
       document.getElementById('program-label').textContent = data.study_program || '-';
+      document.getElementById('stats-semester-print-label').textContent = semester;
       document.getElementById('card-courses').textContent = data.total_courses || 0;
       document.getElementById('card-classes').textContent = data.total_classes || 0;
       document.getElementById('card-students').textContent = data.total_students || 0;
@@ -437,6 +441,9 @@
     @page {
       size: A4 landscape;
       margin: 10mm 12mm;
+    }
+    .print-visible-only {
+      display: block !important;
     }
   }
 </style>
