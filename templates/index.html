@@ -111,7 +111,7 @@
               "score_min": 0, "score_max": 30,
               "subjects": [
                 "Tidak pernah mengajukan pertanyaan atau menjawab pertanyaan dalam diskusi kelas.",
-                "Secara keseluruhan dinilai sangat kurang (skor 0-30)"
+                "Secara keseluruhan dinilai sangat kurang."
               ]
             },
             { "level": 2, "label": "Kurang", "score_min": 31, "score_max": 55, "subjects": ["..."] },
@@ -1476,7 +1476,7 @@
         const max = parseInt(row.querySelector('.wz-crit-max').value, 10);
         const subjectHtml = row.querySelector('.wz-wysiwyg-area').innerHTML.trim();
         const subjectText = row.querySelector('.wz-wysiwyg-area').innerText.trim();
-        const subjects = subjectText ? [subjectHtml, `Secara keseluruhan dinilai ${label.toLowerCase()} (skor ${isNaN(min) ? CRIT_DEFAULT[i].score_min : min}-${isNaN(max) ? CRIT_DEFAULT[i].score_max : max})`] : [`Secara keseluruhan dinilai ${label.toLowerCase()}`];
+        const subjects = subjectText ? [subjectHtml, `Secara keseluruhan dinilai ${label.toLowerCase()}.`] : [`Secara keseluruhan dinilai ${label.toLowerCase()}.`];
         criteria.push({
           level: i + 1,
           label,
