@@ -1,7 +1,7 @@
 services:
-  db:
+  rubrix_db:
     image: mysql:8.0
-    container_name: rubrix_mysql
+    container_name: rubrix_db
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password_here}
@@ -16,7 +16,7 @@ services:
       retries: 10
     # No host ports exposed: the DB is only reachable inside the Docker network.
 
-  web:
+  rubrix_web:
     build: .
     container_name: rubrix_web
     restart: always
@@ -28,13 +28,13 @@ services:
       RKS_SECRET_KEY: ${RKS_SECRET_KEY:-change-me-to-a-long-random-string}
       RKS_PORT: "5000"
       RKS_DB_ENGINE: mysql
-      RKS_MYSQL_HOST: db
+      RKS_MYSQL_HOST: rubrix_db
       RKS_MYSQL_PORT: "3306"
       RKS_MYSQL_USER: ${MYSQL_USER:-rubrikrks}
       RKS_MYSQL_PASSWORD: ${MYSQL_PASSWORD:-rubrikrks_prod_password}
       RKS_MYSQL_DB: ${MYSQL_DB:-rubrikrks}
     depends_on:
-      db:
+      rubrix_db:
         condition: service_healthy
 
 volumes:

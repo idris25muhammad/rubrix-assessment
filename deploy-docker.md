@@ -47,10 +47,10 @@ The deployment files already live in the repository root:
   `flask db upgrade` (applies all migrations, including the SO-PI / sharing schema) and
   boots the app via the `app:create_app()` factory (which also seeds the default accounts
   and the RKS SO-PI set).
-- `docker-compose.yml` — `mysql:8.0` service + `web` service. The MySQL port is **not**
-  exposed to the host, and the web service is bound **only to `127.0.0.1:5000`** on the
-  host (not public). Public access is handled by nginx on the server via reverse proxy
-  (see the "Nginx Reverse Proxy" section below).
+- `docker-compose.yml` — `rubrix_db` (`mysql:8.0`) service + `rubrix_web` service. The
+  MySQL port is **not** exposed to the host, and the web service is bound **only to
+  `127.0.0.1:5000`** on the host (not public). Public access is handled by nginx on the
+  server via reverse proxy (see the "Nginx Reverse Proxy" section below).
 - `.dockerignore` — keeps `venv`, `instance/`, `.env`, and build artifacts out of the image.
 
 Secret values come from a `.env` file in the project root (see Step 2 below) via
@@ -104,7 +104,7 @@ docker compose ps
 ```
 You can read container logs to verify database migrations and server initialization:
 ```bash
-docker compose logs -f web
+docker compose logs -f rubrix_web
 ```
 The web app is only reachable on the host's loopback at this point:
 ```bash
@@ -172,11 +172,11 @@ To pull the latest changes from your repository and rebuild the app:
 git pull origin main
 
 # Rebuild and restart web container
-docker compose up -d --build web
+docker compose up -d --build rubrix_web
 ```
 
 ### Backup Database (MySQL dump)
 To backup your production data, run (use the password from your `.env` `MYSQL_PASSWORD`):
 ```bash
-docker exec rubrix_mysql mysqldump -u rubrikrks -pYOUR_MYSQL_PASSWORD rubrikrks > backup.sql
+docker exec rubrix_db mysqldump -u rubrikrks -pYOUR_MYSQL_PASSWORD rubrikrks > backup.sql
 ```
