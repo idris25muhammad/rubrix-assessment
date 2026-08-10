@@ -197,3 +197,35 @@ Create a systemd unit file to run the Flask application as a background service:
 
 ### Step 9: Verify
 Navigate to `https://rks.polibatam.ac.id/rubrix/` on your browser to verify that the application and its assets load correctly.
+
+---
+
+## Maintenance & Syncing GitHub Updates
+
+If you make modifications to your project on your local machine and push them to GitHub, follow these steps on your VPS to pull the updates and restart the application:
+
+1. Navigate to the project directory:
+   ```bash
+   cd /var/www/rubrix/rubrix-assessment
+   ```
+2. Pull the latest code changes:
+   ```bash
+   git pull origin main
+   ```
+3. Activate the virtual environment:
+   ```bash
+   source venv/bin/activate
+   ```
+4. Install any new dependencies (if `requirements.txt` was modified):
+   ```bash
+   pip install -r requirements.txt
+   ```
+5. Apply database schema upgrades (if migrations were added):
+   ```bash
+   flask db upgrade
+   ```
+6. Restart Gunicorn systemd service to apply Python code changes:
+   ```bash
+   sudo systemctl restart rubrix
+   ```
+
