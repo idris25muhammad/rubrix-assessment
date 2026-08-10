@@ -315,8 +315,8 @@ def get_prodi_semester_statistics(study_program, semester):
     overall_totals = []
     grade_dist = {"A": 0, "B": 0, "C": 0, "D": 0, "E": 0}
 
-    # Track scores for CPL averages
-    cpl_scores = {}
+    # Track scores for SO averages
+    so_scores = {}
 
     for s in actual_students:
         cl = class_by_id.get(s.class_id)
@@ -341,14 +341,14 @@ def get_prodi_semester_statistics(study_program, semester):
         g = grade_of_score(total_score)
         grade_dist[g] += 1
 
-        # CPL mappings
+        # SO mappings
         for co in comps:
             score_val = student_scores.get(co.id)
             if score_val is not None:
                 for mapping in cpl_pis_of(co):
-                    cpl_code = mapping.get("cpl")
-                    if cpl_code:
-                        cpl_scores.setdefault(cpl_code, []).append(score_val)
+                    so_code = mapping.get("so")
+                    if so_code:
+                        so_scores.setdefault(so_code, []).append(score_val)
 
     # Calculate average and pass rate per course
     course_stats = []
@@ -356,7 +356,7 @@ def get_prodi_semester_statistics(study_program, semester):
         final_scores = totals_by_course[c.id]
         avg_score = round(sum(final_scores) / len(final_scores), 2) if final_scores else None
         
-        passed = sum(1 for s in final_scores if grade_of_score(s) in ("A", "B", "C"))
+        passed = sum(1 for s in final_scores if grade_of_score(s) in ("A", "B", "C", "D"))
         pass_rate = round(passed / len(final_scores) * 100, 2) if final_scores else 0
         
         c_classes = [cl for cl in classes if cl.course_id == c.id]
@@ -370,15 +370,15 @@ def get_prodi_semester_statistics(study_program, semester):
             "pass_rate": pass_rate
         })
 
-    # CPL averages
-    cpl_stats = []
-    for code, vals in cpl_scores.items():
+    # SO averages
+    so_stats = []
+    for code, vals in so_scores.items():
         avg = round(sum(vals) / len(vals), 2) if vals else None
-        cpl_stats.append({
-            "cpl_code": code,
+        so_stats.append({
+            "so_code": code,
             "avg_score": avg
         })
-    cpl_stats.sort(key=lambda x: x["cpl_code"])
+    so_stats.sort(key=lambda x: x["so_code"])
 
     return {
         "total_courses": len(courses),
@@ -386,7 +386,7 @@ def get_prodi_semester_statistics(study_program, semester):
         "total_students": len(actual_students),
         "total_assessed": len(assessed_student_ids),
         "grade_distribution": grade_dist,
-        "cpl_stats": cpl_stats,
+        "so_stats": so_stats,
         "course_stats": course_stats
     }
 
