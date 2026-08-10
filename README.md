@@ -18,8 +18,8 @@ RubriX is a web-based course assessment application designed to help lecturers e
 
 ### 1. Authentication & Role-Based Access Control
 *   **Roles:** 
-    *   `lecturer`: Access limited to their own courses and classes.
-    *   `tim_kurikulum` (Curriculum Team): Full administrative privileges, can manage users, view all courses, and see who created each rubric.
+    *   `lecturer`: Access limited to their own courses plus courses shared to them.
+    *   `tim_kurikulum` (Curriculum Team): Manages their program's users, courses, and SO-PI (each account is scoped to one program).
 *   **Credentials:** Default password for all seeded accounts is their email address.
 *   **Security Enforcement:** Session expiration and forced login redirect after a password change.
 
@@ -58,7 +58,7 @@ RubriX is a web-based course assessment application designed to help lecturers e
 │   └── seeder.py           # Seeder helper for course data
 ├── static/                 # Static assets (CSS, JS, fonts, images)
 │   ├── css/style.css       # Core stylesheets
-│   └── data/so-pi.json     # Standard SO-PI map
+│   └── data/so-pi.json     # Seed source for the RKS SO-PI set
 └── templates/              # Jinja2 HTML templates
 ```
 
@@ -105,6 +105,14 @@ Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your web browser.
 ---
 
 ## Seed Accounts
-The application automatically seeds a set of default accounts on startup:
-*   **Tim Kurikulum (Admin):** `timkurikulum@polibatam.ac.id` (Password: `timkurikulum@polibatam.ac.id`)
-*   **Lecturer (Dosen):** Sourced from the Polibatam lecturer list (e.g. `hamdaniarif@polibatam.ac.id`, default password is the email address).
+The application automatically seeds one **Tim Kurikulum** account per study program on startup (password = email):
+*   `rks@polibatam.ac.id` (RKS)
+*   `ti@polibatam.ac.id` (D3-TI)
+*   `trm@polibatam.ac.id` (D4-TRM)
+*   `tg@polibatam.ac.id` (D3-TG)
+*   `anim@polibatam.ac.id` (D4-ANIM)
+*   `trpl@polibatam.ac.id` (D4-TRPL)
+*   `tp@polibatam.ac.id` (D4-TP)
+*   `s2tk@polibatam.ac.id` (S2-TK)
+
+Each manages only its own program's SO-PI and dashboard. **Lecturer** accounts are created later via the **Users** page; courses can be shared to them from the dashboard **Share** button. The RKS SO-PI set is auto-seeded from `static/data/so-pi.json` on first start, then edited via the **SO-PI** page.

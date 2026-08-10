@@ -33,11 +33,12 @@ def create_app():
     # Seed users after tables exist (migrations run via CLI before app import in prod).
     try:
         with app.app_context():
-            from modules.seed import seed_users
+            from modules.seed import seed_so_pi, seed_users
 
             seed_users()
+            seed_so_pi()
     except Exception:
-        # Tables may not exist yet (before first migration) — that's fine.
+        # Tables may not exist yet (before first migration) - that's fine.
         pass
 
     @app.context_processor
@@ -58,6 +59,14 @@ def create_app():
             "course_template": url_for("courses.api_course_template"),
             "so_pi": url_for("courses.api_so_pi"),
             "programs": url_for("courses.api_programs"),
+            "sopi": url_for("sopi.index"),
+            "sopi_api": url_for("sopi.api_sopi"),
+            "sopi_programs": url_for("sopi.api_sopi_programs"),
+            "sopi_create_so": url_for("sopi.api_create_so"),
+            "sopi_so": _url_pat("sopi.api_so", "so_id"),
+            "sopi_create_pi": url_for("sopi.api_create_pi"),
+            "sopi_pi": _url_pat("sopi.api_pi", "pi_id"),
+            "sopi_levels": url_for("sopi.api_levels"),
             "manage_classes": _url_pat("courses.manage_classes_page", "course_id"),
             "assess": _url_pat("courses.assess_page", "class_id"),
             "portfolio": _url_pat("courses.portfolio_page", "class_id"),
@@ -68,6 +77,7 @@ def create_app():
             "api_create": url_for("courses.api_create_course"),
             "api_course": _url_pat("courses.api_course", "course_id"),
             "api_course_editable": _url_pat("courses.api_course_editable", "course_id"),
+            "api_course_share": _url_pat("courses.api_course_share", "course_id"),
             "api_classes": _url_pat("courses.api_classes", "course_id"),
             "api_class": _url_pat("courses.api_class", "class_id"),
             "api_save": _url_pat("courses.api_save", "class_id"),
@@ -78,15 +88,17 @@ def create_app():
             "api_course_portfolio": _url_pat("courses.api_course_portfolio", "course_id"),
             "api_users": url_for("users.api_users"),
             "api_user": _url_pat("users.api_user", "user_id"),
+            "share_options": url_for("users.api_share_options"),
         }
         return {"urls": urls}
 
     from modules import auth, dashboard, users
-    from modules.blueprints import courses
+    from modules.blueprints import courses, sopi
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(dashboard.bp)
     app.register_blueprint(users.bp)
     app.register_blueprint(courses.bp)
+    app.register_blueprint(sopi.bp)
 
     return app

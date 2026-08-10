@@ -36,6 +36,7 @@ def current_user():
         "name": user.name,
         "email": user.email,
         "role": user.role,
+        "study_program": user.get_study_program(),
         "password_hash": user.password_hash,
     }
 

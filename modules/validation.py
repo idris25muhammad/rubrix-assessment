@@ -1,14 +1,15 @@
-import json
-import os
-
-from config import BASE_DIR
-
-SO_PI_PATH = os.path.join(BASE_DIR, "static", "data", "so-pi.json")
+from modules.so_pi import get_so_pi
 
 
-def _load_so_pi():
-    with open(SO_PI_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+def _load_so_pi(study_program):
+    """Load the SO-PI set for a program from the DB. Raises ValueError if absent."""
+    sopi = get_so_pi(study_program)
+    if not sopi:
+        raise ValueError(
+            f"Set SO-PI untuk program studi '{study_program}' belum tersedia. "
+            "Hubungi Tim Kurikulum untuk membuatnya."
+        )
+    return sopi
 
 
 def validate_course_json(data):
@@ -20,7 +21,8 @@ def validate_course_json(data):
     if not isinstance(data["categories"], list) or not data["categories"]:
         raise ValueError("'categories' must be a non-empty list")
 
-    sopi = _load_so_pi()
+    program = data.get("study_program") or "RKS"
+    sopi = _load_so_pi(program)
     so_map = {so["so_code"]: so for so in sopi["student_outcome"]}
 
     # Collect component CPL-PI mappings.
@@ -48,7 +50,7 @@ def validate_course_json(data):
                 if not cpl_code or not so_code or not pi_code:
                     raise ValueError(f"Component '{comp.get('name')}' has an incomplete CPL-PI mapping")
                 if so_code not in so_map:
-                    raise ValueError(f"SO '{so_code}' not found in so-pi.json")
+                    raise ValueError(f"SO '{so_code}' tidak ditemukan di set SO-PI prodi '{program}'")
                 valid_pis = {p["pi_code"] for p in so_map[so_code]["performance_indicator"]}
                 if pi_code not in valid_pis:
                     raise ValueError(

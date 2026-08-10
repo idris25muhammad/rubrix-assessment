@@ -118,14 +118,23 @@ def _get_class_data(class_id):
 
 
 def user_owns_course(user, course_id):
-    if user["role"] == "tim_kurikulum":
-        return True
     course = db.session.get(Course, course_id)
-    return bool(course and course.owner_id == user["id"])
+    if not course:
+        return False
+    if user["role"] == "tim_kurikulum":
+        program = (user.get("study_program") or "").strip() or "RKS"
+        return course.study_program == program
+    return course.owner_id == user["id"] or user["id"] in course.get_shared_with()
 
 
 def user_owns_class(user, class_id):
-    if user["role"] == "tim_kurikulum":
-        return True
     klass = db.session.get(Class, class_id)
-    return bool(klass and klass.owner_id == user["id"])
+    if not klass:
+        return False
+    course = klass.course
+    if user["role"] == "tim_kurikulum":
+        program = (user.get("study_program") or "").strip() or "RKS"
+        return bool(course and course.study_program == program)
+    if course and (course.owner_id == user["id"] or user["id"] in course.get_shared_with()):
+        return True
+    return klass.owner_id == user["id"]

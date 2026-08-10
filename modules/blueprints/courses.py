@@ -7,7 +7,7 @@ from modules.data import _get_class_data, _get_course_structure, user_owns_class
 from modules.seeder import seed_course_data
 from modules.excel import build_sid_workbook, build_workbook, load_workbook_bytes, workbook_bytes
 from modules.helpers import cpl_pis_of
-from modules.models import Category, Class, Component, Course, Score, Student, Cpl, Criteria, CriteriaSubject, db
+from modules.models import Category, Class, Component, Course, Score, Student, Cpl, Criteria, CriteriaSubject, User, db
 from modules.portfolio import compute_portfolio
 
 bp = Blueprint("courses", __name__)
@@ -17,8 +17,15 @@ MAX_STUDENTS = 40
 
 def _courses_for_user(user, q_param="", page=1, per_page=10):
     q = Course.query
-    if user["role"] != "tim_kurikulum":
-        q = q.filter(Course.owner_id == user["id"])
+    if user["role"] == "tim_kurikulum":
+        program = (user.get("study_program") or "").strip() or "RKS"
+        q = q.filter(Course.study_program == program)
+    else:
+        accessible_ids = {
+            c.id for c in Course.query.all()
+            if c.owner_id == user["id"] or user["id"] in c.get_shared_with()
+        }
+        q = Course.query.filter(Course.id.in_(accessible_ids))
 
     if q_param:
         q = q.filter(
@@ -48,6 +55,8 @@ def _courses_for_user(user, q_param="", page=1, per_page=10):
                 .filter(Category.course_id == c.id).count(),
                 "class_count": Class.query.filter_by(course_id=c.id).count(),
                 "owner_name": c.owner.name if c.owner else "-",
+                "can_share": user["role"] == "tim_kurikulum" or c.owner_id == user["id"],
+                "shared": user["id"] in c.get_shared_with(),
             }
         )
     return {
@@ -67,7 +76,9 @@ def manage_classes_page(course_id):
     user = current_user()
     if not user_owns_course(user, course_id):
         return jsonify({"error": "not authorized"}), 403
-    return render_template("manage_classes.html", course_id=course_id)
+    course = db.session.get(Course, course_id)
+    can_manage = can_manage_course(user, course)
+    return render_template("manage_classes.html", course_id=course_id, can_manage=can_manage)
 
 
 @bp.route("/assess/<int:class_id>")
@@ -156,32 +167,27 @@ def api_course_template():
 
 @bp.route("/api/so-pi")
 def api_so_pi():
-    import json as _json
-    import os
+    from modules.so_pi import get_so_pi
 
-    from config import BASE_DIR
-
-    path = os.path.join(BASE_DIR, "static", "data", "so-pi.json")
-    with open(path, "r", encoding="utf-8") as f:
-        return _json.load(f)
+    program = request.args.get("program", "").strip() or "RKS"
+    data = get_so_pi(program)
+    if data is None:
+        return jsonify(
+            {
+                "study_program": program,
+                "student_outcome": [],
+                "proficiency_levels": [],
+            }
+        )
+    return jsonify(data)
 
 
 @bp.route("/api/programs")
 def api_programs():
     # Program studi Jurusan Teknik Informatika, Politeknik Negeri Batam
-    # (from https://if.polibatam.ac.id/program-studi)
-    return jsonify(
-        [
-            {"code": "D3-TI", "label": "D3 Teknik Informatikas"},
-            {"code": "D4-TRM", "label": "D4 Teknologi Rekayasa Multimedia"},
-            {"code": "D3-TG", "label": "D3 Teknologi Geomatika"},
-            {"code": "D4-ANIM", "label": "D4 Animasi"},
-            {"code": "RKS", "label": "D4 Rekayasa Keamanan Siber"},
-            {"code": "D4-TRPL", "label": "D4 Teknologi Rekayasa Perangkat Lunak"},
-            {"code": "D4-TP", "label": "D4 Teknologi Permainan"},
-            {"code": "S2-TK", "label": "S2 Teknik Komputer"},
-        ]
-    )
+    from modules.so_pi import PROGRAMS
+
+    return jsonify([{"code": code, "label": label} for code, label in PROGRAMS.items()])
 
 
 @bp.route("/api/dashboard")
@@ -189,21 +195,45 @@ def api_programs():
 def api_dashboard():
     user = current_user()
     if user["role"] == "tim_kurikulum":
-        course_count = Course.query.count()
-        class_count = Class.query.count()
-        student_count = Student.query.filter(
-            db.func.trim(Student.nim) != "", db.func.trim(Student.name) != ""
-        ).count()
-        assessed_count = db.session.query(Score.student_id).distinct().count()
-        total_scores = Score.query.count()
+        program = (user.get("study_program") or "").strip() or "RKS"
+        course_ids = [c.id for c in Course.query.filter_by(study_program=program).all()]
+        course_count = len(course_ids)
+        if course_ids:
+            class_q = Class.query.filter(Class.course_id.in_(course_ids))
+            class_ids = [cl.id for cl in class_q.all()]
+            class_count = len(class_ids)
+            if class_ids:
+                student_count = Student.query.filter(
+                    Student.class_id.in_(class_ids),
+                    db.func.trim(Student.nim) != "",
+                    db.func.trim(Student.name) != "",
+                ).count()
+                assessed_count = db.session.query(Score.student_id).join(Student).filter(
+                    Student.class_id.in_(class_ids)
+                ).distinct().count()
+                total_scores = Score.query.join(Student).filter(
+                    Student.class_id.in_(class_ids)
+                ).count()
+            else:
+                student_count = 0
+                assessed_count = 0
+                total_scores = 0
+        else:
+            class_count = 0
+            student_count = 0
+            assessed_count = 0
+            total_scores = 0
     else:
-        course_count = Course.query.filter_by(owner_id=user["id"]).count()
-        owned_courses = [c.id for c in Course.query.filter_by(owner_id=user["id"]).all()]
-        
+        accessible_courses = [
+            c.id for c in Course.query.all()
+            if c.owner_id == user["id"] or user["id"] in c.get_shared_with()
+        ]
+        course_count = len(accessible_courses)
+
         classes_q = Class.query.filter(
-            (Class.owner_id == user["id"]) | (Class.course_id.in_(owned_courses))
-        ) if owned_courses else Class.query.filter_by(owner_id=user["id"])
-        
+            (Class.owner_id == user["id"]) | (Class.course_id.in_(accessible_courses))
+        ) if accessible_courses else Class.query.filter_by(owner_id=user["id"])
+
         class_count = classes_q.count()
         user_class_ids = [cl.id for cl in classes_q.all()]
         
@@ -325,22 +355,24 @@ def api_course_editable(course_id):
 def api_course(course_id):
     user = current_user()
     if request.method == "GET":
+        if not user_owns_course(user, course_id):
+            return jsonify({"error": "not authorized"}), 403
         structure = _get_course_structure(course_id)
         if not structure:
             return jsonify({"error": "course not found"}), 404
         return jsonify(structure)
     if request.method == "DELETE":
-        if not user_owns_course(user, course_id):
-            return jsonify({"error": "not authorized"}), 403
         course = db.session.get(Course, course_id)
+        if not can_manage_course(user, course):
+            return jsonify({"error": "not authorized"}), 403
         if course:
             db.session.delete(course)
             db.session.commit()
         return jsonify({"ok": True})
     if request.method == "PUT":
-        if not user_owns_course(user, course_id):
-            return jsonify({"error": "not authorized"}), 403
         course = db.session.get(Course, course_id)
+        if not can_manage_course(user, course):
+            return jsonify({"error": "not authorized"}), 403
         if not course:
             return jsonify({"error": "course not found"}), 404
             
@@ -361,17 +393,66 @@ def api_course(course_id):
         return jsonify({"ok": True, "course_code": course.course_code})
 
 
+def can_manage_course(user, course):
+    """Whether the user may edit/delete/share a course (owner or tim_kurikulum of the program)."""
+    if not course:
+        return False
+    if user["role"] == "tim_kurikulum":
+        program = (user.get("study_program") or "").strip() or "RKS"
+        return course.study_program == program
+    return course.owner_id == user["id"]
+
+
+def can_manage_class(user, class_id):
+    """Whether the user may edit/delete a class (owner or tim_kurikulum of its course)."""
+    klass = db.session.get(Class, class_id)
+    if not klass or not klass.course:
+        return False
+    return can_manage_course(user, klass.course)
+
+
+@bp.route("/api/courses/<int:course_id>/share", methods=["PUT"])
+@api_login_required
+def api_course_share(course_id):
+    user = current_user()
+    course = db.session.get(Course, course_id)
+    if not course:
+        return jsonify({"error": "course not found"}), 404
+    if not can_manage_course(user, course):
+        return jsonify({"error": "not authorized"}), 403
+
+    payload = request.json or {}
+    user_ids = payload.get("user_ids")
+    if not isinstance(user_ids, list):
+        return jsonify({"error": "user_ids must be a list"}), 400
+    if any(not isinstance(i, int) for i in user_ids):
+        return jsonify({"error": "user_ids must be integers"}), 400
+
+    user_ids = list(dict.fromkeys(user_ids))
+    existing_ids = {u[0] for u in db.session.query(User.id).filter(User.id.in_(user_ids)).all()}
+    invalid = [i for i in user_ids if i not in existing_ids]
+    if invalid:
+        return jsonify({"error": f"user(s) not found: {', '.join(map(str, invalid))}"}), 400
+
+    course.shared_with = json.dumps(user_ids, ensure_ascii=False)
+    db.session.commit()
+    return jsonify({"ok": True, "shared_with": course.get_shared_with()})
+
+
 @bp.route("/api/courses/<int:course_id>/classes", methods=["GET", "POST"])
 @api_login_required
 def api_classes(course_id):
     user = current_user()
     if request.method == "GET":
+        if not user_owns_course(user, course_id):
+            return jsonify({"error": "not authorized"}), 403
         structure = _get_course_structure(course_id)
         if not structure:
             return jsonify({"error": "course not found"}), 404
         return jsonify({"course": structure["course"], "classes": structure["classes"]})
     if request.method == "POST":
-        if not user_owns_course(user, course_id):
+        course = db.session.get(Course, course_id)
+        if not can_manage_course(user, course):
             return jsonify({"error": "not authorized"}), 403
         payload = request.json or {}
         name = payload.get("name", "").strip()
@@ -404,7 +485,7 @@ def api_class(class_id):
             return jsonify({"error": "class not found"}), 404
         return jsonify(data)
     if request.method == "DELETE":
-        if not user_owns_class(user, class_id):
+        if not can_manage_class(user, class_id):
             return jsonify({"error": "not authorized"}), 403
         klass = db.session.get(Class, class_id)
         if klass:
@@ -412,7 +493,7 @@ def api_class(class_id):
             db.session.commit()
         return jsonify({"ok": True})
     if request.method == "PUT":
-        if not user_owns_class(user, class_id):
+        if not can_manage_class(user, class_id):
             return jsonify({"error": "not authorized"}), 403
         payload = request.json or {}
         name = payload.get("name", "").strip()
@@ -546,6 +627,7 @@ def api_import(class_id):
         return jsonify({"error": "no component columns matched (missing code/name header row)"}), 400
 
     student_by_no = {s["row_no"]: s for s in data["students"]}
+    components = data["components"]
 
     def _raw_code(cd):
         s = str(cd).strip()
@@ -553,15 +635,20 @@ def api_import(class_id):
             return s.rsplit("-", 1)[1]
         return s
 
-    def match_component(meta):
+    def match_component(meta, position_index):
         codes = meta["codes"]
         name = meta["name"].strip().lower()
 
-        best_comp = None
-        best_score = -1
+        # The exported sheet always lists components in data["components"] order
+        # starting at column 4, so use position as a tie-breaker for ambiguous
+        # headers (e.g. ATS & AAS components with the same name + codes).
+        positional = components[position_index] if 0 <= position_index < len(components) else None
 
-        for co in data["components"]:
-            score = 0
+        best_comp = None
+        best_score = -1.0
+
+        for co in components:
+            score = 0.0
             co_name = co["name"].strip().lower()
 
             # 1. Name matching (exact match gets highest priority, substring matches get partial priority)
@@ -593,6 +680,9 @@ def api_import(class_id):
                 if has_raw_match:
                     score += 2
 
+            if positional and score > 0 and co["id"] == positional["id"]:
+                score += 0.5
+
             if score > best_score:
                 best_score = score
                 best_comp = co
@@ -601,8 +691,8 @@ def api_import(class_id):
             return best_comp
         return None
 
-    def resolve(meta):
-        return match_component(meta)
+    def resolve(meta, position_index):
+        return match_component(meta, position_index)
 
     updates = []
     for raw in rows[4:]:
@@ -621,12 +711,14 @@ def api_import(class_id):
         nim = str(raw[1]) if raw[1] is not None else ""
         name = str(raw[2]) if raw[2] is not None else ""
         scores = {}
+        comp_col_index = 0
         for col, meta in col_meta.items():
             if col > len(raw):
                 continue
             if not meta["codes"] and not meta["name"]:
                 continue
-            comp = resolve(meta)
+            comp = resolve(meta, comp_col_index)
+            comp_col_index += 1
             if not comp:
                 continue
             val = raw[col - 1]

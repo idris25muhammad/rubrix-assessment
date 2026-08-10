@@ -58,6 +58,10 @@
           <option value="tim_kurikulum">Tim Kurikulum</option>
         </select>
       </label>
+      <label class="upload-field" id="user-programs-field" hidden>
+        <span>Program Studi (Tim Kurikulum)</span>
+        <select id="user-programs"></select>
+      </label>
       <label class="upload-field">
         <span>Password <span class="weight">(leave blank to keep unchanged on edit)</span></span>
         <input type="password" id="user-password" minlength="6">
@@ -77,6 +81,13 @@ let editUserId = null;
 let usersCache = {};
 let currentPage = 1;
 let currentSearch = '';
+let userPrograms = [];
+
+async function loadUserPrograms() {
+  try {
+    userPrograms = await fetch(u('programs')).then(r => r.json());
+  } catch (e) { userPrograms = []; }
+}
 
 async function loadUsers() {
   const params = new URLSearchParams({ page: currentPage, page_size: 10 });
@@ -139,6 +150,18 @@ document.getElementById('btn-show-all').addEventListener('click', () => {
   loadUsers();
 });
 
+function renderUserPrograms(selected) {
+  const wrap = document.getElementById('user-programs');
+  const value = selected || 'RKS';
+  wrap.innerHTML = userPrograms.map(p => `<option value="${p.code}">${esc(p.label)}</option>`).join('');
+  if (userPrograms.some(p => p.code === value)) wrap.value = value;
+}
+
+function updateUserProgramsField() {
+  const role = document.getElementById('user-role').value;
+  document.getElementById('user-programs-field').hidden = role !== 'tim_kurikulum';
+}
+
 function openUserModal(id) {
   editUserId = id || null;
   document.getElementById('user-modal-title').textContent = id ? 'Edit User' : 'Add User';
@@ -147,12 +170,15 @@ function openUserModal(id) {
   document.getElementById('user-role').value = 'lecturer';
   document.getElementById('user-password').value = '';
   document.getElementById('user-status').innerHTML = '';
+  renderUserPrograms([]);
   if (id && usersCache[id]) {
     const u = usersCache[id];
     document.getElementById('user-name').value = u.name;
     document.getElementById('user-email').value = u.email;
     document.getElementById('user-role').value = u.role;
+    renderUserPrograms(u.study_program || 'RKS');
   }
+  updateUserProgramsField();
   document.getElementById('user-modal').hidden = false;
   
 }
@@ -168,6 +194,9 @@ async function saveUser() {
     role: document.getElementById('user-role').value,
     password: document.getElementById('user-password').value,
   };
+  if (payload.role === 'tim_kurikulum') {
+    payload.study_program = document.getElementById('user-programs').value;
+  }
   const statusEl = document.getElementById('user-status');
   if (!payload.name || !payload.email) { statusEl.innerHTML = '<p class="alert-err">✗ Name and email are required.</p>'; return; }
   const url = editUserId ? u('api_user', editUserId) : u('api_users');
@@ -185,6 +214,10 @@ async function saveUser() {
   }
 }
 
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 async function deleteUser(id) {
   if (!confirm('Delete this user?')) return;
   const res = await fetch(u('api_user', id), { method: 'DELETE' });
@@ -198,10 +231,11 @@ document.getElementById('user-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('user-modal')) closeUserModal();
 });
 document.getElementById('user-save').addEventListener('click', saveUser);
+document.getElementById('user-role').addEventListener('change', updateUserProgramsField);
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !document.getElementById('user-modal').hidden) closeUserModal();
 });
 
-loadUsers();
+loadUserPrograms().then(loadUsers);
 </script>
 {% endblock %}

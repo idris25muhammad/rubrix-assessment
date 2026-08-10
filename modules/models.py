@@ -16,7 +16,12 @@ class User(db.Model):
     email = db.Column(String(255), nullable=False, unique=True)
     password_hash = db.Column(String(255), nullable=False)
     role = db.Column(String(30), nullable=False, default="lecturer")
+    study_program = db.Column(String(120), nullable=True)
     created_at = db.Column(DateTime, default=datetime.utcnow)
+
+    def get_study_program(self):
+        """The single study program this user manages (None for lecturers)."""
+        return (self.study_program or "").strip() or None
 
     def to_dict(self):
         return {
@@ -24,6 +29,7 @@ class User(db.Model):
             "name": self.name,
             "email": self.email,
             "role": self.role,
+            "study_program": self.get_study_program(),
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -40,9 +46,20 @@ class Course(db.Model):
     study_program = db.Column(String(120), default="")
     is_pbl = db.Column(Boolean, default=False)
     raw_json = db.Column(Text, nullable=False)
+    shared_with = db.Column(Text, nullable=True)
     created_at = db.Column(DateTime, default=datetime.utcnow)
 
     owner = relationship("User", backref="courses")
+
+    def get_shared_with(self):
+        """User ids this course is shared with (JSON list)."""
+        if not self.shared_with:
+            return []
+        try:
+            val = json.loads(self.shared_with)
+            return val if isinstance(val, list) else []
+        except (TypeError, ValueError):
+            return []
 
     def to_dict(self):
         try:
@@ -60,6 +77,7 @@ class Course(db.Model):
             "study_program": self.study_program,
             "is_pbl": bool(self.is_pbl),
             "target_attainment": target,
+            "shared_with": self.get_shared_with(),
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -251,3 +269,67 @@ class Score(db.Model):
             "component_id": self.component_id,
             "score": self.score,
         }
+
+
+class So(db.Model):
+    __tablename__ = "so_pis"
+    __table_args__ = (
+        UniqueConstraint("study_program", "so_code", name="uq_so_pis_program_code"),
+    )
+
+    id = db.Column(Integer, primary_key=True)
+    study_program = db.Column(String(120), nullable=False)
+    so_code = db.Column(String(30), nullable=False)
+    so_description = db.Column(Text, nullable=True)
+    sort_order = db.Column(Integer, default=0)
+
+    performance_indicators = relationship(
+        "Pi",
+        backref="so",
+        cascade="all, delete-orphan",
+        order_by="Pi.sort_order",
+        passive_deletes=True,
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "study_program": self.study_program,
+            "so_code": self.so_code,
+            "so_description": self.so_description,
+            "sort_order": self.sort_order,
+            "performance_indicator": [
+                p.to_dict() for p in sorted(self.performance_indicators, key=lambda x: x.sort_order)
+            ],
+        }
+
+
+class Pi(db.Model):
+    __tablename__ = "performance_indicators"
+    __table_args__ = (UniqueConstraint("so_id", "pi_code", name="uq_pis_so_code"),)
+
+    id = db.Column(Integer, primary_key=True)
+    so_id = db.Column(Integer, ForeignKey("so_pis.id", ondelete="CASCADE"), nullable=False)
+    pi_code = db.Column(String(30), nullable=False)
+    pi_description = db.Column(Text, nullable=True)
+    sort_order = db.Column(Integer, default=0)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "so_id": self.so_id,
+            "pi_code": self.pi_code,
+            "pi_description": self.pi_description,
+            "sort_order": self.sort_order,
+        }
+
+
+class ProficiencyLevel(db.Model):
+    __tablename__ = "proficiency_levels"
+
+    id = db.Column(Integer, primary_key=True)
+    level = db.Column(Integer, nullable=False, unique=True)
+    label = db.Column(String(180), nullable=False)
+
+    def to_dict(self):
+        return {"level": self.level, "label": self.label}

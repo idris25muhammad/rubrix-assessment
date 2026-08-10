@@ -327,6 +327,15 @@ body {
 
 /* Create Rubric wizard */
 .modal-wizard { max-width: 720px; }
+#wizard-status { margin-bottom: 16px; }
+#wizard-status .alert-err,
+#wizard-status .alert-ok,
+#wizard-status .alert-info {
+  padding: 11px 14px;
+  border-radius: 9px;
+  font-size: 14px;
+  line-height: 1.4;
+}
 .wizard-steps { display: flex; gap: 8px; margin-bottom: 18px; }
 .wizard-step {
   font-size: 13px;
@@ -421,6 +430,17 @@ body {
   padding: 14px;
   margin-bottom: 14px;
   background: #fafbfd;
+}
+.wizard-cpl.wz-invalid {
+  border-color: #e35d5d;
+  background: #fff7f7;
+  box-shadow: 0 0 0 3px rgba(227, 93, 93, 0.12);
+}
+.wz-so-hint {
+  color: #c0392b;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 6px;
 }
 .wizard-cpl-head {
   display: flex;
@@ -1052,6 +1072,18 @@ td.nim .nim-input:focus, td.name .name-input:focus {
   font-size: 14px;
 }
 .upload-field input:focus { outline: 2px solid var(--primary); border-color: transparent; }
+.upload-field textarea,
+.upload-field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.upload-field textarea { resize: vertical; }
+.upload-field textarea:focus,
+.upload-field select:focus { outline: 2px solid var(--primary); border-color: transparent; }
 
 .dropzone {
   border: 2px dashed #b9c7ea;
@@ -1248,7 +1280,7 @@ td.nim .nim-input:focus, td.name .name-input:focus {
   }
 }
 
-/* Named page for landscape sections — must be outside @media print */
+/* Named page for landscape sections - must be outside @media print */
 @page landscape-page {
   size: A4 landscape;
   margin: 10mm 12mm;
@@ -1411,3 +1443,87 @@ td.nim .nim-input:focus, td.name .name-input:focus {
     break-inside: avoid !important;
   }
 }
+
+/* ---- SO-PI admin page ---- */
+.sopi-so {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.sopi-so-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sopi-so-code {
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  color: var(--primary);
+  white-space: nowrap;
+}
+.sopi-so-desc {
+  flex: 1;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.sopi-so-actions,
+.sopi-pi-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.sopi-pi-list {
+  margin: 10px 0 8px 22px;
+  border-left: 2px solid var(--border);
+  padding-left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sopi-pi {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+.sopi-pi-desc {
+  flex: 1;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.sopi-pi-level {
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+#sopi-list .empty {
+  color: var(--muted);
+  padding: 16px 4px;
+}
+.share-user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+.share-user-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 7px;
+}
+.share-user-item:hover { background: #f4f7fb; }
+.share-user-item .weight { margin-left: 6px; }
+.share-user-list .empty { padding: 8px 4px; }
+

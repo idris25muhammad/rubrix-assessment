@@ -123,6 +123,7 @@
       <button class="modal-close" id="wizard-close">&times;</button>
     </div>
     <div class="modal-body">
+      <div id="wizard-status"></div>
       <div class="wizard-steps" id="wizard-steps"></div>
 
       <!-- Step 1: Course info -->
@@ -197,7 +198,6 @@
         <div id="wizard-criteria"></div>
       </div>
 
-      <div id="wizard-status"></div>
       <div class="modal-actions wizard-actions">
         <div class="wizard-actions-left">
           <button class="btn btn-ghost" id="wizard-cancel" type="button">Cancel</button>
@@ -241,6 +241,28 @@
       <div id="edit-status"></div>
       <div class="modal-actions">
         <button class="btn btn-primary" id="edit-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Share course modal -->
+<div class="modal-overlay" id="share-modal" hidden>
+  <div class="modal modal-upload">
+    <div class="modal-head">
+      <h3>Bagikan Course</h3>
+      <button class="modal-close" id="share-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="sub" id="share-course-name"></p>
+      <label class="upload-field">
+        <span>Cari akun (nama / email)</span>
+        <input type="text" id="share-search" placeholder="Ketik nama atau email…">
+      </label>
+      <div id="share-user-list" class="share-user-list"></div>
+      <div id="share-status"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="share-save">Simpan</button>
       </div>
     </div>
   </div>
@@ -290,7 +312,7 @@ async function loadCourses(query = currentSearch, page = currentPage) {
   const colspan = USER_ROLE === 'tim_kurikulum' ? 8 : 7;
 
   if (!courses.length) {
-    body.innerHTML = `<tr><td colspan="${colspan}" class="empty">No courses yet. Upload a course JSON to get started.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="${colspan}" class="empty">No courses yet. Start your assessment with course assesment wizard or upload a course JSON to get started.</td></tr>`;
     document.getElementById('course-pagination').innerHTML = '';
     return;
   }
@@ -305,12 +327,14 @@ async function loadCourses(query = currentSearch, page = currentPage) {
       <td class="num">${c.class_count}</td>
       <td class="actions">
         <a class="btn btn-primary btn-sm" href="${u('manage_classes', c.id)}">Manage Class</a>
-        <button class="icon-btn" title="Edit" data-edit="${c.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
-        <button class="icon-btn icon-danger" title="Delete" data-del="${c.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        ${c.can_share ? `<button class="icon-btn" title="Share" data-share="${c.id}" data-name="${esc(c.course_name)}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>` : ''}
+        ${c.can_share ? `<button class="icon-btn" title="Edit" data-edit="${c.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>` : ''}
+        ${c.can_share ? `<button class="icon-btn icon-danger" title="Delete" data-del="${c.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
       </td>
     </tr>`).join('');
   document.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openEdit(b.dataset.edit)));
   document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => deleteCourse(b.dataset.del)));
+  document.querySelectorAll('[data-share]').forEach(b => b.addEventListener('click', () => openShareModal(b.dataset.share, b.dataset.name)));
   renderPagination(data);
 }
 
@@ -345,6 +369,75 @@ async function deleteCourse(id) {
   }
 }
 
+// ---- Share course ----
+let shareUsers = [];
+let shareSelected = new Set();
+let shareCourseId = null;
+
+async function loadShareOptions() {
+  try {
+    const res = await fetch(u('share_options'));
+    shareUsers = await res.json();
+  } catch (e) { shareUsers = []; }
+  renderShareUsers();
+}
+
+function renderShareUsers() {
+  const q = document.getElementById('share-search').value.trim().toLowerCase();
+  const list = document.getElementById('share-user-list');
+  const filtered = shareUsers.filter(u =>
+    !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+  );
+  if (!filtered.length) {
+    list.innerHTML = '<p class="empty">Tidak ada user yang cocok.</p>';
+    return;
+  }
+  list.innerHTML = filtered.map(u => `
+    <label class="share-user-item wizard-check">
+      <input type="checkbox" class="share-user-cb" value="${u.id}" ${shareSelected.has(u.id) ? 'checked' : ''}>
+      <span><b>${esc(u.name)}</b> <span class="weight">${esc(u.email)}</span></span>
+    </label>`).join('');
+  list.querySelectorAll('.share-user-cb').forEach(cb => cb.addEventListener('change', () => {
+    const id = parseInt(cb.value, 10);
+    if (cb.checked) shareSelected.add(id); else shareSelected.delete(id);
+  }));
+}
+
+async function openShareModal(id, name) {
+  shareCourseId = parseInt(id, 10);
+  shareSelected = new Set();
+  document.getElementById('share-course-name').textContent = name || '';
+  document.getElementById('share-search').value = '';
+  document.getElementById('share-status').innerHTML = '';
+  try {
+    const res = await fetch(u('api_course', shareCourseId));
+    const data = await res.json();
+    (data.course && data.course.shared_with || []).forEach(i => shareSelected.add(i));
+  } catch (e) {}
+  if (!shareUsers.length) await loadShareOptions(); else renderShareUsers();
+  document.getElementById('share-modal').hidden = false;
+}
+
+async function saveShare() {
+  const statusEl = document.getElementById('share-status');
+  const res = await fetch(u('api_course_share', shareCourseId), {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_ids: [...shareSelected] })
+  });
+  const out = await res.json();
+  if (res.ok) {
+    document.getElementById('share-modal').hidden = true;
+    showToast('Pengaturan berbagi disimpan.', 'success');
+    loadCourses();
+  } else {
+    statusEl.innerHTML = `<p class="alert-err">✗ ${esc(out.error)}</p>`;
+  }
+}
+
+function closeShareModal() {
+  document.getElementById('share-modal').hidden = true;
+}
+
 let wizardEditCourseId = null;
 
 async function openEdit(id) {
@@ -374,28 +467,22 @@ async function openEdit(id) {
   document.getElementById('wizard-status').innerHTML = '';
 
   try {
-    soPi = await fetch(u('so_pi')).then(r => r.json());
-    soByCode = {};
-    soPi.student_outcome.forEach(so => soByCode[so.so_code] = so);
-  } catch (e) { soPi = { student_outcome: [], proficiency_levels: PROF_LEVELS }; }
-  try {
     programs = await fetch(u('programs')).then(r => r.json());
-    const sel = document.getElementById('wizard-program');
-    sel.innerHTML = programs.map(p =>
-      `<option value="${p.code}" ${p.code === 'RKS' ? 'selected' : ''}>${esc(p.label)}</option>`
-    ).join('');
   } catch (e) { programs = []; }
-
-  buildCplList();
-  buildWizardCategories();
-  buildWizardWeights();
-  buildWizardCriteria();
+  renderProgramSelect();
 
   document.getElementById('wizard-code').value = d.course.course_code || '';
   document.getElementById('wizard-name').value = d.course.course_name || '';
   document.getElementById('wizard-sks').value = d.course.sks || 3;
   document.getElementById('wizard-semester').value = d.course.semester || '';
   document.getElementById('wizard-program').value = d.course.study_program || '';
+
+  await loadSoPi();
+
+  buildCplList();
+  buildWizardCategories();
+  buildWizardWeights();
+  buildWizardCriteria();
   document.getElementById('wizard-pbl').checked = !!d.course.is_pbl;
   
   const targetVal = d.course.target_attainment !== undefined ? d.course.target_attainment : 80;
@@ -451,6 +538,15 @@ function closeEdit() {
 document.getElementById('edit-close').addEventListener('click', closeEdit);
 document.getElementById('edit-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('edit-modal')) closeEdit();
+});
+document.getElementById('share-close').addEventListener('click', closeShareModal);
+document.getElementById('share-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('share-modal')) closeShareModal();
+});
+document.getElementById('share-save').addEventListener('click', saveShare);
+document.getElementById('share-search').addEventListener('input', renderShareUsers);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !document.getElementById('share-modal').hidden) closeShareModal();
 });
 document.getElementById('edit-save').addEventListener('click', async () => {
   const payload = {
@@ -678,6 +774,54 @@ function esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+async function loadSoPi() {
+  const sel = document.getElementById('wizard-program');
+  const program = (sel && sel.value) || 'RKS';
+  try {
+    soPi = await fetch(u('so_pi') + '?program=' + encodeURIComponent(program)).then(r => r.json());
+  } catch (e) {
+    soPi = { student_outcome: [], proficiency_levels: PROF_LEVELS };
+  }
+  soByCode = {};
+  soPi.student_outcome.forEach(so => soByCode[so.so_code] = so);
+}
+
+function refreshSoViews() {
+  const sos = soPi && soPi.student_outcome ? soPi.student_outcome : [];
+  document.querySelectorAll('.wizard-cpl .wz-so-list').forEach(list => {
+    const prev = [...list.querySelectorAll('.wz-so-cb:checked')].map(cb => cb.value);
+    list.innerHTML = sos.map(so =>
+      `<label class="wizard-check"><input type="checkbox" class="wz-so-cb" value="${so.so_code}"> <span><b>${so.so_code}</b> - ${esc(so.so_description)}</span></label>`
+    ).join('') || '<p class="empty">Data SO tidak tersedia.</p>';
+    list.querySelectorAll('.wz-so-cb').forEach(cb => {
+      if (prev.includes(cb.value)) cb.checked = true;
+    });
+  });
+  document.querySelectorAll('.wz-cpl-pi-row').forEach(row => {
+    const cplSel = row.querySelector('.wz-comp-cpl');
+    if (cplSel && cplSel.value) renderPiOptions(row, null);
+  });
+}
+
+function renderProgramSelect() {
+  const sel = document.getElementById('wizard-program');
+  const cu = window.CURRENT_USER || {};
+  if (cu.role === 'tim_kurikulum' && cu.study_program) {
+    const p = programs.find(x => x.code === cu.study_program);
+    sel.innerHTML = p
+      ? `<option value="${p.code}">${esc(p.label)}</option>`
+      : `<option value="${cu.study_program}">${esc(cu.study_program)}</option>`;
+    sel.value = cu.study_program;
+    sel.disabled = true;
+    sel.title = 'Program Studi kamu';
+  } else {
+    sel.innerHTML = programs.map(p =>
+      `<option value="${p.code}" ${p.code === 'RKS' ? 'selected' : ''}>${esc(p.label)}</option>`
+    ).join('');
+    sel.disabled = false;
+  }
+}
+
 async function openWizard() {
   wizardEditCourseId = null;
   document.getElementById('wizard-title').textContent = 'Create Rubric';
@@ -704,11 +848,9 @@ async function openWizard() {
   } catch (e) { soPi = { student_outcome: [], proficiency_levels: PROF_LEVELS }; }
   try {
     programs = await fetch(u('programs')).then(r => r.json());
-    const sel = document.getElementById('wizard-program');
-    sel.innerHTML = programs.map(p =>
-      `<option value="${p.code}" ${p.code === 'RKS' ? 'selected' : ''}>${esc(p.label)}</option>`
-    ).join('');
   } catch (e) { programs = []; }
+  renderProgramSelect();
+  await loadSoPi();
   buildCplList();
   buildWizardCategories();
   buildWizardWeights();
@@ -814,7 +956,10 @@ function addCplRow(cpl) {
       <div class="wz-so-list"></div>
     </div>`;
   const levelSel = row.querySelector('.wz-cpl-level');
-  levelSel.innerHTML = PROF_LEVELS.map(p =>
+  const levels = (soPi && soPi.proficiency_levels && soPi.proficiency_levels.length)
+    ? soPi.proficiency_levels.map(p => ({ v: p.level, t: p.label }))
+    : PROF_LEVELS;
+  levelSel.innerHTML = levels.map(p =>
     `<option value="${p.v}">${p.v}. ${esc(p.t)}</option>`
   ).join('');
   levelSel.value = (cpl && cpl.proficiency_level) || '3';
@@ -1279,6 +1424,33 @@ function renderWizardStep() {
   if (wizardStep === 5) renderCriteria();
 }
 
+// Mark CPL rows that have no SO selected. Returns index of the first bad row (-1 if none).
+function markCplSoIssues() {
+  const rows = [...document.querySelectorAll('.wizard-cpl')];
+  let firstBad = -1;
+  rows.forEach((row, i) => {
+    const has = !!row.querySelector('.wz-so-cb:checked');
+    const hint = row.querySelector('.wz-so-hint');
+    if (has) {
+      row.classList.remove('wz-invalid');
+      if (hint) hint.remove();
+    } else {
+      row.classList.add('wz-invalid');
+      if (firstBad === -1) firstBad = i;
+      if (!hint) {
+        const soList = row.querySelector('.wz-so-list');
+        if (soList) {
+          const el = document.createElement('p');
+          el.className = 'wz-so-hint';
+          el.textContent = `✗ Pilih minimal 1 SO untuk ${row.dataset.cpl}`;
+          soList.insertAdjacentElement('afterend', el);
+        }
+      }
+    }
+  });
+  return firstBad;
+}
+
 function validateStep() {
   const status = document.getElementById('wizard-status');
   status.innerHTML = '';
@@ -1294,8 +1466,11 @@ function validateStep() {
       status.innerHTML = '<p class="alert-err">✗ Isi minimal 1 CPL beserta deskripsinya.</p>';
       return false;
     }
-    if (cpls.some(c => !c.so_codes.length)) {
-      status.innerHTML = '<p class="alert-err">✗ Setiap CPL harus memilih minimal 1 SO.</p>';
+    const firstBad = markCplSoIssues();
+    if (firstBad !== -1) {
+      status.innerHTML = '<p class="alert-err">✗ Setiap CPL harus memilih minimal 1 SO - baris yang bermasalah ditandai merah.</p>';
+      const row = document.querySelectorAll('.wizard-cpl')[firstBad];
+      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return false;
     }
   }
@@ -1401,13 +1576,21 @@ document.getElementById('wizard-pbl').addEventListener('change', () => {
   if (wizardStep === 4) updatePblStatus();
   saveWizardDraft();
 });
+document.getElementById('wizard-program').addEventListener('change', async () => {
+  await loadSoPi();
+  refreshSoViews();
+  saveWizardDraft();
+});
 
 // Save draft on any input/change inside the wizard.
 document.getElementById('wizard-modal').addEventListener('input', e => {
   if (e.target.closest('#wizard-modal')) saveWizardDraft();
 });
 document.getElementById('wizard-modal').addEventListener('change', e => {
-  if (e.target.closest('#wizard-modal')) saveWizardDraft();
+  if (e.target.closest('#wizard-modal')) {
+    if (e.target.classList.contains('wz-so-cb')) markCplSoIssues();
+    saveWizardDraft();
+  }
 });
 
 // Target Attainment slider listener

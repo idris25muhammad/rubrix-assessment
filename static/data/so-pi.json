@@ -1,4 +1,5 @@
 {
+  "study_program": "RKS",
   "student_outcome": [
     {
       "so_code": "SO1",
@@ -6,28 +7,23 @@
       "performance_indicator": [
         {
           "pi_code": "1a",
-          "pi_description": "Menerapkan dasar-dasar jaringan, kriptografi, dan sistem operasi untuk menyelesaikan permasalahan keamanan.",
-          "level": 3
+          "pi_description": "Menerapkan dasar-dasar jaringan, kriptografi, dan sistem operasi untuk menyelesaikan permasalahan keamanan."
         },
         {
           "pi_code": "1b",
-          "pi_description": "Menggunakan alat keamanan siber (misalnya Wireshark, Metasploit) untuk analisis ancaman.",
-          "level": 3
+          "pi_description": "Menggunakan alat keamanan siber (misalnya Wireshark, Metasploit) untuk analisis ancaman."
         },
         {
           "pi_code": "1c",
-          "pi_description": "Menyelesaikan masalah menggunakan pemrograman aman dan otomatisasi.",
-          "level": 3
+          "pi_description": "Menyelesaikan masalah menggunakan pemrograman aman dan otomatisasi."
         },
         {
           "pi_code": "1d",
-          "pi_description": "Menganalisis kerentanan perangkat lunak menggunakan teknik reverse engineering atau analisis statis/dinamis.",
-          "level": 4
+          "pi_description": "Menganalisis kerentanan perangkat lunak menggunakan teknik reverse engineering atau analisis statis/dinamis."
         },
         {
           "pi_code": "1e",
-          "pi_description": "Menerapkan prinsip-prinsip dasar kriptografi dalam perlindungan data.",
-          "level": 3
+          "pi_description": "Menerapkan prinsip-prinsip dasar kriptografi dalam perlindungan data."
         }
       ]
     },
@@ -37,13 +33,11 @@
       "performance_indicator": [
         {
           "pi_code": "2a",
-          "pi_description": "Menggunakan dan mengutip standar/literatur yang relevan dalam keamanan siber.",
-          "level": 3
+          "pi_description": "Menggunakan dan mengutip standar/literatur yang relevan dalam keamanan siber."
         },
         {
           "pi_code": "2b",
-          "pi_description": "Menganalisis dan membandingkan pendekatan atau kerangka kerja alternatif untuk menyelesaikan masalah keamanan siber yang terdefinisi.",
-          "level": 4
+          "pi_description": "Menganalisis dan membandingkan pendekatan atau kerangka kerja alternatif untuk menyelesaikan masalah keamanan siber yang terdefinisi."
         }
       ]
     },
@@ -53,23 +47,19 @@
       "performance_indicator": [
         {
           "pi_code": "3a",
-          "pi_description": "Merancang arsitektur sistem yang aman.",
-          "level": 4
+          "pi_description": "Merancang arsitektur sistem yang aman."
         },
         {
           "pi_code": "3b",
-          "pi_description": "Membangun komponen keamanan yang sesuai dengan praktik terbaik.",
-          "level": 4
+          "pi_description": "Membangun komponen keamanan yang sesuai dengan praktik terbaik."
         },
         {
           "pi_code": "3c",
-          "pi_description": "Mengevaluasi pertukaran (trade-off) dan memberikan justifikasi atas keputusan desain.",
-          "level": 4
+          "pi_description": "Mengevaluasi pertukaran (trade-off) dan memberikan justifikasi atas keputusan desain."
         },
         {
           "pi_code": "3d",
-          "pi_description": "Menerapkan kerangka kerja berbasis risiko (misalnya ISO 27001, KAMI V4) dalam proses desain.",
-          "level": 3
+          "pi_description": "Menerapkan kerangka kerja berbasis risiko (misalnya ISO 27001, KAMI V4) dalam proses desain."
         }
       ]
     },
@@ -79,23 +69,19 @@
       "performance_indicator": [
         {
           "pi_code": "4a",
-          "pi_description": "Menganalisis data monitoring/log untuk mengidentifikasi ancaman.",
-          "level": 4
+          "pi_description": "Menganalisis data monitoring/log untuk mengidentifikasi ancaman."
         },
         {
           "pi_code": "4b",
-          "pi_description": "Memberikan rekomendasi berbasis bukti (evidence-based).",
-          "level": 3
+          "pi_description": "Memberikan rekomendasi berbasis bukti (evidence-based)."
         },
         {
           "pi_code": "4c",
-          "pi_description": "Menggunakan metode pengujian terstruktur (misalnya MITRE ATT&CK, OWASP).",
-          "level": 3
+          "pi_description": "Menggunakan metode pengujian terstruktur (misalnya MITRE ATT&CK, OWASP)."
         },
         {
           "pi_code": "4d",
-          "pi_description": "Melakukan penetration test atau audit keamanan.",
-          "level": 4
+          "pi_description": "Melakukan penetration test atau audit keamanan."
         }
       ]
     },
@@ -105,13 +91,11 @@
       "performance_indicator": [
         {
           "pi_code": "5a",
-          "pi_description": "Mengevaluasi dampak pengujian terhadap kesinambungan atau keamanan sistem.",
-          "level": 3
+          "pi_description": "Mengevaluasi dampak pengujian terhadap kesinambungan atau keamanan sistem."
         },
         {
           "pi_code": "5b",
-          "pi_description": "Menggunakan alat simulasi atau pemodelan (misalnya threat modeling, network emulation) untuk memprediksi dan mengurangi risiko keamanan.",
-          "level": 4
+          "pi_description": "Menggunakan alat simulasi atau pemodelan (misalnya threat modeling, network emulation) untuk memprediksi dan mengurangi risiko keamanan."
         }
       ]
     },
@@ -121,13 +105,11 @@
       "performance_indicator": [
         {
           "pi_code": "6a",
-          "pi_description": "Mengintegrasikan pertimbangan hukum dan etika dalam desain keamanan.",
-          "level": 3
+          "pi_description": "Mengintegrasikan pertimbangan hukum dan etika dalam desain keamanan."
         },
         {
           "pi_code": "6b",
-          "pi_description": "Mengidentifikasi dan merespons isu etika dalam praktik keamanan siber melalui studi kasus atau skenario.",
-          "level": 2
+          "pi_description": "Mengidentifikasi dan merespons isu etika dalam praktik keamanan siber melalui studi kasus atau skenario."
         }
       ]
     },
@@ -137,18 +119,15 @@
       "performance_indicator": [
         {
           "pi_code": "7a",
-          "pi_description": "Bekerja sama dalam menyelesaikan tugas dan berkontribusi pada tujuan tim.",
-          "level": 2
+          "pi_description": "Bekerja sama dalam menyelesaikan tugas dan berkontribusi pada tujuan tim."
         },
         {
           "pi_code": "7b",
-          "pi_description": "Memimpin tim, menyelesaikan konflik, dan mengelola dinamika kelompok.",
-          "level": 3
+          "pi_description": "Memimpin tim, menyelesaikan konflik, dan mengelola dinamika kelompok."
         },
         {
           "pi_code": "7c",
-          "pi_description": "Melakukan refleksi terhadap kinerja tim dan mengusulkan perbaikan.",
-          "level": 2
+          "pi_description": "Melakukan refleksi terhadap kinerja tim dan mengusulkan perbaikan."
         }
       ]
     },
@@ -158,18 +137,15 @@
       "performance_indicator": [
         {
           "pi_code": "8a",
-          "pi_description": "Menyusun laporan teknis dan dokumentasi secara jelas.",
-          "level": 3
+          "pi_description": "Menyusun laporan teknis dan dokumentasi secara jelas."
         },
         {
           "pi_code": "8b",
-          "pi_description": "Berkomunikasi secara efektif dengan tim teknis maupun non-teknis.",
-          "level": 3
+          "pi_description": "Berkomunikasi secara efektif dengan tim teknis maupun non-teknis."
         },
         {
           "pi_code": "8c",
-          "pi_description": "Mengembangkan diagram visual (misalnya model ancaman, alur sistem) untuk mendukung penjelasan teknis.",
-          "level": 3
+          "pi_description": "Mengembangkan diagram visual (misalnya model ancaman, alur sistem) untuk mendukung penjelasan teknis."
         }
       ]
     },
@@ -179,13 +155,11 @@
       "performance_indicator": [
         {
           "pi_code": "9a",
-          "pi_description": "Menerapkan alat agile atau manajemen proyek untuk mengoordinasikan hasil kerja.",
-          "level": 3
+          "pi_description": "Menerapkan alat agile atau manajemen proyek untuk mengoordinasikan hasil kerja."
         },
         {
           "pi_code": "9b",
-          "pi_description": "Mengembangkan dan mengelola jadwal proyek, pencapaian target (milestone), dan sumber daya untuk mencapai tujuan yang telah ditentukan.",
-          "level": 3
+          "pi_description": "Mengembangkan dan mengelola jadwal proyek, pencapaian target (milestone), dan sumber daya untuk mencapai tujuan yang telah ditentukan."
         }
       ]
     },
@@ -195,13 +169,11 @@
       "performance_indicator": [
         {
           "pi_code": "10a",
-          "pi_description": "Menunjukkan kemampuan belajar mandiri melalui jurnal reflektif, sumber daring, atau eksplorasi mandiri yang relevan dengan topik PBL.",
-          "level": 2
+          "pi_description": "Menunjukkan kemampuan belajar mandiri melalui jurnal reflektif, sumber daring, atau eksplorasi mandiri yang relevan dengan topik PBL."
         },
         {
           "pi_code": "10b",
-          "pi_description": "Mengusulkan dan menerapkan ide atau pendekatan inovatif dalam menyelesaikan masalah kompleks keamanan siber dalam proyek PBL multidisipliner.",
-          "level": 4
+          "pi_description": "Mengusulkan dan menerapkan ide atau pendekatan inovatif dalam menyelesaikan masalah kompleks keamanan siber dalam proyek PBL multidisipliner."
         }
       ]
     }

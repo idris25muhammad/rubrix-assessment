@@ -14,8 +14,10 @@
       <p id="course-subtitle">Loading course…</p>
     </div>
     <div class="head-actions">
+      {% if can_manage %}
       <button class="btn btn-outline" id="btn-combined">Show Combined Portfolio</button>
       <button class="btn btn-primary" id="btn-add-class">Add Class</button>
+      {% endif %}
     </div>
   </div>
 </section>
@@ -67,6 +69,7 @@
 {% block scripts %}
 <script>
 const COURSE_ID = {{ course_id }};
+const CAN_MANAGE = {{ can_manage | tojson }};
 let editClassId = null;
 
 async function loadCourse() {
@@ -101,8 +104,8 @@ async function renderClasses(classes) {
         <a class="btn btn-primary btn-sm" href="${u('assess', cl.id)}">Assess</a>
         <a class="btn btn-outline btn-sm" href="${u('portfolio', cl.id)}">Show Portfolio</a>
         <a class="btn btn-outline btn-sm" href="${u('api_export_sid', cl.id)}" title="Rubrik SID">Rubrik SID</a>
-        <button class="icon-btn" title="Edit" data-edit="${cl.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
-        <button class="icon-btn icon-danger" title="Delete" data-del="${cl.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        ${CAN_MANAGE ? `<button class="icon-btn" title="Edit" data-edit="${cl.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>` : ''}
+        ${CAN_MANAGE ? `<button class="icon-btn icon-danger" title="Delete" data-del="${cl.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
       </td>
     </tr>`).join('');
   document.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openClassModal(b.dataset.edit)));
@@ -154,10 +157,12 @@ async function deleteClass(id) {
   }
 }
 
-document.getElementById('btn-add-class').addEventListener('click', () => openClassModal());
-document.getElementById('btn-combined').addEventListener('click', () => {
-  window.location.href = u('portfolio_course', COURSE_ID);
-});
+if (CAN_MANAGE) {
+  document.getElementById('btn-add-class').addEventListener('click', () => openClassModal());
+  document.getElementById('btn-combined').addEventListener('click', () => {
+    window.location.href = u('portfolio_course', COURSE_ID);
+  });
+}
 document.getElementById('class-close').addEventListener('click', closeClassModal);
 document.getElementById('class-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('class-modal')) closeClassModal();

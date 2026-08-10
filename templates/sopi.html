@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% block title %}Manage SO-PI &middot; RubriX{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1>Manage SO-PI</h1>
+    <p>Kelola set Student Outcome (SO) dan Performance Indicator (PI) per program studi. Perubahan langsung dipakai oleh wizard rubrik.</p>
+  </div>
+  <div class="head-actions">
+    <button class="btn btn-outline" id="btn-levels">Proficiency Levels</button>
+    <button class="btn btn-primary" id="btn-add-so">Add SO</button>
+  </div>
+</section>
+
+<section class="card">
+  <div class="table-toolbar" style="margin-bottom: 16px; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+    <label for="sopi-program">Program Studi</label>
+    <select id="sopi-program" class="search-input" style="width: 260px;"></select>
+  </div>
+  <div id="sopi-list"></div>
+</section>
+
+<!-- SO modal -->
+<div class="modal-overlay" id="so-modal" hidden>
+  <div class="modal modal-upload">
+    <div class="modal-head">
+      <h3 id="so-modal-title">Add SO</h3>
+      <button class="modal-close" id="so-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label class="upload-field">
+        <span>SO Code</span>
+        <input type="text" id="so-code" maxlength="30" placeholder="contoh: SO11">
+      </label>
+      <label class="upload-field">
+        <span>Deskripsi SO</span>
+        <textarea id="so-description" rows="3" maxlength="1000" placeholder="Deskripsi student outcome..."></textarea>
+      </label>
+      <div id="so-status"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="so-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PI modal -->
+<div class="modal-overlay" id="pi-modal" hidden>
+  <div class="modal modal-upload">
+    <div class="modal-head">
+      <h3 id="pi-modal-title">Add PI</h3>
+      <button class="modal-close" id="pi-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label class="upload-field">
+        <span>PI Code</span>
+        <input type="text" id="pi-code" maxlength="30" placeholder="contoh: 11a">
+      </label>
+      <label class="upload-field">
+        <span>Deskripsi PI</span>
+        <textarea id="pi-description" rows="3" maxlength="1000" placeholder="Deskripsi performance indicator..."></textarea>
+      </label>
+      <div id="pi-status"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="pi-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Proficiency levels modal -->
+<div class="modal-overlay" id="levels-modal" hidden>
+  <div class="modal modal-upload">
+    <div class="modal-head">
+      <h3>Proficiency Levels</h3>
+      <button class="modal-close" id="levels-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="sub">Label level dipakai wizard untuk CPL proficiency level.</p>
+      <div id="levels-list"></div>
+      <div id="levels-status"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="levels-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentProgram = 'RKS';
+let soPiData = { student_outcome: [], proficiency_levels: [] };
+let soCache = {};
+let piCache = {};
+let editSoId = null;
+let editPiId = null;
+let editPiSoId = null;
+let programs = [];
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+const ICON_EDIT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
+const ICON_TRASH = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+
+async function loadPrograms() {
+  try {
+    programs = await fetch(u('sopi_programs')).then(r => r.json());
+    const sel = document.getElementById('sopi-program');
+    sel.innerHTML = programs.map(p => `<option value="${p.code}">${esc(p.label)}</option>`).join('');
+    if (!programs.some(p => p.code === currentProgram)) {
+      currentProgram = programs.length ? programs[0].code : 'RKS';
+    }
+    sel.value = currentProgram;
+    sel.disabled = programs.length <= 1;
+    if (sel.disabled) sel.title = 'Anda hanya mengelola satu prodi';
+  } catch (e) {
+    programs = [];
+    document.getElementById('sopi-program').innerHTML = '';
+  }
+}
+
+async function loadSoPi() {
+  try {
+    const res = await fetch(`${u('sopi_api')}?program=${encodeURIComponent(currentProgram)}`);
+    soPiData = await res.json();
+  } catch (e) {
+    soPiData = { student_outcome: [], proficiency_levels: [] };
+  }
+  soCache = {};
+  piCache = {};
+  soPiData.student_outcome.forEach(so => { soCache[so.id] = so; (so.performance_indicator || []).forEach(p => piCache[p.id] = p); });
+  renderSoPi();
+}
+
+function renderSoPi() {
+  const wrap = document.getElementById('sopi-list');
+  const sos = soPiData.student_outcome || [];
+  if (!sos.length) {
+    wrap.innerHTML = '<p class="empty">Belum ada SO untuk prodi ini. Klik "Add SO" untuk membuatnya.</p>';
+    return;
+  }
+  wrap.innerHTML = sos.map(so => `
+    <div class="sopi-so">
+      <div class="sopi-so-head">
+        <b class="sopi-so-code">${esc(so.so_code)}</b>
+        <span class="sopi-so-desc">${esc(so.so_description || '')}</span>
+        <div class="sopi-so-actions">
+          <button class="icon-btn" title="Edit SO" data-so-edit="${so.id}">${ICON_EDIT}</button>
+          <button class="icon-btn icon-danger" title="Delete SO" data-so-del="${so.id}">${ICON_TRASH}</button>
+        </div>
+      </div>
+      <div class="sopi-pi-list">
+        ${(so.performance_indicator || []).map(pi => `
+          <div class="sopi-pi">
+            <span class="chip">${esc(pi.pi_code)}</span>
+            <span class="sopi-pi-desc">${esc(pi.pi_description || '')}</span>
+            <div class="sopi-pi-actions">
+              <button class="icon-btn" title="Edit PI" data-pi-edit="${pi.id}">${ICON_EDIT}</button>
+              <button class="icon-btn icon-danger" title="Delete PI" data-pi-del="${pi.id}">${ICON_TRASH}</button>
+            </div>
+          </div>`).join('') || '<p class="empty">Belum ada PI.</p>'}
+      </div>
+      <button class="btn btn-outline btn-sm" data-pi-add="${so.id}">+ Tambah PI</button>
+    </div>`).join('');
+
+  document.querySelectorAll('[data-so-edit]').forEach(b => b.addEventListener('click', () => openSoModal(parseInt(b.dataset.soEdit, 10))));
+  document.querySelectorAll('[data-so-del]').forEach(b => b.addEventListener('click', () => deleteSo(parseInt(b.dataset.soDel, 10))));
+  document.querySelectorAll('[data-pi-add]').forEach(b => b.addEventListener('click', () => openPiModal(null, parseInt(b.dataset.piAdd, 10))));
+  document.querySelectorAll('[data-pi-edit]').forEach(b => b.addEventListener('click', () => openPiModal(parseInt(b.dataset.piEdit, 10))));
+  document.querySelectorAll('[data-pi-del]').forEach(b => b.addEventListener('click', () => deletePi(parseInt(b.dataset.piDel, 10))));
+}
+
+// ---- SO ----
+function openSoModal(id) {
+  editSoId = id || null;
+  document.getElementById('so-modal-title').textContent = id ? 'Edit SO' : 'Add SO';
+  document.getElementById('so-code').value = '';
+  document.getElementById('so-description').value = '';
+  document.getElementById('so-status').innerHTML = '';
+  if (id && soCache[id]) {
+    const so = soCache[id];
+    document.getElementById('so-code').value = so.so_code;
+    document.getElementById('so-description').value = so.so_description || '';
+  }
+  document.getElementById('so-modal').hidden = false;
+}
+
+async function saveSo() {
+  const payload = {
+    study_program: currentProgram,
+    so_code: document.getElementById('so-code').value.trim(),
+    so_description: document.getElementById('so-description').value.trim(),
+  };
+  const statusEl = document.getElementById('so-status');
+  if (!payload.so_code) { statusEl.innerHTML = '<p class="alert-err">SO code wajib diisi.</p>'; return; }
+  const url = editSoId ? u('sopi_so', editSoId) : u('sopi_create_so');
+  const method = editSoId ? 'PUT' : 'POST';
+  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const out = await res.json();
+  if (res.ok) {
+    closeSoModal();
+    showToast(editSoId ? 'SO diperbarui.' : 'SO ditambahkan.', 'success');
+    loadSoPi();
+  } else {
+    statusEl.innerHTML = `<p class="alert-err">✗ ${esc(out.error)}</p>`;
+  }
+}
+
+async function deleteSo(id) {
+  const so = soCache[id];
+  if (!confirm(`Hapus SO '${so ? so.so_code : id}' beserta semua PI-nya?`)) return;
+  const res = await fetch(u('sopi_so', id), { method: 'DELETE' });
+  if (res.ok) { showToast('SO dihapus.', 'success'); loadSoPi(); }
+  else { showToast('Gagal menghapus SO.', 'error'); }
+}
+
+// ---- PI ----
+function openPiModal(id, soId) {
+  editPiId = id || null;
+  editPiSoId = soId || (id && piCache[id] ? piCache[id].so_id : null);
+  document.getElementById('pi-modal-title').textContent = id ? 'Edit PI' : 'Add PI';
+  document.getElementById('pi-code').value = '';
+  document.getElementById('pi-description').value = '';
+  document.getElementById('pi-status').innerHTML = '';
+  if (id && piCache[id]) {
+    const pi = piCache[id];
+    document.getElementById('pi-code').value = pi.pi_code;
+    document.getElementById('pi-description').value = pi.pi_description || '';
+  }
+  document.getElementById('pi-modal').hidden = false;
+}
+
+async function savePi() {
+  const payload = {
+    pi_code: document.getElementById('pi-code').value.trim(),
+    pi_description: document.getElementById('pi-description').value.trim(),
+  };
+  const statusEl = document.getElementById('pi-status');
+  if (!editPiSoId) { statusEl.innerHTML = '<p class="alert-err">SO tidak ditemukan.</p>'; return; }
+  if (!payload.pi_code) { statusEl.innerHTML = '<p class="alert-err">PI code wajib diisi.</p>'; return; }
+  const url = editPiId ? u('sopi_pi', editPiId) : u('sopi_create_pi');
+  const method = editPiId ? 'PUT' : 'POST';
+  if (!editPiId) payload.so_id = editPiSoId;
+  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const out = await res.json();
+  if (res.ok) {
+    closePiModal();
+    showToast(editPiId ? 'PI diperbarui.' : 'PI ditambahkan.', 'success');
+    loadSoPi();
+  } else {
+    statusEl.innerHTML = `<p class="alert-err">✗ ${esc(out.error)}</p>`;
+  }
+}
+
+async function deletePi(id) {
+  const pi = piCache[id];
+  if (!confirm(`Hapus PI '${pi ? pi.pi_code : id}'?`)) return;
+  const res = await fetch(u('sopi_pi', id), { method: 'DELETE' });
+  if (res.ok) { showToast('PI dihapus.', 'success'); loadSoPi(); }
+  else { showToast('Gagal menghapus PI.', 'error'); }
+}
+
+// ---- Proficiency levels ----
+async function openLevelsModal() {
+  const wrap = document.getElementById('levels-list');
+  const levels = soPiData.proficiency_levels && soPiData.proficiency_levels.length
+    ? soPiData.proficiency_levels
+    : [{ level: 1 }, { level: 2 }, { level: 3 }, { level: 4 }, { level: 5 }];
+  wrap.innerHTML = levels.map(l => `
+    <div class="sopi-pi" style="margin-bottom: 8px;">
+      <span class="chip">Level ${l.level}</span>
+      <input type="text" class="search-input" data-level="${l.level}" value="${esc(l.label || '')}" placeholder="Label level ${l.level}" style="flex: 1; min-width: 200px;">
+    </div>`).join('');
+  document.getElementById('levels-status').innerHTML = '';
+  document.getElementById('levels-modal').hidden = false;
+}
+
+async function saveLevels() {
+  const levels = [...document.querySelectorAll('#levels-list input[data-level]')].map(inp => ({
+    level: parseInt(inp.dataset.level, 10),
+    label: inp.value.trim(),
+  }));
+  const res = await fetch(u('sopi_levels'), {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ proficiency_levels: levels })
+  });
+  const out = await res.json();
+  if (res.ok) {
+    document.getElementById('levels-modal').hidden = true;
+    showToast('Proficiency levels disimpan.', 'success');
+    loadSoPi();
+  } else {
+    document.getElementById('levels-status').innerHTML = `<p class="alert-err">✗ ${esc(out.error)}</p>`;
+  }
+}
+
+// ---- modal helpers ----
+function closeSoModal() { document.getElementById('so-modal').hidden = true; }
+function closePiModal() { document.getElementById('pi-modal').hidden = true; }
+
+document.getElementById('sopi-program').addEventListener('change', e => {
+  currentProgram = e.target.value || 'RKS';
+  loadSoPi();
+});
+document.getElementById('btn-add-so').addEventListener('click', () => openSoModal());
+document.getElementById('btn-levels').addEventListener('click', openLevelsModal);
+document.getElementById('so-close').addEventListener('click', closeSoModal);
+document.getElementById('so-save').addEventListener('click', saveSo);
+document.getElementById('so-modal').addEventListener('click', e => { if (e.target === document.getElementById('so-modal')) closeSoModal(); });
+document.getElementById('pi-close').addEventListener('click', closePiModal);
+document.getElementById('pi-save').addEventListener('click', savePi);
+document.getElementById('pi-modal').addEventListener('click', e => { if (e.target === document.getElementById('pi-modal')) closePiModal(); });
+document.getElementById('levels-close').addEventListener('click', () => document.getElementById('levels-modal').hidden = true);
+document.getElementById('levels-save').addEventListener('click', saveLevels);
+document.getElementById('levels-modal').addEventListener('click', e => { if (e.target === document.getElementById('levels-modal')) document.getElementById('levels-modal').hidden = true; });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  ['so-modal', 'pi-modal', 'levels-modal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el.hidden) el.hidden = true;
+  });
+});
+
+loadPrograms().then(loadSoPi);
+</script>
+{% endblock %}

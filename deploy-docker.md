@@ -173,6 +173,27 @@ You can read container logs to verify database migrations and server initializat
 docker compose logs -f web
 ```
 
+### Default Seeded Accounts
+On first startup the app seeds one `tim_kurikulum` account per study program
+(login **password = email**):
+- `rks@polibatam.ac.id` (RKS)
+- `ti@polibatam.ac.id` (D3-TI)
+- `trm@polibatam.ac.id` (D4-TRM)
+- `tg@polibatam.ac.id` (D3-TG)
+- `anim@polibatam.ac.id` (D4-ANIM)
+- `trpl@polibatam.ac.id` (D4-TRPL)
+- `tp@polibatam.ac.id` (D4-TP)
+- `s2tk@polibatam.ac.id` (S2-TK)
+
+Each account only manages its own program's SO-PI and dashboard. Lecturers are
+created later via the **Users** page, and courses can be shared to them via the
+**Share** button on the dashboard.
+
+The RKS SO-PI set is auto-seeded from `static/data/so-pi.json` on first start;
+other programs' SO-PI sets are created by their tim_kurikulum account in the
+**SO-PI** page. New DB migrations are applied automatically by `flask db upgrade`
+in the container startup command.
+
 ---
 
 ## 4. Maintenance & Updates

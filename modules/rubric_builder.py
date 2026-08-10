@@ -1,9 +1,6 @@
 """Build a course rubric JSON from the "Create Rubric" wizard input (CPL-based)."""
 
-import json
-import os
-
-from config import BASE_DIR
+from modules.so_pi import get_so_pi
 
 CATEGORIES = [
     ("partisipatif", "Partisipatif"),
@@ -31,9 +28,14 @@ PHRASES = [
 ]
 
 
-def _load_so_pi():
-    with open(os.path.join(BASE_DIR, "static", "data", "so-pi.json"), "r", encoding="utf-8") as f:
-        return json.load(f)
+def _load_so_pi(study_program):
+    sopi = get_so_pi(study_program)
+    if not sopi:
+        raise ValueError(
+            f"Set SO-PI untuk program studi '{study_program}' belum tersedia. "
+            "Hubungi Tim Kurikulum untuk membuatnya."
+        )
+    return sopi
 
 
 def _criteria_for(name):
@@ -72,7 +74,7 @@ def build_rubric_from_wizard(payload):
     if not course_code or not course_name:
         raise ValueError("course_code and course_name are required")
 
-    sopi = _load_so_pi()
+    sopi = _load_so_pi(str(payload.get("study_program", "")).strip() or "RKS")
     so_map = {so["so_code"]: so for so in sopi["student_outcome"]}
 
     cpls_in = payload.get("cpls") or []
