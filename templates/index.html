@@ -144,7 +144,7 @@
           </label>
           <label class="upload-field">
             <span>Semester</span>
-            <input type="text" id="wizard-semester" placeholder="e.g. Ganjil 2026/2027" maxlength="40">
+            <select id="wizard-semester"></select>
           </label>
           <label class="upload-field">
             <span>Program Studi</span>
@@ -474,7 +474,7 @@ async function openEdit(id) {
   document.getElementById('wizard-code').value = d.course.course_code || '';
   document.getElementById('wizard-name').value = d.course.course_name || '';
   document.getElementById('wizard-sks').value = d.course.sks || 3;
-  document.getElementById('wizard-semester').value = d.course.semester || '';
+  setSemesterValue(d.course.semester || '');
   document.getElementById('wizard-program').value = d.course.study_program || '';
 
   await loadSoPi();
@@ -593,6 +593,38 @@ async function loadDefaultInstruments() {
   }
 }
 
+function populateSemesterSelect() {
+  const sel = document.getElementById('wizard-semester');
+  if (!sel) return;
+  const startYear = 2025;
+  const numYears = 5;
+  let html = '<option value="">Pilih Semester...</option>';
+  for (let i = 0; i < numYears; i++) {
+    const y1 = startYear + i;
+    const y2 = y1 + 1;
+    const term = `${y1}/${y2}`;
+    html += `<option value="${term} Ganjil">${term} Ganjil</option>`;
+    html += `<option value="${term} Genap">${term} Genap</option>`;
+  }
+  sel.innerHTML = html;
+}
+
+function setSemesterValue(val) {
+  const sel = document.getElementById('wizard-semester');
+  if (!sel) return;
+  if (val) {
+    const exists = [...sel.options].some(opt => opt.value === val);
+    if (!exists) {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = val;
+      sel.appendChild(opt);
+    }
+  }
+  sel.value = val;
+}
+
+populateSemesterSelect();
 loadCourses();
 loadDashboard();
 loadDefaultInstruments();
@@ -828,7 +860,7 @@ async function openWizard() {
   document.getElementById('wizard-code').value = '';
   document.getElementById('wizard-name').value = '';
   document.getElementById('wizard-sks').value = 3;
-  document.getElementById('wizard-semester').value = '';
+  setSemesterValue('');
   document.getElementById('wizard-pbl').checked = false;
   document.getElementById('wizard-status').innerHTML = '';
   document.getElementById('wizard-target-attainment').value = 80;
@@ -889,7 +921,7 @@ function restoreWizardDraft() {
   document.getElementById('wizard-code').value = d.course_code || '';
   document.getElementById('wizard-name').value = d.course_name || '';
   document.getElementById('wizard-sks').value = d.sks || 3;
-  document.getElementById('wizard-semester').value = d.semester || '';
+  setSemesterValue(d.semester || '');
   if (d.study_program) document.getElementById('wizard-program').value = d.study_program;
   document.getElementById('wizard-pbl').checked = !!d.is_pbl;
   
