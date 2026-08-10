@@ -584,7 +584,7 @@ document.getElementById('btn-show-all').addEventListener('click', () => {
 
 async function loadDefaultInstruments() {
   try {
-    const res = await fetch('/static/data/default-instrument-asesment.json');
+    const res = await fetch('{{ url_for('static', filename='data/default-instrument-asesment.json') }}');
     if (res.ok) {
       defaultInstruments = await res.json();
     }

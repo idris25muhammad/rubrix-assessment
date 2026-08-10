@@ -130,10 +130,29 @@ server {
 }
 ```
 
-> **Note on sub-paths:** Flask generates absolute URLs (e.g. `/dashboard`), so the
-> app must be served at the **root** of a server block / subdomain. If you need a
-> sub-path (e.g. `https://host/rubrix/`), additional `SCRIPT_NAME`/`APPLICATION_ROOT`
-> configuration is required — prefer a subdomain instead.
+If you need to serve the app under a **sub-path** (e.g.
+`https://rks.polibatam.ac.id/rubrix/`), tell Flask the script prefix via the
+`X-Script-Name` header and `location /rubrix/`:
+
+```nginx
+server {
+    listen 80;
+    server_name rks.polibatam.ac.id;
+
+    location /rubrix/ {
+        proxy_pass http://127.0.0.1:5000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Script-Name /rubrix;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Important:** the app must be wrapped with `ProxyFix(..., x_script=1)` so Flask
+honors the `X-Script-Name` header and generates all `url_for` URLs with the
+`/rubrix` prefix (this is not currently enabled in `modules/__init__.py`).
 
 ### Default Seeded Accounts
 On first startup the app seeds one `tim_kurikulum` account per study program
