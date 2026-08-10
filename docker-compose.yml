@@ -20,8 +20,10 @@ services:
     build: .
     container_name: rubrix_web
     restart: always
+    # Bound to the host loopback only; public access is handled by nginx on the
+    # host (reverse proxy) so the app is not exposed directly to the internet.
     ports:
-      - "80:5000"
+      - "127.0.0.1:5000:5000"
     environment:
       RKS_SECRET_KEY: ${RKS_SECRET_KEY:-change-me-to-a-long-random-string}
       RKS_PORT: "5000"

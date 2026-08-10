@@ -48,7 +48,9 @@ The deployment files already live in the repository root:
   boots the app via the `app:create_app()` factory (which also seeds the default accounts
   and the RKS SO-PI set).
 - `docker-compose.yml` — `mysql:8.0` service + `web` service. The MySQL port is **not**
-  exposed to the host for security; it is only reachable inside the Docker network.
+  exposed to the host, and the web service is bound **only to `127.0.0.1:5000`** on the
+  host (not public). Public access is handled by nginx on the server via reverse proxy
+  (see the "Nginx Reverse Proxy" section below).
 - `.dockerignore` — keeps `venv`, `instance/`, `.env`, and build artifacts out of the image.
 
 Secret values come from a `.env` file in the project root (see Step 2 below) via
@@ -104,6 +106,34 @@ You can read container logs to verify database migrations and server initializat
 ```bash
 docker compose logs -f web
 ```
+The web app is only reachable on the host's loopback at this point:
+```bash
+curl -I http://127.0.0.1:5000/login
+```
+
+### Nginx Reverse Proxy
+The app is **not** exposed to the internet directly. Put nginx in front of it
+(e.g. on the same server) and proxy to the loopback port:
+
+```nginx
+server {
+    listen 80;
+    server_name rubrix.example.com;   # or your public IP / subdomain
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+> **Note on sub-paths:** Flask generates absolute URLs (e.g. `/dashboard`), so the
+> app must be served at the **root** of a server block / subdomain. If you need a
+> sub-path (e.g. `https://host/rubrix/`), additional `SCRIPT_NAME`/`APPLICATION_ROOT`
+> configuration is required — prefer a subdomain instead.
 
 ### Default Seeded Accounts
 On first startup the app seeds one `tim_kurikulum` account per study program
