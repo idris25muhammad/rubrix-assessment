@@ -11,7 +11,9 @@
     <button class="btn btn-ghost" id="btn-refresh">Refresh</button>
     <button class="btn btn-outline" id="btn-create">+ Create Rubric</button>
     <button class="btn btn-teal" id="btn-upload">
-      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+        <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z" />
+      </svg>
       Upload Course JSON
     </button>
   </div>
@@ -20,7 +22,8 @@
 <section class="stat-grid" id="stat-grid"></section>
 
 <section class="card">
-  <div class="table-toolbar" style="margin-bottom: 16px; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+  <div class="table-toolbar"
+    style="margin-bottom: 16px; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
     <input type="text" id="course-search" class="search-input" placeholder="Cari kode atau nama matakuliah...">
     <button class="btn btn-primary" id="btn-filter">Filter</button>
     <button class="btn btn-outline" id="btn-show-all">Show All</button>
@@ -42,7 +45,9 @@
         </tr>
       </thead>
       <tbody id="course-body">
-        <tr><td colspan="{% if user.role == 'tim_kurikulum' %}8{% else %}7{% endif %}" class="empty">Loading…</td></tr>
+        <tr>
+          <td colspan="{% if user.role == 'tim_kurikulum' %}8{% else %}7{% endif %}" class="empty">Loading…</td>
+        </tr>
       </tbody>
     </table>
   </div>
@@ -58,13 +63,19 @@
     <div class="modal-body">
       <p class="upload-help">
         The course file is exported from the <b>ProdiSync</b> app - or you can create it manually
-        following the <a href="{{ url_for('courses.api_course_template') }}" class="link-download">example JSON template</a>.
+        following the <a href="{{ url_for('courses.api_course_template') }}" class="link-download">example JSON
+          template</a>.
         After uploading, create one or more classes to start assessing.
       </p>
 
       <div class="dropzone" id="dropzone">
         <input type="file" id="upload-file" accept=".json,application/json" hidden>
-        <div class="dropzone-icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <div class="dropzone-icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor"
+            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg></div>
         <p class="dropzone-main">Drag &amp; drop your <b>.json</b> file here</p>
         <p class="dropzone-sub">or click to browse files</p>
       </div>
@@ -151,10 +162,11 @@
             <select id="wizard-program"></select>
           </label>
           <label class="upload-field" style="grid-column: span 2; margin-top: 10px;">
-            <span>Target Attainment (Skor): <b id="wizard-target-attainment-val">70</b></span>
+            <span>Target Attainment (Skor): <b id="wizard-target-attainment-val">60</b></span>
             <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; margin-bottom: 2px;">
               <span style="font-size: 13px; color: var(--muted);">0</span>
-              <input type="range" id="wizard-target-attainment" min="0" max="100" step="5" value="70" style="flex: 1; cursor: pointer; accent-color: var(--primary);">
+              <input type="range" id="wizard-target-attainment" min="0" max="100" step="5" value="60"
+                style="flex: 1; cursor: pointer; accent-color: var(--primary);">
               <span style="font-size: 13px; color: var(--muted);">100</span>
             </div>
             <p class="wizard-hint" style="margin-top: 4px; font-size: 12.5px; color: var(--muted); line-height: 1.4;">
@@ -271,21 +283,21 @@
 
 {% block scripts %}
 <script>
-async function loadDashboard() {
-  const d = await fetch(u('api_dashboard')).then(r => r.json());
-  const svgIcon = {
-    courses: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
-    classes: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
-    students: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-    assessed: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
-  };
-  const cards = [
-    { label: 'Courses', value: d.course_count, icon: svgIcon.courses },
-    { label: 'Classes', value: d.class_count, icon: svgIcon.classes },
-    { label: 'Students', value: d.student_count, icon: svgIcon.students },
-    { label: 'Students assessed', value: d.assessed_count, icon: svgIcon.assessed },
-  ];
-  document.getElementById('stat-grid').innerHTML = cards.map(c => `
+  async function loadDashboard() {
+    const d = await fetch(u('api_dashboard')).then(r => r.json());
+    const svgIcon = {
+      courses: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+      classes: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+      students: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+      assessed: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    };
+    const cards = [
+      { label: 'Courses', value: d.course_count, icon: svgIcon.courses },
+      { label: 'Classes', value: d.class_count, icon: svgIcon.classes },
+      { label: 'Students', value: d.student_count, icon: svgIcon.students },
+      { label: 'Students assessed', value: d.assessed_count, icon: svgIcon.assessed },
+    ];
+    document.getElementById('stat-grid').innerHTML = cards.map(c => `
     <div class="card stat">
       <div class="stat-top">
         <span class="stat-icon">${c.icon}</span>
@@ -295,28 +307,28 @@ async function loadDashboard() {
         </div>
       </div>
     </div>`).join('');
-}
-
-const USER_ROLE = "{{ user.role }}";
-let currentSearch = '';
-let currentPage = 1;
-
-async function loadCourses(query = currentSearch, page = currentPage) {
-  currentSearch = query;
-  currentPage = page;
-
-  const res = await fetch(u('api_courses') + `?q=${encodeURIComponent(query)}&page=${page}`);
-  const data = await res.json();
-  const courses = data.courses || [];
-  const body = document.getElementById('course-body');
-  const colspan = USER_ROLE === 'tim_kurikulum' ? 8 : 7;
-
-  if (!courses.length) {
-    body.innerHTML = `<tr><td colspan="${colspan}" class="empty">No courses yet. Start your assessment with course assesment wizard or upload a course JSON to get started.</td></tr>`;
-    document.getElementById('course-pagination').innerHTML = '';
-    return;
   }
-  body.innerHTML = courses.map(c => `
+
+  const USER_ROLE = "{{ user.role }}";
+  let currentSearch = '';
+  let currentPage = 1;
+
+  async function loadCourses(query = currentSearch, page = currentPage) {
+    currentSearch = query;
+    currentPage = page;
+
+    const res = await fetch(u('api_courses') + `?q=${encodeURIComponent(query)}&page=${page}`);
+    const data = await res.json();
+    const courses = data.courses || [];
+    const body = document.getElementById('course-body');
+    const colspan = USER_ROLE === 'tim_kurikulum' ? 8 : 7;
+
+    if (!courses.length) {
+      body.innerHTML = `<tr><td colspan="${colspan}" class="empty">No courses yet. Start your assessment with course assesment wizard or upload a course JSON to get started.</td></tr>`;
+      document.getElementById('course-pagination').innerHTML = '';
+      return;
+    }
+    body.innerHTML = courses.map(c => `
     <tr>
       <td class="mono">${c.course_code}</td>
       <td>${c.course_name}</td>
@@ -332,648 +344,648 @@ async function loadCourses(query = currentSearch, page = currentPage) {
         ${c.can_share ? `<button class="icon-btn icon-danger" title="Delete" data-del="${c.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
       </td>
     </tr>`).join('');
-  document.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openEdit(b.dataset.edit)));
-  document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => deleteCourse(b.dataset.del)));
-  document.querySelectorAll('[data-share]').forEach(b => b.addEventListener('click', () => openShareModal(b.dataset.share, b.dataset.name)));
-  renderPagination(data);
-}
-
-function renderPagination(data) {
-  const pag = document.getElementById('course-pagination');
-  if (!pag) return;
-  if (data.total_pages <= 1) {
-    pag.innerHTML = '';
-    return;
+    document.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openEdit(b.dataset.edit)));
+    document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => deleteCourse(b.dataset.del)));
+    document.querySelectorAll('[data-share]').forEach(b => b.addEventListener('click', () => openShareModal(b.dataset.share, b.dataset.name)));
+    renderPagination(data);
   }
-  let html = `<span class="page-info">Showing page ${data.page} of ${data.total_pages} (${data.total_count} courses)</span>`;
-  html += `<button class="page-btn" ${data.page === 1 ? 'disabled' : ''} onclick="loadCourses(currentSearch, ${data.page - 1})">Prev</button>`;
-  for (let p = 1; p <= data.total_pages; p++) {
-    if (p === 1 || p === data.total_pages || (p >= data.page - 2 && p <= data.page + 2)) {
-      html += `<button class="page-btn ${p === data.page ? 'active' : ''}" onclick="loadCourses(currentSearch, ${p})">${p}</button>`;
-    } else if (p === 2 || p === data.total_pages - 1) {
-      html += `<span style="padding: 0 4px; color: var(--muted);">...</span>`;
+
+  function renderPagination(data) {
+    const pag = document.getElementById('course-pagination');
+    if (!pag) return;
+    if (data.total_pages <= 1) {
+      pag.innerHTML = '';
+      return;
+    }
+    let html = `<span class="page-info">Showing page ${data.page} of ${data.total_pages} (${data.total_count} courses)</span>`;
+    html += `<button class="page-btn" ${data.page === 1 ? 'disabled' : ''} onclick="loadCourses(currentSearch, ${data.page - 1})">Prev</button>`;
+    for (let p = 1; p <= data.total_pages; p++) {
+      if (p === 1 || p === data.total_pages || (p >= data.page - 2 && p <= data.page + 2)) {
+        html += `<button class="page-btn ${p === data.page ? 'active' : ''}" onclick="loadCourses(currentSearch, ${p})">${p}</button>`;
+      } else if (p === 2 || p === data.total_pages - 1) {
+        html += `<span style="padding: 0 4px; color: var(--muted);">...</span>`;
+      }
+    }
+    html += `<button class="page-btn" ${data.page === data.total_pages ? 'disabled' : ''} onclick="loadCourses(currentSearch, ${data.page + 1})">Next</button>`;
+    pag.innerHTML = html;
+  }
+
+  async function deleteCourse(id) {
+    if (!confirm('Delete this course and all its classes?')) return;
+    const res = await fetch(u('api_course', id), { method: 'DELETE' });
+    if (res.ok) { showToast('Course deleted.', 'success'); loadCourses(); loadDashboard(); }
+    else {
+      let msg = 'Failed to delete.';
+      try { msg = (await res.json()).error || msg; } catch (e) { }
+      showToast(msg, 'error');
     }
   }
-  html += `<button class="page-btn" ${data.page === data.total_pages ? 'disabled' : ''} onclick="loadCourses(currentSearch, ${data.page + 1})">Next</button>`;
-  pag.innerHTML = html;
-}
 
-async function deleteCourse(id) {
-  if (!confirm('Delete this course and all its classes?')) return;
-  const res = await fetch(u('api_course', id), { method: 'DELETE' });
-  if (res.ok) { showToast('Course deleted.', 'success'); loadCourses(); loadDashboard(); }
-  else {
-    let msg = 'Failed to delete.';
-    try { msg = (await res.json()).error || msg; } catch (e) {}
-    showToast(msg, 'error');
+  // ---- Share course ----
+  let shareUsers = [];
+  let shareSelected = new Set();
+  let shareCourseId = null;
+
+  async function loadShareOptions() {
+    try {
+      const res = await fetch(u('share_options'));
+      shareUsers = await res.json();
+    } catch (e) { shareUsers = []; }
+    renderShareUsers();
   }
-}
 
-// ---- Share course ----
-let shareUsers = [];
-let shareSelected = new Set();
-let shareCourseId = null;
-
-async function loadShareOptions() {
-  try {
-    const res = await fetch(u('share_options'));
-    shareUsers = await res.json();
-  } catch (e) { shareUsers = []; }
-  renderShareUsers();
-}
-
-function renderShareUsers() {
-  const q = document.getElementById('share-search').value.trim().toLowerCase();
-  const list = document.getElementById('share-user-list');
-  const filtered = shareUsers.filter(u =>
-    !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-  );
-  if (!filtered.length) {
-    list.innerHTML = '<p class="empty">Tidak ada user yang cocok.</p>';
-    return;
-  }
-  list.innerHTML = filtered.map(u => `
+  function renderShareUsers() {
+    const q = document.getElementById('share-search').value.trim().toLowerCase();
+    const list = document.getElementById('share-user-list');
+    const filtered = shareUsers.filter(u =>
+      !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+    );
+    if (!filtered.length) {
+      list.innerHTML = '<p class="empty">Tidak ada user yang cocok.</p>';
+      return;
+    }
+    list.innerHTML = filtered.map(u => `
     <label class="share-user-item wizard-check">
       <input type="checkbox" class="share-user-cb" value="${u.id}" ${shareSelected.has(u.id) ? 'checked' : ''}>
       <span><b>${esc(u.name)}</b> <span class="weight">${esc(u.email)}</span></span>
     </label>`).join('');
-  list.querySelectorAll('.share-user-cb').forEach(cb => cb.addEventListener('change', () => {
-    const id = parseInt(cb.value, 10);
-    if (cb.checked) shareSelected.add(id); else shareSelected.delete(id);
-  }));
-}
-
-async function openShareModal(id, name) {
-  shareCourseId = parseInt(id, 10);
-  shareSelected = new Set();
-  document.getElementById('share-course-name').textContent = name || '';
-  document.getElementById('share-search').value = '';
-  document.getElementById('share-status').innerHTML = '';
-  try {
-    const res = await fetch(u('api_course', shareCourseId));
-    const data = await res.json();
-    (data.course && data.course.shared_with || []).forEach(i => shareSelected.add(i));
-  } catch (e) {}
-  if (!shareUsers.length) await loadShareOptions(); else renderShareUsers();
-  document.getElementById('share-modal').hidden = false;
-}
-
-async function saveShare() {
-  const statusEl = document.getElementById('share-status');
-  const res = await fetch(u('api_course_share', shareCourseId), {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_ids: [...shareSelected] })
-  });
-  const out = await res.json();
-  if (res.ok) {
-    document.getElementById('share-modal').hidden = true;
-    showToast('Pengaturan berbagi disimpan.', 'success');
-    loadCourses();
-  } else {
-    statusEl.innerHTML = `<p class="alert-err">✗ ${esc(out.error)}</p>`;
-  }
-}
-
-function closeShareModal() {
-  document.getElementById('share-modal').hidden = true;
-}
-
-let wizardEditCourseId = null;
-
-async function openEdit(id) {
-  try {
-    const editCheck = await fetch(u('api_course_editable', id)).then(r => r.json());
-    if (!editCheck.editable) {
-      showToast(editCheck.error || 'Matakuliah tidak dapat diedit karena sudah ada mahasiswa/nilai yang diisi.', 'error');
-      return;
-    }
-  } catch (e) {
-    showToast('Gagal memverifikasi status edit matakuliah.', 'error');
-    return;
+    list.querySelectorAll('.share-user-cb').forEach(cb => cb.addEventListener('change', () => {
+      const id = parseInt(cb.value, 10);
+      if (cb.checked) shareSelected.add(id); else shareSelected.delete(id);
+    }));
   }
 
-  let d;
-  try {
-    d = await fetch(u('api_course', id)).then(r => r.json());
-  } catch (e) {
-    showToast('Gagal memuat data matakuliah.', 'error');
-    return;
-  }
-  if (!d) return;
-
-  wizardEditCourseId = id;
-  wizardStep = 1;
-  document.getElementById('wizard-title').textContent = 'Edit Rubric';
-  document.getElementById('wizard-status').innerHTML = '';
-
-  try {
-    programs = await fetch(u('programs')).then(r => r.json());
-  } catch (e) { programs = []; }
-  renderProgramSelect();
-
-  document.getElementById('wizard-code').value = d.course.course_code || '';
-  document.getElementById('wizard-name').value = d.course.course_name || '';
-  document.getElementById('wizard-sks').value = d.course.sks || 3;
-  setSemesterValue(d.course.semester || '');
-  document.getElementById('wizard-program').value = d.course.study_program || '';
-
-  await loadSoPi();
-
-  buildCplList();
-  buildWizardCategories();
-  buildWizardWeights();
-  buildWizardCriteria();
-  document.getElementById('wizard-pbl').checked = !!d.course.is_pbl;
-  
-  const targetVal = d.course.target_attainment !== undefined ? d.course.target_attainment : 70;
-  document.getElementById('wizard-target-attainment').value = targetVal;
-  document.getElementById('wizard-target-attainment-val').textContent = targetVal;
-
-  const cplWrap = document.getElementById('wizard-cpl-list');
-  cplWrap.innerHTML = '';
-  (d.cpls && d.cpls.length ? d.cpls : [null]).forEach(c => addCplRow(c));
-
-  const catData = {};
-  d.categories.forEach(cat => {
-    catData[cat.key] = cat.components || [];
-  });
-
-  WIZARD_CATEGORIES.forEach(cat => {
-    const card = document.querySelector(`.wizard-cat[data-cat="${cat.key}"]`);
-    const list = card.querySelector('.wizard-comp-list');
-    list.innerHTML = '';
-    const comps = catData[cat.key] || [];
-    if (!comps.length) addWizardComponent(cat.key);
-    else comps.forEach(c => addWizardComponent(cat.key, c));
-    renumberWizardComponents(card);
-  });
-
-  weightState = {};
-  criteriaDraft = {};
-  
-  d.categories.forEach(cat => {
-    (cat.components || []).forEach(comp => {
-      const ckey = `${cat.key}|${comp.name}`;
-      weightState[ckey] = comp.weight;
-      
-      criteriaDraft[ckey] = (comp.criteria || []).map(cr => {
-        const firstSubj = cr.subjects && cr.subjects.length ? cr.subjects[0] : '';
-        return {
-          label: cr.label,
-          score_min: cr.score_min,
-          score_max: cr.score_max,
-          subject: firstSubj
-        };
-      });
-    });
-  });
-
-  renderWizardStep();
-  wizardModal.hidden = false;
-}
-function closeEdit() {
-  document.getElementById('edit-modal').hidden = true;
-
-}
-document.getElementById('edit-close').addEventListener('click', closeEdit);
-document.getElementById('edit-modal').addEventListener('click', e => {
-  if (e.target === document.getElementById('edit-modal')) closeEdit();
-});
-document.getElementById('share-close').addEventListener('click', closeShareModal);
-document.getElementById('share-modal').addEventListener('click', e => {
-  if (e.target === document.getElementById('share-modal')) closeShareModal();
-});
-document.getElementById('share-save').addEventListener('click', saveShare);
-document.getElementById('share-search').addEventListener('input', renderShareUsers);
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && !document.getElementById('share-modal').hidden) closeShareModal();
-});
-document.getElementById('edit-save').addEventListener('click', async () => {
-  const payload = {
-    course_code: document.getElementById('edit-code').value.trim(),
-    course_name: document.getElementById('edit-name').value.trim(),
-    sks: parseInt(document.getElementById('edit-sks').value, 10) || 0,
-    semester: document.getElementById('edit-semester').value.trim(),
-    study_program: document.getElementById('edit-program').value.trim(),
-  };
-  const res = await fetch(u('api_course', editId), {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-  });
-  const out = await res.json();
-  if (res.ok) { closeEdit(); showToast('Course updated.', 'success'); loadCourses(); }
-  else document.getElementById('edit-status').innerHTML = `<p class="alert-err">✗ ${out.error}</p>`;
-});
-
-document.getElementById('btn-refresh').addEventListener('click', () => { loadCourses(); loadDashboard(); });
-
-function triggerFilter() {
-  const query = document.getElementById('course-search').value.trim();
-  loadCourses(query, 1);
-}
-
-document.getElementById('btn-filter').addEventListener('click', triggerFilter);
-document.getElementById('course-search').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    triggerFilter();
-  }
-});
-document.getElementById('btn-show-all').addEventListener('click', () => {
-  document.getElementById('course-search').value = '';
-  loadCourses('', 1);
-});
-
-async function loadDefaultInstruments() {
-  try {
-    const res = await fetch('{{ url_for('static', filename='data/default-instrument-asesment.json') }}');
-    if (res.ok) {
-      defaultInstruments = await res.json();
-    }
-  } catch (e) {
-    console.error('Failed to load default instruments:', e);
-  }
-}
-
-function populateSemesterSelect() {
-  const sel = document.getElementById('wizard-semester');
-  if (!sel) return;
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth(); // 0 is January, 6 is July
-  // If July (6) or later, start from current year. Otherwise, start from last year to include the current active term.
-  const startYear = currentMonth >= 6 ? currentYear : currentYear - 1;
-  const numYears = 5;
-  let html = '<option value="">Pilih Semester...</option>';
-  for (let i = 0; i < numYears; i++) {
-    const y1 = startYear + i;
-    const y2 = y1 + 1;
-    const term = `${y1}/${y2}`;
-    html += `<option value="${term} Ganjil">${term} Ganjil</option>`;
-    html += `<option value="${term} Genap">${term} Genap</option>`;
-  }
-  sel.innerHTML = html;
-}
-
-function setSemesterValue(val) {
-  const sel = document.getElementById('wizard-semester');
-  if (!sel) return;
-  if (val) {
-    const exists = [...sel.options].some(opt => opt.value === val);
-    if (!exists) {
-      const opt = document.createElement('option');
-      opt.value = val;
-      opt.textContent = val;
-      sel.appendChild(opt);
-    }
-  }
-  sel.value = val;
-}
-
-populateSemesterSelect();
-loadCourses();
-loadDashboard();
-loadDefaultInstruments();
-
-const modal = document.getElementById('upload-modal');
-const dropzone = document.getElementById('dropzone');
-const fileInput = document.getElementById('upload-file');
-const statusEl = document.getElementById('upload-status');
-
-function openModal() {
-  modal.hidden = false;
-
-  statusEl.innerHTML = '';
-  dropzone.classList.remove('is-dragover');
-}
-function closeModal() {
-  modal.hidden = true;
-
-}
-
-document.getElementById('btn-upload').addEventListener('click', openModal);
-document.getElementById('upload-close').addEventListener('click', closeModal);
-modal.addEventListener('click', e => {
-  if (e.target === modal) closeModal();
-});
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { if (!modal.hidden) closeModal(); if (!document.getElementById('edit-modal').hidden) closeEdit(); }
-});
-
-dropzone.addEventListener('click', () => fileInput.click());
-['dragenter', 'dragover'].forEach(ev => dropzone.addEventListener(ev, e => {
-  e.preventDefault();
-  dropzone.classList.add('is-dragover');
-}));
-['dragleave', 'drop'].forEach(ev => dropzone.addEventListener(ev, e => {
-  e.preventDefault();
-  dropzone.classList.remove('is-dragover');
-}));
-dropzone.addEventListener('drop', e => {
-  const files = e.dataTransfer.files;
-  if (files.length) handleFile(files[0]);
-});
-fileInput.addEventListener('change', e => {
-  if (e.target.files.length) handleFile(e.target.files[0]);
-  e.target.value = '';
-});
-
-function validateStructure(data) {
-  const errors = [];
-  const top = ['course_code', 'course_name', 'categories'];
-  for (const k of top) if (!(k in data)) errors.push(`Missing required field "${k}"`);
-  const validCodes = new Set();
-  if (!Array.isArray(data.categories) || !data.categories.length) {
-    errors.push('"categories" must be a non-empty array');
-  } else {
-    let wsum = 0;
-    data.categories.forEach((cat, ci) => {
-      const label = cat && cat.label ? cat.label : `category #${ci + 1}`;
-      if (!cat || typeof cat !== 'object' || !cat.key || !cat.label) {
-        errors.push(`Category #${ci + 1} needs "key" and "label"`);
-        return;
-      }
-      if (!Array.isArray(cat.components) || !cat.components.length) {
-        errors.push(`Category "${label}" has no components`);
-        return;
-      }
-      cat.components.forEach((comp, ri) => {
-        const cname = comp && comp.name ? comp.name : `component #${ri + 1}`;
-        if (!comp || typeof comp !== 'object' || !('weight' in comp)) {
-          errors.push(`Component "${cname}" needs "weight"`);
-          return;
-        }
-        if (typeof comp.weight !== 'number' || comp.weight <= 0) {
-          errors.push(`Component "${cname}" weight must be a positive number`);
-        }
-        if (!Array.isArray(comp.cpl_pis) || !comp.cpl_pis.length) {
-          errors.push(`Component "${cname}" needs at least one "cpl_pis" mapping`);
-        }
-        wsum += comp.weight || 0;
-      });
-    });
-    if (Math.abs(wsum - 100) > 0.001) errors.push(`Total weight is ${wsum.toFixed(1)}% - must be 100%`);
-  }
-  if (!Array.isArray(data.cpls) || !data.cpls.length) {
-    errors.push('Course must define at least one "cpls" entry');
-  } else {
-    (data.cpls || []).forEach(clo => {
-      if (!clo.code) errors.push('Each CPL needs "code"');
-      if (![1, 2, 3, 4, 5].includes(Number(clo.proficiency_level))) {
-        errors.push(`CPL ${clo.code} proficiency_level must be 1-5`);
-      }
-    });
-  }
-  if (data.is_pbl) {
-    const byKey = {};
-    (data.categories || []).forEach(c => byKey[c.key] = c);
-    let pbl = 0;
-    ['partisipatif', 'proyek'].forEach(k => {
-      const cat = byKey[k];
-      if (cat) pbl += (cat.components || []).reduce((a, c) => a + (c.weight || 0), 0);
-    });
-    if (pbl < 50) errors.push(`PBL requires Partisipatif + Proyek >= 50%, currently ${pbl.toFixed(1)}%`);
-  }
-  return errors;
-}
-
-async function handleFile(file) {
-  statusEl.innerHTML = '<p class="alert-info">Reading file…</p>';
-  try {
-    const text = await file.text();
-    let data;
+  async function openShareModal(id, name) {
+    shareCourseId = parseInt(id, 10);
+    shareSelected = new Set();
+    document.getElementById('share-course-name').textContent = name || '';
+    document.getElementById('share-search').value = '';
+    document.getElementById('share-status').innerHTML = '';
     try {
-      data = JSON.parse(text);
-    } catch (err) {
-      statusEl.innerHTML = `<p class="alert-err">✗ Not valid JSON: ${err.message}</p>`;
-      return;
-    }
-    const errors = validateStructure(data);
-    if (errors.length) {
-      statusEl.innerHTML = `<p class="alert-err">✗ Invalid structure:</p><ul class="err-list">${errors.map(x => `<li>${x}</li>`).join('')}</ul>`;
-      return;
-    }
-    statusEl.innerHTML = '<p class="alert-info">Uploading…</p>';
-    const fd = new FormData();
-    fd.append('file', new File([text], file.name, { type: 'application/json' }));
-    const res = await fetch(u('api_upload'), { method: 'POST', body: fd });
+      const res = await fetch(u('api_course', shareCourseId));
+      const data = await res.json();
+      (data.course && data.course.shared_with || []).forEach(i => shareSelected.add(i));
+    } catch (e) { }
+    if (!shareUsers.length) await loadShareOptions(); else renderShareUsers();
+    document.getElementById('share-modal').hidden = false;
+  }
+
+  async function saveShare() {
+    const statusEl = document.getElementById('share-status');
+    const res = await fetch(u('api_course_share', shareCourseId), {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_ids: [...shareSelected] })
+    });
     const out = await res.json();
     if (res.ok) {
-      closeModal();
-      showToast(`Course ${out.course_code} uploaded. Now create a class.`, 'success');
+      document.getElementById('share-modal').hidden = true;
+      showToast('Pengaturan berbagi disimpan.', 'success');
       loadCourses();
-      loadDashboard();
     } else {
-      statusEl.innerHTML = `<p class="alert-err">✗ ${out.error || 'Upload failed'}</p>`;
+      statusEl.innerHTML = `<p class="alert-err">✗ ${esc(out.error)}</p>`;
     }
-  } catch (err) {
-    statusEl.innerHTML = `<p class="alert-err">✗ ${err.message}</p>`;
   }
-}
 
-// ---------------- Create Rubric wizard (5 steps) ----------------
-const WIZARD_CATEGORIES = [
-  { key: 'partisipatif', label: 'Partisipatif' },
-  { key: 'tugas', label: 'Tugas' },
-  { key: 'kuis', label: 'Kuis' },
-  { key: 'ats', label: 'ATS' },
-  { key: 'aas', label: 'AAS' },
-  { key: 'proyek', label: 'Proyek' },
-];
-const STEP_NAMES = ['Course Info', 'CPL & SO', 'Komponen & PI', 'Bobot & PBL', 'Kriteria'];
-const PROF_LEVELS = [
-  { v: 1, t: 'to have experienced or been exposed to' },
-  { v: 2, t: 'to be able to participate in and contribute to' },
-  { v: 3, t: 'to be able to understand and explain' },
-  { v: 4, t: 'to be skilled in the practice or implementation of' },
-  { v: 5, t: 'to be able to lead or innovate in' },
-];
-
-let wizardStep = 1;
-let soPi = { student_outcome: [], proficiency_levels: [] };
-let soByCode = {};
-let programs = [];
-let defaultInstruments = null;
-let weightState = {};
-let criteriaDraft = {}; // component key -> array of {label, score_min, score_max, subject}
-
-const CRIT_LABELS = ['Sangat Kurang', 'Kurang', 'Cukup', 'Baik', 'Sangat Baik'];
-const CRIT_DEFAULT = [
-  { score_min: 0, score_max: 30 },
-  { score_min: 31, score_max: 55 },
-  { score_min: 56, score_max: 70 },
-  { score_min: 75, score_max: 84 },
-  { score_min: 85, score_max: 100 },
-];
-
-const wizardModal = document.getElementById('wizard-modal');
-
-function esc(s) {
-  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-async function loadSoPi() {
-  const sel = document.getElementById('wizard-program');
-  const program = (sel && sel.value) || 'RKS';
-  try {
-    soPi = await fetch(u('so_pi') + '?program=' + encodeURIComponent(program)).then(r => r.json());
-  } catch (e) {
-    soPi = { student_outcome: [], proficiency_levels: PROF_LEVELS };
+  function closeShareModal() {
+    document.getElementById('share-modal').hidden = true;
   }
-  soByCode = {};
-  soPi.student_outcome.forEach(so => soByCode[so.so_code] = so);
-}
 
-function refreshSoViews() {
-  const sos = soPi && soPi.student_outcome ? soPi.student_outcome : [];
-  document.querySelectorAll('.wizard-cpl .wz-so-list').forEach(list => {
-    const prev = [...list.querySelectorAll('.wz-so-cb:checked')].map(cb => cb.value);
-    list.innerHTML = sos.map(so =>
-      `<label class="wizard-check"><input type="checkbox" class="wz-so-cb" value="${so.so_code}"> <span><b>${so.so_code}</b> - ${esc(so.so_description)}</span></label>`
-    ).join('') || '<p class="empty">Data SO tidak tersedia.</p>';
-    list.querySelectorAll('.wz-so-cb').forEach(cb => {
-      if (prev.includes(cb.value)) cb.checked = true;
+  let wizardEditCourseId = null;
+
+  async function openEdit(id) {
+    try {
+      const editCheck = await fetch(u('api_course_editable', id)).then(r => r.json());
+      if (!editCheck.editable) {
+        showToast(editCheck.error || 'Matakuliah tidak dapat diedit karena sudah ada mahasiswa/nilai yang diisi.', 'error');
+        return;
+      }
+    } catch (e) {
+      showToast('Gagal memverifikasi status edit matakuliah.', 'error');
+      return;
+    }
+
+    let d;
+    try {
+      d = await fetch(u('api_course', id)).then(r => r.json());
+    } catch (e) {
+      showToast('Gagal memuat data matakuliah.', 'error');
+      return;
+    }
+    if (!d) return;
+
+    wizardEditCourseId = id;
+    wizardStep = 1;
+    document.getElementById('wizard-title').textContent = 'Edit Rubric';
+    document.getElementById('wizard-status').innerHTML = '';
+
+    try {
+      programs = await fetch(u('programs')).then(r => r.json());
+    } catch (e) { programs = []; }
+    renderProgramSelect();
+
+    document.getElementById('wizard-code').value = d.course.course_code || '';
+    document.getElementById('wizard-name').value = d.course.course_name || '';
+    document.getElementById('wizard-sks').value = d.course.sks || 3;
+    setSemesterValue(d.course.semester || '');
+    document.getElementById('wizard-program').value = d.course.study_program || '';
+
+    await loadSoPi();
+
+    buildCplList();
+    buildWizardCategories();
+    buildWizardWeights();
+    buildWizardCriteria();
+    document.getElementById('wizard-pbl').checked = !!d.course.is_pbl;
+
+    const targetVal = d.course.target_attainment !== undefined ? d.course.target_attainment : 60;
+    document.getElementById('wizard-target-attainment').value = targetVal;
+    document.getElementById('wizard-target-attainment-val').textContent = targetVal;
+
+    const cplWrap = document.getElementById('wizard-cpl-list');
+    cplWrap.innerHTML = '';
+    (d.cpls && d.cpls.length ? d.cpls : [null]).forEach(c => addCplRow(c));
+
+    const catData = {};
+    d.categories.forEach(cat => {
+      catData[cat.key] = cat.components || [];
     });
-  });
-  document.querySelectorAll('.wz-cpl-pi-row').forEach(row => {
-    const cplSel = row.querySelector('.wz-comp-cpl');
-    if (cplSel && cplSel.value) renderPiOptions(row, null);
-  });
-}
 
-function renderProgramSelect() {
-  const sel = document.getElementById('wizard-program');
-  const cu = window.CURRENT_USER || {};
-  
-  sel.innerHTML = programs.map(p =>
-    `<option value="${p.code}">${esc(p.label)}</option>`
-  ).join('');
-  sel.disabled = false;
-  sel.title = 'Pilih Program Studi';
+    WIZARD_CATEGORIES.forEach(cat => {
+      const card = document.querySelector(`.wizard-cat[data-cat="${cat.key}"]`);
+      const list = card.querySelector('.wizard-comp-list');
+      list.innerHTML = '';
+      const comps = catData[cat.key] || [];
+      if (!comps.length) addWizardComponent(cat.key);
+      else comps.forEach(c => addWizardComponent(cat.key, c));
+      renumberWizardComponents(card);
+    });
 
-  const defaultProgram = (cu.role === 'tim_kurikulum' && cu.study_program) ? cu.study_program : 'RKS';
-  if (programs.some(p => p.code === defaultProgram)) {
-    sel.value = defaultProgram;
-  } else if (programs.length > 0) {
-    sel.value = programs[0].code;
+    weightState = {};
+    criteriaDraft = {};
+
+    d.categories.forEach(cat => {
+      (cat.components || []).forEach(comp => {
+        const ckey = `${cat.key}|${comp.name}`;
+        weightState[ckey] = comp.weight;
+
+        criteriaDraft[ckey] = (comp.criteria || []).map(cr => {
+          const firstSubj = cr.subjects && cr.subjects.length ? cr.subjects[0] : '';
+          return {
+            label: cr.label,
+            score_min: cr.score_min,
+            score_max: cr.score_max,
+            subject: firstSubj
+          };
+        });
+      });
+    });
+
+    renderWizardStep();
+    wizardModal.hidden = false;
   }
-}
+  function closeEdit() {
+    document.getElementById('edit-modal').hidden = true;
 
-async function openWizard() {
-  wizardEditCourseId = null;
-  document.getElementById('wizard-title').textContent = 'Create Rubric';
-  wizardStep = 1;
-  document.getElementById('wizard-code').value = '';
-  document.getElementById('wizard-name').value = '';
-  document.getElementById('wizard-sks').value = 3;
-  setSemesterValue('');
-  document.getElementById('wizard-pbl').checked = false;
-  document.getElementById('wizard-status').innerHTML = '';
-  document.getElementById('wizard-target-attainment').value = 70;
-  document.getElementById('wizard-target-attainment-val').textContent = '70';
-  weightState = {};
-  criteriaDraft = {};
-  
-  if (!defaultInstruments) {
-    await loadDefaultInstruments();
+  }
+  document.getElementById('edit-close').addEventListener('click', closeEdit);
+  document.getElementById('edit-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('edit-modal')) closeEdit();
+  });
+  document.getElementById('share-close').addEventListener('click', closeShareModal);
+  document.getElementById('share-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('share-modal')) closeShareModal();
+  });
+  document.getElementById('share-save').addEventListener('click', saveShare);
+  document.getElementById('share-search').addEventListener('input', renderShareUsers);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !document.getElementById('share-modal').hidden) closeShareModal();
+  });
+  document.getElementById('edit-save').addEventListener('click', async () => {
+    const payload = {
+      course_code: document.getElementById('edit-code').value.trim(),
+      course_name: document.getElementById('edit-name').value.trim(),
+      sks: parseInt(document.getElementById('edit-sks').value, 10) || 0,
+      semester: document.getElementById('edit-semester').value.trim(),
+      study_program: document.getElementById('edit-program').value.trim(),
+    };
+    const res = await fetch(u('api_course', editId), {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const out = await res.json();
+    if (res.ok) { closeEdit(); showToast('Course updated.', 'success'); loadCourses(); }
+    else document.getElementById('edit-status').innerHTML = `<p class="alert-err">✗ ${out.error}</p>`;
+  });
+
+  document.getElementById('btn-refresh').addEventListener('click', () => { loadCourses(); loadDashboard(); });
+
+  function triggerFilter() {
+    const query = document.getElementById('course-search').value.trim();
+    loadCourses(query, 1);
   }
 
-  try {
-    soPi = await fetch(u('so_pi')).then(r => r.json());
+  document.getElementById('btn-filter').addEventListener('click', triggerFilter);
+  document.getElementById('course-search').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      triggerFilter();
+    }
+  });
+  document.getElementById('btn-show-all').addEventListener('click', () => {
+    document.getElementById('course-search').value = '';
+    loadCourses('', 1);
+  });
+
+  async function loadDefaultInstruments() {
+    try {
+      const res = await fetch('{{ url_for('static', filename='data/default-instrument-asesment.json') }}');
+      if (res.ok) {
+        defaultInstruments = await res.json();
+      }
+    } catch (e) {
+      console.error('Failed to load default instruments:', e);
+    }
+  }
+
+  function populateSemesterSelect() {
+    const sel = document.getElementById('wizard-semester');
+    if (!sel) return;
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0 is January, 6 is July
+    // If July (6) or later, start from current year. Otherwise, start from last year to include the current active term.
+    const startYear = currentMonth >= 6 ? currentYear : currentYear - 1;
+    const numYears = 5;
+    let html = '<option value="">Pilih Semester...</option>';
+    for (let i = 0; i < numYears; i++) {
+      const y1 = startYear + i;
+      const y2 = y1 + 1;
+      const term = `${y1}/${y2}`;
+      html += `<option value="${term} Ganjil">${term} Ganjil</option>`;
+      html += `<option value="${term} Genap">${term} Genap</option>`;
+    }
+    sel.innerHTML = html;
+  }
+
+  function setSemesterValue(val) {
+    const sel = document.getElementById('wizard-semester');
+    if (!sel) return;
+    if (val) {
+      const exists = [...sel.options].some(opt => opt.value === val);
+      if (!exists) {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = val;
+        sel.appendChild(opt);
+      }
+    }
+    sel.value = val;
+  }
+
+  populateSemesterSelect();
+  loadCourses();
+  loadDashboard();
+  loadDefaultInstruments();
+
+  const modal = document.getElementById('upload-modal');
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('upload-file');
+  const statusEl = document.getElementById('upload-status');
+
+  function openModal() {
+    modal.hidden = false;
+
+    statusEl.innerHTML = '';
+    dropzone.classList.remove('is-dragover');
+  }
+  function closeModal() {
+    modal.hidden = true;
+
+  }
+
+  document.getElementById('btn-upload').addEventListener('click', openModal);
+  document.getElementById('upload-close').addEventListener('click', closeModal);
+  modal.addEventListener('click', e => {
+    if (e.target === modal) closeModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { if (!modal.hidden) closeModal(); if (!document.getElementById('edit-modal').hidden) closeEdit(); }
+  });
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  ['dragenter', 'dragover'].forEach(ev => dropzone.addEventListener(ev, e => {
+    e.preventDefault();
+    dropzone.classList.add('is-dragover');
+  }));
+  ['dragleave', 'drop'].forEach(ev => dropzone.addEventListener(ev, e => {
+    e.preventDefault();
+    dropzone.classList.remove('is-dragover');
+  }));
+  dropzone.addEventListener('drop', e => {
+    const files = e.dataTransfer.files;
+    if (files.length) handleFile(files[0]);
+  });
+  fileInput.addEventListener('change', e => {
+    if (e.target.files.length) handleFile(e.target.files[0]);
+    e.target.value = '';
+  });
+
+  function validateStructure(data) {
+    const errors = [];
+    const top = ['course_code', 'course_name', 'categories'];
+    for (const k of top) if (!(k in data)) errors.push(`Missing required field "${k}"`);
+    const validCodes = new Set();
+    if (!Array.isArray(data.categories) || !data.categories.length) {
+      errors.push('"categories" must be a non-empty array');
+    } else {
+      let wsum = 0;
+      data.categories.forEach((cat, ci) => {
+        const label = cat && cat.label ? cat.label : `category #${ci + 1}`;
+        if (!cat || typeof cat !== 'object' || !cat.key || !cat.label) {
+          errors.push(`Category #${ci + 1} needs "key" and "label"`);
+          return;
+        }
+        if (!Array.isArray(cat.components) || !cat.components.length) {
+          errors.push(`Category "${label}" has no components`);
+          return;
+        }
+        cat.components.forEach((comp, ri) => {
+          const cname = comp && comp.name ? comp.name : `component #${ri + 1}`;
+          if (!comp || typeof comp !== 'object' || !('weight' in comp)) {
+            errors.push(`Component "${cname}" needs "weight"`);
+            return;
+          }
+          if (typeof comp.weight !== 'number' || comp.weight <= 0) {
+            errors.push(`Component "${cname}" weight must be a positive number`);
+          }
+          if (!Array.isArray(comp.cpl_pis) || !comp.cpl_pis.length) {
+            errors.push(`Component "${cname}" needs at least one "cpl_pis" mapping`);
+          }
+          wsum += comp.weight || 0;
+        });
+      });
+      if (Math.abs(wsum - 100) > 0.001) errors.push(`Total weight is ${wsum.toFixed(1)}% - must be 100%`);
+    }
+    if (!Array.isArray(data.cpls) || !data.cpls.length) {
+      errors.push('Course must define at least one "cpls" entry');
+    } else {
+      (data.cpls || []).forEach(clo => {
+        if (!clo.code) errors.push('Each CPL needs "code"');
+        if (![1, 2, 3, 4, 5].includes(Number(clo.proficiency_level))) {
+          errors.push(`CPL ${clo.code} proficiency_level must be 1-5`);
+        }
+      });
+    }
+    if (data.is_pbl) {
+      const byKey = {};
+      (data.categories || []).forEach(c => byKey[c.key] = c);
+      let pbl = 0;
+      ['partisipatif', 'proyek'].forEach(k => {
+        const cat = byKey[k];
+        if (cat) pbl += (cat.components || []).reduce((a, c) => a + (c.weight || 0), 0);
+      });
+      if (pbl < 50) errors.push(`PBL requires Partisipatif + Proyek >= 50%, currently ${pbl.toFixed(1)}%`);
+    }
+    return errors;
+  }
+
+  async function handleFile(file) {
+    statusEl.innerHTML = '<p class="alert-info">Reading file…</p>';
+    try {
+      const text = await file.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        statusEl.innerHTML = `<p class="alert-err">✗ Not valid JSON: ${err.message}</p>`;
+        return;
+      }
+      const errors = validateStructure(data);
+      if (errors.length) {
+        statusEl.innerHTML = `<p class="alert-err">✗ Invalid structure:</p><ul class="err-list">${errors.map(x => `<li>${x}</li>`).join('')}</ul>`;
+        return;
+      }
+      statusEl.innerHTML = '<p class="alert-info">Uploading…</p>';
+      const fd = new FormData();
+      fd.append('file', new File([text], file.name, { type: 'application/json' }));
+      const res = await fetch(u('api_upload'), { method: 'POST', body: fd });
+      const out = await res.json();
+      if (res.ok) {
+        closeModal();
+        showToast(`Course ${out.course_code} uploaded. Now create a class.`, 'success');
+        loadCourses();
+        loadDashboard();
+      } else {
+        statusEl.innerHTML = `<p class="alert-err">✗ ${out.error || 'Upload failed'}</p>`;
+      }
+    } catch (err) {
+      statusEl.innerHTML = `<p class="alert-err">✗ ${err.message}</p>`;
+    }
+  }
+
+  // ---------------- Create Rubric wizard (5 steps) ----------------
+  const WIZARD_CATEGORIES = [
+    { key: 'partisipatif', label: 'Partisipatif' },
+    { key: 'tugas', label: 'Tugas' },
+    { key: 'kuis', label: 'Kuis' },
+    { key: 'ats', label: 'ATS' },
+    { key: 'aas', label: 'AAS' },
+    { key: 'proyek', label: 'Proyek' },
+  ];
+  const STEP_NAMES = ['Course Info', 'CPL & SO', 'Komponen & PI', 'Bobot & PBL', 'Kriteria'];
+  const PROF_LEVELS = [
+    { v: 1, t: 'to have experienced or been exposed to' },
+    { v: 2, t: 'to be able to participate in and contribute to' },
+    { v: 3, t: 'to be able to understand and explain' },
+    { v: 4, t: 'to be skilled in the practice or implementation of' },
+    { v: 5, t: 'to be able to lead or innovate in' },
+  ];
+
+  let wizardStep = 1;
+  let soPi = { student_outcome: [], proficiency_levels: [] };
+  let soByCode = {};
+  let programs = [];
+  let defaultInstruments = null;
+  let weightState = {};
+  let criteriaDraft = {}; // component key -> array of {label, score_min, score_max, subject}
+
+  const CRIT_LABELS = ['Sangat Kurang', 'Kurang', 'Cukup', 'Baik', 'Sangat Baik'];
+  const CRIT_DEFAULT = [
+    { score_min: 0, score_max: 30 },
+    { score_min: 31, score_max: 55 },
+    { score_min: 56, score_max: 70 },
+    { score_min: 75, score_max: 84 },
+    { score_min: 85, score_max: 100 },
+  ];
+
+  const wizardModal = document.getElementById('wizard-modal');
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  async function loadSoPi() {
+    const sel = document.getElementById('wizard-program');
+    const program = (sel && sel.value) || 'RKS';
+    try {
+      soPi = await fetch(u('so_pi') + '?program=' + encodeURIComponent(program)).then(r => r.json());
+    } catch (e) {
+      soPi = { student_outcome: [], proficiency_levels: PROF_LEVELS };
+    }
     soByCode = {};
     soPi.student_outcome.forEach(so => soByCode[so.so_code] = so);
-  } catch (e) { soPi = { student_outcome: [], proficiency_levels: PROF_LEVELS }; }
-  try {
-    programs = await fetch(u('programs')).then(r => r.json());
-  } catch (e) { programs = []; }
-  renderProgramSelect();
-  await loadSoPi();
-  buildCplList();
-  buildWizardCategories();
-  buildWizardWeights();
-  buildWizardCriteria();
-  restoreWizardDraft();
-  renderWizardStep();
-  wizardModal.hidden = false;
-}
-function closeWizard() {
-  wizardModal.hidden = true;
-  wizardEditCourseId = null;
-}
+  }
 
-// ---- Wizard draft persistence (cookies) ----
-function saveWizardDraft() {
-  const draft = {
-    course_code: document.getElementById('wizard-code').value,
-    course_name: document.getElementById('wizard-name').value,
-    sks: document.getElementById('wizard-sks').value,
-    semester: document.getElementById('wizard-semester').value,
-    study_program: document.getElementById('wizard-program').value,
-    is_pbl: document.getElementById('wizard-pbl').checked,
-    target_attainment: document.getElementById('wizard-target-attainment').value,
-    cpls: collectCpls(),
-    categories: collectComponents(),
-    weights: weightState,
-    criteria: criteriaDraft,
-    step: wizardStep,
-  };
-  setCookie('rubrix_wizard_draft', draft, 7);
-}
+  function refreshSoViews() {
+    const sos = soPi && soPi.student_outcome ? soPi.student_outcome : [];
+    document.querySelectorAll('.wizard-cpl .wz-so-list').forEach(list => {
+      const prev = [...list.querySelectorAll('.wz-so-cb:checked')].map(cb => cb.value);
+      list.innerHTML = sos.map(so =>
+        `<label class="wizard-check"><input type="checkbox" class="wz-so-cb" value="${so.so_code}"> <span><b>${so.so_code}</b> - ${esc(so.so_description)}</span></label>`
+      ).join('') || '<p class="empty">Data SO tidak tersedia.</p>';
+      list.querySelectorAll('.wz-so-cb').forEach(cb => {
+        if (prev.includes(cb.value)) cb.checked = true;
+      });
+    });
+    document.querySelectorAll('.wz-cpl-pi-row').forEach(row => {
+      const cplSel = row.querySelector('.wz-comp-cpl');
+      if (cplSel && cplSel.value) renderPiOptions(row, null);
+    });
+  }
 
-function restoreWizardDraft() {
-  const d = getCookie('rubrix_wizard_draft');
-  if (!d) return false;
-  // Course fields
-  document.getElementById('wizard-code').value = d.course_code || '';
-  document.getElementById('wizard-name').value = d.course_name || '';
-  document.getElementById('wizard-sks').value = d.sks || 3;
-  setSemesterValue(d.semester || '');
-  if (d.study_program) document.getElementById('wizard-program').value = d.study_program;
-  document.getElementById('wizard-pbl').checked = !!d.is_pbl;
-  
-  const targetVal = d.target_attainment !== undefined ? d.target_attainment : 70;
-  document.getElementById('wizard-target-attainment').value = targetVal;
-  document.getElementById('wizard-target-attainment-val').textContent = targetVal;
+  function renderProgramSelect() {
+    const sel = document.getElementById('wizard-program');
+    const cu = window.CURRENT_USER || {};
 
-  // CPL rows
-  const cplWrap = document.getElementById('wizard-cpl-list');
-  cplWrap.innerHTML = '';
-  (d.cpls && d.cpls.length ? d.cpls : [null]).forEach(c => addCplRow(c));
-  // Components per category
-  const catData = d.categories || {};
-  WIZARD_CATEGORIES.forEach(cat => {
-    const card = document.querySelector(`.wizard-cat[data-cat="${cat.key}"]`);
-    const list = card.querySelector('.wizard-comp-list');
-    list.innerHTML = '';
-    const comps = catData[cat.key] || [];
-    if (!comps.length) addWizardComponent(cat.key);
-    else comps.forEach(c => addWizardComponent(cat.key, c));
-    renumberWizardComponents(card);
-  });
-  // Weights + criteria
-  weightState = d.weights || {};
-  criteriaDraft = d.criteria || {};
-  // Resume at last step (or step 1 if invalid)
-  wizardStep = Math.min(5, Math.max(1, d.step || 1));
-  return true;
-}
+    sel.innerHTML = programs.map(p =>
+      `<option value="${p.code}">${esc(p.label)}</option>`
+    ).join('');
+    sel.disabled = false;
+    sel.title = 'Pilih Program Studi';
 
-function clearWizardDraft() {
-  removeCookie('rubrix_wizard_draft');
-}
+    const defaultProgram = (cu.role === 'tim_kurikulum' && cu.study_program) ? cu.study_program : 'RKS';
+    if (programs.some(p => p.code === defaultProgram)) {
+      sel.value = defaultProgram;
+    } else if (programs.length > 0) {
+      sel.value = programs[0].code;
+    }
+  }
 
-// ---------- Step 2: CPL list ----------
-function buildCplList() {
-  const wrap = document.getElementById('wizard-cpl-list');
-  wrap.innerHTML = '';
-  addCplRow();
-}
+  async function openWizard() {
+    wizardEditCourseId = null;
+    document.getElementById('wizard-title').textContent = 'Create Rubric';
+    wizardStep = 1;
+    document.getElementById('wizard-code').value = '';
+    document.getElementById('wizard-name').value = '';
+    document.getElementById('wizard-sks').value = 3;
+    setSemesterValue('');
+    document.getElementById('wizard-pbl').checked = false;
+    document.getElementById('wizard-status').innerHTML = '';
+    document.getElementById('wizard-target-attainment').value = 60;
+    document.getElementById('wizard-target-attainment-val').textContent = '60';
+    weightState = {};
+    criteriaDraft = {};
 
-function addCplRow(cpl) {
-  const wrap = document.getElementById('wizard-cpl-list');
-  const idx = wrap.children.length + 1;
-  const row = document.createElement('div');
-  row.className = 'wizard-cpl';
-  row.dataset.cpl = (cpl && cpl.code) || `CPL${idx}`;
-  row.innerHTML = `
+    if (!defaultInstruments) {
+      await loadDefaultInstruments();
+    }
+
+    try {
+      soPi = await fetch(u('so_pi')).then(r => r.json());
+      soByCode = {};
+      soPi.student_outcome.forEach(so => soByCode[so.so_code] = so);
+    } catch (e) { soPi = { student_outcome: [], proficiency_levels: PROF_LEVELS }; }
+    try {
+      programs = await fetch(u('programs')).then(r => r.json());
+    } catch (e) { programs = []; }
+    renderProgramSelect();
+    await loadSoPi();
+    buildCplList();
+    buildWizardCategories();
+    buildWizardWeights();
+    buildWizardCriteria();
+    restoreWizardDraft();
+    renderWizardStep();
+    wizardModal.hidden = false;
+  }
+  function closeWizard() {
+    wizardModal.hidden = true;
+    wizardEditCourseId = null;
+  }
+
+  // ---- Wizard draft persistence (cookies) ----
+  function saveWizardDraft() {
+    const draft = {
+      course_code: document.getElementById('wizard-code').value,
+      course_name: document.getElementById('wizard-name').value,
+      sks: document.getElementById('wizard-sks').value,
+      semester: document.getElementById('wizard-semester').value,
+      study_program: document.getElementById('wizard-program').value,
+      is_pbl: document.getElementById('wizard-pbl').checked,
+      target_attainment: document.getElementById('wizard-target-attainment').value,
+      cpls: collectCpls(),
+      categories: collectComponents(),
+      weights: weightState,
+      criteria: criteriaDraft,
+      step: wizardStep,
+    };
+    setCookie('rubrix_wizard_draft', draft, 7);
+  }
+
+  function restoreWizardDraft() {
+    const d = getCookie('rubrix_wizard_draft');
+    if (!d) return false;
+    // Course fields
+    document.getElementById('wizard-code').value = d.course_code || '';
+    document.getElementById('wizard-name').value = d.course_name || '';
+    document.getElementById('wizard-sks').value = d.sks || 3;
+    setSemesterValue(d.semester || '');
+    if (d.study_program) document.getElementById('wizard-program').value = d.study_program;
+    document.getElementById('wizard-pbl').checked = !!d.is_pbl;
+
+    const targetVal = d.target_attainment !== undefined ? d.target_attainment : 60;
+    document.getElementById('wizard-target-attainment').value = targetVal;
+    document.getElementById('wizard-target-attainment-val').textContent = targetVal;
+
+    // CPL rows
+    const cplWrap = document.getElementById('wizard-cpl-list');
+    cplWrap.innerHTML = '';
+    (d.cpls && d.cpls.length ? d.cpls : [null]).forEach(c => addCplRow(c));
+    // Components per category
+    const catData = d.categories || {};
+    WIZARD_CATEGORIES.forEach(cat => {
+      const card = document.querySelector(`.wizard-cat[data-cat="${cat.key}"]`);
+      const list = card.querySelector('.wizard-comp-list');
+      list.innerHTML = '';
+      const comps = catData[cat.key] || [];
+      if (!comps.length) addWizardComponent(cat.key);
+      else comps.forEach(c => addWizardComponent(cat.key, c));
+      renumberWizardComponents(card);
+    });
+    // Weights + criteria
+    weightState = d.weights || {};
+    criteriaDraft = d.criteria || {};
+    // Resume at last step (or step 1 if invalid)
+    wizardStep = Math.min(5, Math.max(1, d.step || 1));
+    return true;
+  }
+
+  function clearWizardDraft() {
+    removeCookie('rubrix_wizard_draft');
+  }
+
+  // ---------- Step 2: CPL list ----------
+  function buildCplList() {
+    const wrap = document.getElementById('wizard-cpl-list');
+    wrap.innerHTML = '';
+    addCplRow();
+  }
+
+  function addCplRow(cpl) {
+    const wrap = document.getElementById('wizard-cpl-list');
+    const idx = wrap.children.length + 1;
+    const row = document.createElement('div');
+    row.className = 'wizard-cpl';
+    row.dataset.cpl = (cpl && cpl.code) || `CPL${idx}`;
+    row.innerHTML = `
     <div class="wizard-cpl-head">
       <b class="wz-cpl-code">${row.dataset.cpl}</b>
       <button class="icon-btn icon-danger" type="button" title="Hapus"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
@@ -990,52 +1002,52 @@ function addCplRow(cpl) {
       <span>SO (boleh lebih dari satu)</span>
       <div class="wz-so-list"></div>
     </div>`;
-  const levelSel = row.querySelector('.wz-cpl-level');
-  const levels = (soPi && soPi.proficiency_levels && soPi.proficiency_levels.length)
-    ? soPi.proficiency_levels.map(p => ({ v: p.level, t: p.label }))
-    : PROF_LEVELS;
-  levelSel.innerHTML = levels.map(p =>
-    `<option value="${p.v}">${p.v}. ${esc(p.t)}</option>`
-  ).join('');
-  levelSel.value = (cpl && cpl.proficiency_level) || '3';
-  const soList = row.querySelector('.wz-so-list');
-  const sos = soPi && soPi.student_outcome ? soPi.student_outcome : [];
-  const selected = cpl && cpl.so_codes ? cpl.so_codes : [];
-  soList.innerHTML = sos.map(so =>
-    `<label class="wizard-check"><input type="checkbox" class="wz-so-cb" value="${so.so_code}" ${selected.includes(so.so_code) ? 'checked' : ''}> <span><b>${so.so_code}</b> - ${esc(so.so_description)}</span></label>`
-  ).join('') || '<p class="empty">Data SO tidak tersedia.</p>';
-  if (cpl) row.querySelector('.wz-cpl-desc').value = cpl.description || '';
-  row.querySelector('.icon-btn').addEventListener('click', () => {
-    row.remove();
+    const levelSel = row.querySelector('.wz-cpl-level');
+    const levels = (soPi && soPi.proficiency_levels && soPi.proficiency_levels.length)
+      ? soPi.proficiency_levels.map(p => ({ v: p.level, t: p.label }))
+      : PROF_LEVELS;
+    levelSel.innerHTML = levels.map(p =>
+      `<option value="${p.v}">${p.v}. ${esc(p.t)}</option>`
+    ).join('');
+    levelSel.value = (cpl && cpl.proficiency_level) || '3';
+    const soList = row.querySelector('.wz-so-list');
+    const sos = soPi && soPi.student_outcome ? soPi.student_outcome : [];
+    const selected = cpl && cpl.so_codes ? cpl.so_codes : [];
+    soList.innerHTML = sos.map(so =>
+      `<label class="wizard-check"><input type="checkbox" class="wz-so-cb" value="${so.so_code}" ${selected.includes(so.so_code) ? 'checked' : ''}> <span><b>${so.so_code}</b> - ${esc(so.so_description)}</span></label>`
+    ).join('') || '<p class="empty">Data SO tidak tersedia.</p>';
+    if (cpl) row.querySelector('.wz-cpl-desc').value = cpl.description || '';
+    row.querySelector('.icon-btn').addEventListener('click', () => {
+      row.remove();
+      renumberCpls();
+    });
+    wrap.appendChild(row);
     renumberCpls();
-  });
-  wrap.appendChild(row);
-  renumberCpls();
-}
+  }
 
-function renumberCpls() {
-  const rows = [...document.querySelectorAll('.wizard-cpl')];
-  rows.forEach((row, i) => {
-    row.dataset.cpl = `CPL${i + 1}`;
-    row.querySelector('.wz-cpl-code').textContent = `CPL${i + 1}`;
-  });
-}
+  function renumberCpls() {
+    const rows = [...document.querySelectorAll('.wizard-cpl')];
+    rows.forEach((row, i) => {
+      row.dataset.cpl = `CPL${i + 1}`;
+      row.querySelector('.wz-cpl-code').textContent = `CPL${i + 1}`;
+    });
+  }
 
-function collectCpls() {
-  const cpls = [];
-  document.querySelectorAll('.wizard-cpl').forEach(row => {
-    const desc = row.querySelector('.wz-cpl-desc').value.trim();
-    const level = parseInt(row.querySelector('.wz-cpl-level').value, 10);
-    const soCodes = [...row.querySelectorAll('.wz-so-cb:checked')].map(cb => cb.value);
-    cpls.push({ code: row.dataset.cpl, description: desc, proficiency_level: level, so_codes: soCodes });
-  });
-  return cpls;
-}
+  function collectCpls() {
+    const cpls = [];
+    document.querySelectorAll('.wizard-cpl').forEach(row => {
+      const desc = row.querySelector('.wz-cpl-desc').value.trim();
+      const level = parseInt(row.querySelector('.wz-cpl-level').value, 10);
+      const soCodes = [...row.querySelectorAll('.wz-so-cb:checked')].map(cb => cb.value);
+      cpls.push({ code: row.dataset.cpl, description: desc, proficiency_level: level, so_codes: soCodes });
+    });
+    return cpls;
+  }
 
-// ---------- Step 3: components per category with CPL/PI ----------
-function buildWizardCategories() {
-  const wrap = document.getElementById('wizard-categories');
-  wrap.innerHTML = WIZARD_CATEGORIES.map(cat => `
+  // ---------- Step 3: components per category with CPL/PI ----------
+  function buildWizardCategories() {
+    const wrap = document.getElementById('wizard-categories');
+    wrap.innerHTML = WIZARD_CATEGORIES.map(cat => `
     <div class="wizard-cat" data-cat="${cat.key}">
       <div class="wizard-cat-head">
         <b>${cat.label}</b>
@@ -1047,193 +1059,193 @@ function buildWizardCategories() {
       </div>
     </div>`).join('');
 
-  const mapping = {
-    'partisipatif': '1_partisipatif',
-    'tugas': '2_tugas',
-    'kuis': '3_kuis',
-    'ats': '4_ats',
-    'aas': '5_aas',
-    'proyek': '6_proyek'
-  };
+    const mapping = {
+      'partisipatif': '1_partisipatif',
+      'tugas': '2_tugas',
+      'kuis': '3_kuis',
+      'ats': '4_ats',
+      'aas': '5_aas',
+      'proyek': '6_proyek'
+    };
 
-  wrap.querySelectorAll('.wizard-cat').forEach(card => {
-    const catKey = card.dataset.cat;
-    const addBtn = card.querySelector('.wizard-cat-body > button');
-    addBtn.addEventListener('click', () => addWizardComponent(catKey));
+    wrap.querySelectorAll('.wizard-cat').forEach(card => {
+      const catKey = card.dataset.cat;
+      const addBtn = card.querySelector('.wizard-cat-body > button');
+      addBtn.addEventListener('click', () => addWizardComponent(catKey));
 
-    const jsonKey = mapping[catKey];
-    const pblData = defaultInstruments && defaultInstruments.rubrik_penilaian_pbl;
-    const catData = pblData && pblData[jsonKey];
-    
-    if (catData && Array.isArray(catData.sub_komponen) && catData.sub_komponen.length > 0) {
-      catData.sub_komponen.forEach(sub => {
-        // Seed the component
-        addWizardComponent(catKey, { name: sub.nama });
-        
-        // Seed the weight (convert "10%" -> 10)
-        const ckey = `${catKey}|${sub.nama}`;
-        const weightVal = parseFloat(sub.bobot) || 0;
-        weightState[ckey] = weightVal;
+      const jsonKey = mapping[catKey];
+      const pblData = defaultInstruments && defaultInstruments.rubrik_penilaian_pbl;
+      const catData = pblData && pblData[jsonKey];
 
-        // Seed the criteria (levels 1-5)
-        const levels = ['level_1', 'level_2', 'level_3', 'level_4', 'level_5'];
-        criteriaDraft[ckey] = levels.map((lvlKey, idx) => {
-          const bulletPoints = sub.kriteria_level[lvlKey] || [];
-          const subjectHtml = bulletPoints.length ? `<ul>${bulletPoints.map(p => `<li>${p}</li>`).join('')}</ul>` : '';
-          return {
-            label: CRIT_LABELS[idx],
-            score_min: CRIT_DEFAULT[idx].score_min,
-            score_max: CRIT_DEFAULT[idx].score_max,
-            subject: subjectHtml
-          };
+      if (catData && Array.isArray(catData.sub_komponen) && catData.sub_komponen.length > 0) {
+        catData.sub_komponen.forEach(sub => {
+          // Seed the component
+          addWizardComponent(catKey, { name: sub.nama });
+
+          // Seed the weight (convert "10%" -> 10)
+          const ckey = `${catKey}|${sub.nama}`;
+          const weightVal = parseFloat(sub.bobot) || 0;
+          weightState[ckey] = weightVal;
+
+          // Seed the criteria (levels 1-5)
+          const levels = ['level_1', 'level_2', 'level_3', 'level_4', 'level_5'];
+          criteriaDraft[ckey] = levels.map((lvlKey, idx) => {
+            const bulletPoints = sub.kriteria_level[lvlKey] || [];
+            const subjectHtml = bulletPoints.length ? `<ul>${bulletPoints.map(p => `<li>${p}</li>`).join('')}</ul>` : '';
+            return {
+              label: CRIT_LABELS[idx],
+              score_min: CRIT_DEFAULT[idx].score_min,
+              score_max: CRIT_DEFAULT[idx].score_max,
+              subject: subjectHtml
+            };
+          });
         });
-      });
-    } else {
-      // Fallback to default single component
-      const defName = catKey === 'ats' ? 'ATS' : catKey === 'aas' ? 'AAS' : card.querySelector('.wizard-cat-head b').textContent;
-      addWizardComponent(catKey, { name: defName });
-    }
-  });
-}
+      } else {
+        // Fallback to default single component
+        const defName = catKey === 'ats' ? 'ATS' : catKey === 'aas' ? 'AAS' : card.querySelector('.wizard-cat-head b').textContent;
+        addWizardComponent(catKey, { name: defName });
+      }
+    });
+  }
 
-function addWizardComponent(catKey, comp) {
-  const card = document.querySelector(`.wizard-cat[data-cat="${catKey}"]`);
-  const list = card.querySelector('.wizard-comp-list');
-  const row = document.createElement('div');
-  row.className = 'wizard-comp wizard-comp-full';
-  row.innerHTML = `
+  function addWizardComponent(catKey, comp) {
+    const card = document.querySelector(`.wizard-cat[data-cat="${catKey}"]`);
+    const list = card.querySelector('.wizard-comp-list');
+    const row = document.createElement('div');
+    row.className = 'wizard-comp wizard-comp-full';
+    row.innerHTML = `
     <span class="wizard-comp-no"></span>
     <input type="text" class="wz-comp-name" placeholder="Nama sub-komponen" maxlength="120">
     <div class="wz-cpl-pi-area"></div>
     <button class="btn btn-outline btn-sm wz-add-cpl" type="button">+ Pilih CPL</button>
     <button class="icon-btn icon-danger" type="button" title="Hapus"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
-  list.appendChild(row);
-  row.querySelector('.icon-btn').addEventListener('click', () => {
-    row.remove();
+    list.appendChild(row);
+    row.querySelector('.icon-btn').addEventListener('click', () => {
+      row.remove();
+      renumberWizardComponents(card);
+    });
+    row.querySelector('.wz-add-cpl').addEventListener('click', () => addCplPiRow(row));
+    if (comp) {
+      row.querySelector('.wz-comp-name').value = comp.name || '';
+      (comp.cpl_pis || []).forEach(m => addCplPiRow(row, m));
+      if (!comp.cpl_pis || !comp.cpl_pis.length) addCplPiRow(row);
+    } else {
+      addCplPiRow(row);
+    }
     renumberWizardComponents(card);
-  });
-  row.querySelector('.wz-add-cpl').addEventListener('click', () => addCplPiRow(row));
-  if (comp) {
-    row.querySelector('.wz-comp-name').value = comp.name || '';
-    (comp.cpl_pis || []).forEach(m => addCplPiRow(row, m));
-    if (!comp.cpl_pis || !comp.cpl_pis.length) addCplPiRow(row);
-  } else {
-    addCplPiRow(row);
   }
-  renumberWizardComponents(card);
-}
 
-function addCplPiRow(compRow, mapping) {
-  const area = compRow.querySelector('.wz-cpl-pi-area');
-  const cplRow = document.createElement('div');
-  cplRow.className = 'wz-cpl-pi-row';
-  cplRow.innerHTML = `
+  function addCplPiRow(compRow, mapping) {
+    const area = compRow.querySelector('.wz-cpl-pi-area');
+    const cplRow = document.createElement('div');
+    cplRow.className = 'wz-cpl-pi-row';
+    cplRow.innerHTML = `
     <select class="wz-comp-cpl"><option value="">Pilih CPL...</option></select>
     <div class="wz-pi-list"></div>
     <button class="icon-btn icon-danger" type="button" title="Hapus"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
-  const sel = cplRow.querySelector('.wz-comp-cpl');
-  sel.innerHTML = '<option value="">Pilih CPL...</option>' +
-    collectCpls().map(c => `<option value="${c.code}">${c.code}</option>`).join('');
-  if (mapping) sel.value = mapping.cpl || '';
-  sel.addEventListener('change', () => renderPiOptions(cplRow, mapping));
-  cplRow.querySelector('.icon-btn').addEventListener('click', () => cplRow.remove());
-  area.appendChild(cplRow);
-  if (mapping) renderPiOptions(cplRow, mapping);
-}
-
-function renderPiOptions(cplRow, mapping) {
-  const cplCode = cplRow.querySelector('.wz-comp-cpl').value;
-  const piList = cplRow.querySelector('.wz-pi-list');
-  piList.innerHTML = '';
-  if (!cplCode) return;
-  const cpl = collectCpls().find(c => c.code === cplCode);
-  if (!cpl) return;
-  // Only PIs from the SOs chosen for this CPL.
-  const pis = [];
-  cpl.so_codes.forEach(soCode => {
-    const so = soByCode[soCode];
-    if (so) {
-      so.performance_indicator.forEach(pi => {
-        pis.push({ pi_code: pi.pi_code, pi_description: pi.pi_description, so: soCode });
-      });
-    }
-  });
-  const seen = new Set();
-  piList.innerHTML = pis.map(pi => {
-    const key = `${pi.so}-${pi.pi_code}`;
-    if (seen.has(key)) return '';
-    seen.add(key);
-    const checked = mapping && mapping.so === pi.so && mapping.pi === pi.pi_code;
-    return `<label class="wizard-check"><input type="checkbox" class="wz-pi-cb" value="${pi.so}|${pi.pi_code}" ${checked ? 'checked' : ''}> <span><b>${pi.pi_code}</b> - ${esc(pi.pi_description)}</span></label>`;
-  }).join('');
-}
-
-function renumberWizardComponents(card) {
-  card.querySelectorAll('.wizard-comp-no').forEach((el, i) => el.textContent = i + 1);
-  card.querySelector('.wizard-cat-count').textContent = card.querySelectorAll('.wizard-comp').length + ' komponen';
-}
-
-function collectComponents() {
-  const categories = {};
-  for (const cat of WIZARD_CATEGORIES) {
-    const comps = [];
-    document.querySelectorAll(`.wizard-cat[data-cat="${cat.key}"] .wizard-comp`).forEach(row => {
-      const nameEl = row.querySelector('.wz-comp-name');
-      if (!nameEl) return;
-      const name = nameEl.value.trim();
-      if (!name) return;
-      const cpl_pis = [];
-      row.querySelectorAll('.wz-cpl-pi-row').forEach(cplRow => {
-        const cplSel = cplRow.querySelector('.wz-comp-cpl');
-        if (!cplSel) return;
-        const cpl = cplSel.value;
-        if (!cpl) return;
-        cplRow.querySelectorAll('.wz-pi-cb:checked').forEach(cb => {
-          const [so, pi] = cb.value.split('|');
-          cpl_pis.push({ cpl, so, pi });
-        });
-      });
-      comps.push({ name, cpl_pis });
-    });
-    if (comps.length) categories[cat.key] = comps;
+    const sel = cplRow.querySelector('.wz-comp-cpl');
+    sel.innerHTML = '<option value="">Pilih CPL...</option>' +
+      collectCpls().map(c => `<option value="${c.code}">${c.code}</option>`).join('');
+    if (mapping) sel.value = mapping.cpl || '';
+    sel.addEventListener('change', () => renderPiOptions(cplRow, mapping));
+    cplRow.querySelector('.icon-btn').addEventListener('click', () => cplRow.remove());
+    area.appendChild(cplRow);
+    if (mapping) renderPiOptions(cplRow, mapping);
   }
-  return categories;
-}
 
-// ---------- Step 4: PBL + weights ----------
+  function renderPiOptions(cplRow, mapping) {
+    const cplCode = cplRow.querySelector('.wz-comp-cpl').value;
+    const piList = cplRow.querySelector('.wz-pi-list');
+    piList.innerHTML = '';
+    if (!cplCode) return;
+    const cpl = collectCpls().find(c => c.code === cplCode);
+    if (!cpl) return;
+    // Only PIs from the SOs chosen for this CPL.
+    const pis = [];
+    cpl.so_codes.forEach(soCode => {
+      const so = soByCode[soCode];
+      if (so) {
+        so.performance_indicator.forEach(pi => {
+          pis.push({ pi_code: pi.pi_code, pi_description: pi.pi_description, so: soCode });
+        });
+      }
+    });
+    const seen = new Set();
+    piList.innerHTML = pis.map(pi => {
+      const key = `${pi.so}-${pi.pi_code}`;
+      if (seen.has(key)) return '';
+      seen.add(key);
+      const checked = mapping && mapping.so === pi.so && mapping.pi === pi.pi_code;
+      return `<label class="wizard-check"><input type="checkbox" class="wz-pi-cb" value="${pi.so}|${pi.pi_code}" ${checked ? 'checked' : ''}> <span><b>${pi.pi_code}</b> - ${esc(pi.pi_description)}</span></label>`;
+    }).join('');
+  }
 
-function buildWizardWeights() {
-  const wrap = document.getElementById('wizard-weights');
-  wrap.innerHTML = WIZARD_CATEGORIES.map(cat => `
+  function renumberWizardComponents(card) {
+    card.querySelectorAll('.wizard-comp-no').forEach((el, i) => el.textContent = i + 1);
+    card.querySelector('.wizard-cat-count').textContent = card.querySelectorAll('.wizard-comp').length + ' komponen';
+  }
+
+  function collectComponents() {
+    const categories = {};
+    for (const cat of WIZARD_CATEGORIES) {
+      const comps = [];
+      document.querySelectorAll(`.wizard-cat[data-cat="${cat.key}"] .wizard-comp`).forEach(row => {
+        const nameEl = row.querySelector('.wz-comp-name');
+        if (!nameEl) return;
+        const name = nameEl.value.trim();
+        if (!name) return;
+        const cpl_pis = [];
+        row.querySelectorAll('.wz-cpl-pi-row').forEach(cplRow => {
+          const cplSel = cplRow.querySelector('.wz-comp-cpl');
+          if (!cplSel) return;
+          const cpl = cplSel.value;
+          if (!cpl) return;
+          cplRow.querySelectorAll('.wz-pi-cb:checked').forEach(cb => {
+            const [so, pi] = cb.value.split('|');
+            cpl_pis.push({ cpl, so, pi });
+          });
+        });
+        comps.push({ name, cpl_pis });
+      });
+      if (comps.length) categories[cat.key] = comps;
+    }
+    return categories;
+  }
+
+  // ---------- Step 4: PBL + weights ----------
+
+  function buildWizardWeights() {
+    const wrap = document.getElementById('wizard-weights');
+    wrap.innerHTML = WIZARD_CATEGORIES.map(cat => `
     <div class="wizard-cat" data-cat="${cat.key}">
       <div class="wizard-cat-head"><b>${cat.label}</b><span class="wizard-cat-count">0</span></div>
       <div class="wizard-cat-body"><div class="wizard-weight-list"></div></div>
     </div>`).join('');
-}
-
-function weightKey(cat, name) {
-  return `${cat.key}|${name}`;
-}
-
-function renderWeights() {
-  const components = collectComponents();
-  // Prune stale state keys for removed components.
-  const activeKeys = new Set();
-  for (const cat of WIZARD_CATEGORIES) {
-    (components[cat.key] || []).forEach(c => activeKeys.add(weightKey(cat, c.name)));
   }
-  Object.keys(weightState).forEach(k => { if (!activeKeys.has(k)) delete weightState[k]; });
 
-  WIZARD_CATEGORIES.forEach(cat => {
-    const card = document.querySelector(`#wizard-weights .wizard-cat[data-cat="${cat.key}"]`);
-    const list = card.querySelector('.wizard-weight-list');
-    const comps = components[cat.key] || [];
-    card.querySelector('.wizard-cat-count').textContent = comps.length;
-    list.innerHTML = comps.map((c, i) => {
-      const label = c.cpl_pis.map(m => `${m.cpl}-${m.pi}`).join(', ');
-      const key = weightKey(cat, c.name);
-      const val = weightState[key] != null ? weightState[key] : '';
-      return `
+  function weightKey(cat, name) {
+    return `${cat.key}|${name}`;
+  }
+
+  function renderWeights() {
+    const components = collectComponents();
+    // Prune stale state keys for removed components.
+    const activeKeys = new Set();
+    for (const cat of WIZARD_CATEGORIES) {
+      (components[cat.key] || []).forEach(c => activeKeys.add(weightKey(cat, c.name)));
+    }
+    Object.keys(weightState).forEach(k => { if (!activeKeys.has(k)) delete weightState[k]; });
+
+    WIZARD_CATEGORIES.forEach(cat => {
+      const card = document.querySelector(`#wizard-weights .wizard-cat[data-cat="${cat.key}"]`);
+      const list = card.querySelector('.wizard-weight-list');
+      const comps = components[cat.key] || [];
+      card.querySelector('.wizard-cat-count').textContent = comps.length;
+      list.innerHTML = comps.map((c, i) => {
+        const label = c.cpl_pis.map(m => `${m.cpl}-${m.pi}`).join(', ');
+        const key = weightKey(cat, c.name);
+        const val = weightState[key] != null ? weightState[key] : '';
+        return `
         <div class="wizard-comp">
           <span class="wizard-comp-no">${i + 1}</span>
           <span class="wz-w-name">${esc(c.name)} <small class="wz-w-label">(${esc(label)})</small></span>
@@ -1242,104 +1254,104 @@ function renderWeights() {
             <span>%</span>
           </div>
         </div>`;
-    }).join('');
-  });
-  document.querySelectorAll('#wizard-weights .wz-comp-weight').forEach(inp => {
-    inp.addEventListener('input', () => {
-      weightState[inp.dataset.key] = inp.value;
-      updateWizardTotals();
-      updatePblStatus();
+      }).join('');
     });
-  });
-  updateWizardTotals();
-  updatePblStatus();
-}
+    document.querySelectorAll('#wizard-weights .wz-comp-weight').forEach(inp => {
+      inp.addEventListener('input', () => {
+        weightState[inp.dataset.key] = inp.value;
+        updateWizardTotals();
+        updatePblStatus();
+      });
+    });
+    updateWizardTotals();
+    updatePblStatus();
+  }
 
-function updateWizardTotals() {
-  const el = document.getElementById('wizard-total');
-  const total = wizardTotalWeight();
-  const ok = Math.abs(total - 100) < 0.001;
-  el.innerHTML = `Total bobot: <b class="${ok ? 'ok' : 'bad'}">${total.toFixed(1)}%</b> <span class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '(harus 100%)'}</span>`;
-}
+  function updateWizardTotals() {
+    const el = document.getElementById('wizard-total');
+    const total = wizardTotalWeight();
+    const ok = Math.abs(total - 100) < 0.001;
+    el.innerHTML = `Total bobot: <b class="${ok ? 'ok' : 'bad'}">${total.toFixed(1)}%</b> <span class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '(harus 100%)'}</span>`;
+  }
 
-function wizardTotalWeight() {
-  let total = 0;
-  document.querySelectorAll('#wizard-weights .wz-comp-weight').forEach(inp => {
-    const v = parseFloat(inp.value);
-    if (!isNaN(v)) total += v;
-  });
-  return total;
-}
-
-function pblWeight() {
-  let total = 0;
-  for (const cat of WIZARD_CATEGORIES) {
-    if (cat.key !== 'partisipatif' && cat.key !== 'proyek') continue;
-    document.querySelectorAll(`#wizard-weights .wizard-cat[data-cat="${cat.key}"] .wz-comp-weight`).forEach(inp => {
+  function wizardTotalWeight() {
+    let total = 0;
+    document.querySelectorAll('#wizard-weights .wz-comp-weight').forEach(inp => {
       const v = parseFloat(inp.value);
       if (!isNaN(v)) total += v;
     });
+    return total;
   }
-  return total;
-}
 
-function updatePblStatus() {
-  const hint = document.getElementById('wizard-pbl-hint');
-  if (!hint) return;
-  const isPbl = document.getElementById('wizard-pbl').checked;
-  hint.innerHTML = '';
-  if (isPbl) {
-    const p = pblWeight();
-    const ok = p >= 50;
-    hint.innerHTML = `PBL: Partisipatif + Proyek = <b class="${ok ? 'ok' : 'bad'}">${p.toFixed(1)}%</b> <span class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '(harus &ge; 50%)'}</span>`;
-  } else {
-    hint.innerHTML = 'Jika PBL, total bobot Partisipatif + Proyek harus &ge; 50%.';
+  function pblWeight() {
+    let total = 0;
+    for (const cat of WIZARD_CATEGORIES) {
+      if (cat.key !== 'partisipatif' && cat.key !== 'proyek') continue;
+      document.querySelectorAll(`#wizard-weights .wizard-cat[data-cat="${cat.key}"] .wz-comp-weight`).forEach(inp => {
+        const v = parseFloat(inp.value);
+        if (!isNaN(v)) total += v;
+      });
+    }
+    return total;
   }
-}
 
-function collectWeights() {
-  const categories = collectComponents();
-  const weights = [];
-  for (const cat of WIZARD_CATEGORIES) {
-    (categories[cat.key] || []).forEach(c => {
-      const key = weightKey(cat, c.name);
-      const v = weightState[key];
-      weights.push({ cat: cat.key, name: c.name, weight: parseFloat(v), cpl_pis: c.cpl_pis });
-    });
+  function updatePblStatus() {
+    const hint = document.getElementById('wizard-pbl-hint');
+    if (!hint) return;
+    const isPbl = document.getElementById('wizard-pbl').checked;
+    hint.innerHTML = '';
+    if (isPbl) {
+      const p = pblWeight();
+      const ok = p >= 50;
+      hint.innerHTML = `PBL: Partisipatif + Proyek = <b class="${ok ? 'ok' : 'bad'}">${p.toFixed(1)}%</b> <span class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '(harus &ge; 50%)'}</span>`;
+    } else {
+      hint.innerHTML = 'Jika PBL, total bobot Partisipatif + Proyek harus &ge; 50%.';
+    }
   }
-  return weights;
-}
 
-// ---------- Step 5: criteria ----------
-
-function buildWizardCriteria() {
-  const wrap = document.getElementById('wizard-criteria');
-  wrap.innerHTML = '<p class="empty">Belum ada komponen. Kembali ke langkah sebelumnya.</p>';
-}
-
-function critRange(i, saved) {
-  const def = CRIT_DEFAULT[i];
-  if (saved && saved[i]) return { min: saved[i].score_min, max: saved[i].score_max };
-  return { min: def.score_min, max: def.score_max };
-}
-
-function renderCriteria() {
-  const weights = collectWeights();
-  const wrap = document.getElementById('wizard-criteria');
-  if (!weights.length) {
-    wrap.innerHTML = '<p class="empty">Belum ada komponen.</p>';
-    return;
+  function collectWeights() {
+    const categories = collectComponents();
+    const weights = [];
+    for (const cat of WIZARD_CATEGORIES) {
+      (categories[cat.key] || []).forEach(c => {
+        const key = weightKey(cat, c.name);
+        const v = weightState[key];
+        weights.push({ cat: cat.key, name: c.name, weight: parseFloat(v), cpl_pis: c.cpl_pis });
+      });
+    }
+    return weights;
   }
-  wrap.innerHTML = weights.map((w, ci) => {
-    const ckey = weightKey({ key: w.cat }, w.name);
-    const saved = criteriaDraft[ckey];
-    return `
+
+  // ---------- Step 5: criteria ----------
+
+  function buildWizardCriteria() {
+    const wrap = document.getElementById('wizard-criteria');
+    wrap.innerHTML = '<p class="empty">Belum ada komponen. Kembali ke langkah sebelumnya.</p>';
+  }
+
+  function critRange(i, saved) {
+    const def = CRIT_DEFAULT[i];
+    if (saved && saved[i]) return { min: saved[i].score_min, max: saved[i].score_max };
+    return { min: def.score_min, max: def.score_max };
+  }
+
+  function renderCriteria() {
+    const weights = collectWeights();
+    const wrap = document.getElementById('wizard-criteria');
+    if (!weights.length) {
+      wrap.innerHTML = '<p class="empty">Belum ada komponen.</p>';
+      return;
+    }
+    wrap.innerHTML = weights.map((w, ci) => {
+      const ckey = weightKey({ key: w.cat }, w.name);
+      const saved = criteriaDraft[ckey];
+      return `
     <div class="wizard-criteria-comp" data-ci="${ci}">
       <div class="wizard-cat-head"><b>${esc(w.name)}</b><span class="chip">${w.cpl_pis.map(m => `${m.cpl}-${m.pi}`).join(', ')}</span></div>
       <div class="wizard-criteria-levels">
         ${[0, 1, 2, 3, 4].map(i => {
-          const r = critRange(i, saved);
-          return `
+        const r = critRange(i, saved);
+        return `
           <div class="wizard-criteria-row">
             <span class="wz-lv-badge">L${i + 1}</span>
             <span class="wz-crit-label-readonly">${CRIT_LABELS[i]}</span>
@@ -1356,301 +1368,301 @@ function renderCriteria() {
               <div class="wz-wysiwyg-area" contenteditable="true" data-placeholder="Kriteria yang harus dipenuhi...">${saved && saved[i] && saved[i].subject ? saved[i].subject : ''}</div>
             </div>
           </div>`;
-        }).join('')}
+      }).join('')}
       </div>
     </div>`;
-  }).join('');
+    }).join('');
 
-  // Wire WYSIWYG toolbar buttons
-  wrap.querySelectorAll('.wz-wysiwyg-toolbar button').forEach(btn => {
-    btn.addEventListener('mousedown', e => e.preventDefault());
-    btn.addEventListener('click', () => {
-      document.execCommand(btn.dataset.cmd, false, null);
-      const area = btn.closest('.wz-wysiwyg').querySelector('.wz-wysiwyg-area');
-      area.focus();
-      grabCriteriaFor(area);
+    // Wire WYSIWYG toolbar buttons
+    wrap.querySelectorAll('.wz-wysiwyg-toolbar button').forEach(btn => {
+      btn.addEventListener('mousedown', e => e.preventDefault());
+      btn.addEventListener('click', () => {
+        document.execCommand(btn.dataset.cmd, false, null);
+        const area = btn.closest('.wz-wysiwyg').querySelector('.wz-wysiwyg-area');
+        area.focus();
+        grabCriteriaFor(area);
+      });
     });
-  });
 
-  // Save criteria edits live
-  wrap.querySelectorAll('.wizard-criteria-comp').forEach((compEl) => {
+    // Save criteria edits live
+    wrap.querySelectorAll('.wizard-criteria-comp').forEach((compEl) => {
+      const ci = parseInt(compEl.dataset.ci, 10);
+      const w = weights[ci];
+      if (!w) return;
+      const ckey = weightKey({ key: w.cat }, w.name);
+      criteriaDraft[ckey] = [];
+      compEl.querySelectorAll('.wizard-criteria-row').forEach((row, i) => {
+        const area = row.querySelector('.wz-wysiwyg-area');
+        criteriaDraft[ckey][i] = {
+          label: CRIT_LABELS[i],
+          score_min: parseInt(row.querySelector('.wz-crit-min').value, 10),
+          score_max: parseInt(row.querySelector('.wz-crit-max').value, 10),
+          subject: area ? area.innerHTML : '',
+        };
+        const grab = () => grabCriteriaFor(area);
+        row.querySelectorAll('.wz-crit-min, .wz-crit-max').forEach(inp => inp.addEventListener('input', () => { grab(); saveWizardDraft(); }));
+        if (area) area.addEventListener('input', () => { grab(); saveWizardDraft(); });
+      });
+    });
+  }
+
+  function grabCriteriaFor(area) {
+    if (!area) return;
+    const row = area.closest('.wizard-criteria-row');
+    const compEl = row.closest('.wizard-criteria-comp');
     const ci = parseInt(compEl.dataset.ci, 10);
+    const i = [...compEl.querySelectorAll('.wizard-criteria-row')].indexOf(row);
+    const key = [...compEl.querySelectorAll('.wizard-criteria-row')];
+    // find component key from ci -> weights
+    const weights = collectWeights();
     const w = weights[ci];
     if (!w) return;
     const ckey = weightKey({ key: w.cat }, w.name);
-    criteriaDraft[ckey] = [];
-    compEl.querySelectorAll('.wizard-criteria-row').forEach((row, i) => {
-      const area = row.querySelector('.wz-wysiwyg-area');
-      criteriaDraft[ckey][i] = {
-        label: CRIT_LABELS[i],
-        score_min: parseInt(row.querySelector('.wz-crit-min').value, 10),
-        score_max: parseInt(row.querySelector('.wz-crit-max').value, 10),
-        subject: area ? area.innerHTML : '',
-      };
-      const grab = () => grabCriteriaFor(area);
-      row.querySelectorAll('.wz-crit-min, .wz-crit-max').forEach(inp => inp.addEventListener('input', () => { grab(); saveWizardDraft(); }));
-      if (area) area.addEventListener('input', () => { grab(); saveWizardDraft(); });
-    });
-  });
-}
-
-function grabCriteriaFor(area) {
-  if (!area) return;
-  const row = area.closest('.wizard-criteria-row');
-  const compEl = row.closest('.wizard-criteria-comp');
-  const ci = parseInt(compEl.dataset.ci, 10);
-  const i = [...compEl.querySelectorAll('.wizard-criteria-row')].indexOf(row);
-  const key = [...compEl.querySelectorAll('.wizard-criteria-row')];
-  // find component key from ci -> weights
-  const weights = collectWeights();
-  const w = weights[ci];
-  if (!w) return;
-  const ckey = weightKey({ key: w.cat }, w.name);
-  if (!criteriaDraft[ckey]) criteriaDraft[ckey] = [];
-  criteriaDraft[ckey][i] = {
-    label: CRIT_LABELS[i],
-    score_min: parseInt(row.querySelector('.wz-crit-min').value, 10),
-    score_max: parseInt(row.querySelector('.wz-crit-max').value, 10),
-    subject: area.innerHTML,
-  };
-}
-
-function collectCriteria() {
-  const weights = collectWeights();
-  const result = [];
-  document.querySelectorAll('.wizard-criteria-comp').forEach((compEl, ci) => {
-    const w = weights[ci];
-    if (!w) return;
-    const criteria = [];
-    compEl.querySelectorAll('.wizard-criteria-row').forEach((row, i) => {
-      const label = CRIT_LABELS[i];
-      const min = parseInt(row.querySelector('.wz-crit-min').value, 10);
-      const max = parseInt(row.querySelector('.wz-crit-max').value, 10);
-      const subjectHtml = row.querySelector('.wz-wysiwyg-area').innerHTML.trim();
-      const subjectText = row.querySelector('.wz-wysiwyg-area').innerText.trim();
-      const subjects = subjectText ? [subjectHtml, `Secara keseluruhan dinilai ${label.toLowerCase()} (skor ${isNaN(min) ? CRIT_DEFAULT[i].score_min : min}-${isNaN(max) ? CRIT_DEFAULT[i].score_max : max})`] : [`Secara keseluruhan dinilai ${label.toLowerCase()}`];
-      criteria.push({
-        level: i + 1,
-        label,
-        score_min: isNaN(min) ? CRIT_DEFAULT[i].score_min : min,
-        score_max: isNaN(max) ? CRIT_DEFAULT[i].score_max : max,
-        subjects,
-      });
-    });
-    result.push({ cat: w.cat, name: w.name, weight: w.weight, cpl_pis: w.cpl_pis, criteria });
-  });
-  return result;
-}
-
-// ---------- step navigation ----------
-function refreshWizardCplDropdowns() {
-  const cpls = collectCpls();
-  document.querySelectorAll('.wz-comp-cpl').forEach(sel => {
-    const currentVal = sel.value;
-    sel.innerHTML = '<option value="">Pilih CPL...</option>' +
-      cpls.map(c => `<option value="${c.code}">${c.code}</option>`).join('');
-    if (cpls.some(c => c.code === currentVal)) {
-      sel.value = currentVal;
-    } else {
-      sel.value = '';
-      const cplRow = sel.closest('.wz-cpl-pi-row');
-      if (cplRow) {
-        const piList = cplRow.querySelector('.wz-pi-list');
-        if (piList) piList.innerHTML = '';
-      }
-    }
-  });
-}
-
-function renderWizardStep() {
-  for (let i = 1; i <= 5; i++) {
-    const el = document.getElementById(`wizard-step-${i}`);
-    if (el) el.hidden = wizardStep !== i;
+    if (!criteriaDraft[ckey]) criteriaDraft[ckey] = [];
+    criteriaDraft[ckey][i] = {
+      label: CRIT_LABELS[i],
+      score_min: parseInt(row.querySelector('.wz-crit-min').value, 10),
+      score_max: parseInt(row.querySelector('.wz-crit-max').value, 10),
+      subject: area.innerHTML,
+    };
   }
-  document.getElementById('wizard-back').hidden = wizardStep === 1;
-  document.getElementById('wizard-next').textContent = wizardStep === 5 ? (wizardEditCourseId ? 'Update Course' : '+ Create Course') : 'Next';
-  const steps = document.getElementById('wizard-steps');
-  steps.innerHTML = STEP_NAMES.map((s, i) => {
-    const n = i + 1;
-    return `<span class="wizard-step ${wizardStep === n ? 'active' : ''}">${n}. ${s}</span>`;
-  }).join('');
-  if (wizardStep === 3) refreshWizardCplDropdowns();
-  if (wizardStep === 4) renderWeights();
-  if (wizardStep === 5) renderCriteria();
-}
 
-// Mark CPL rows that have no SO selected. Returns index of the first bad row (-1 if none).
-function markCplSoIssues() {
-  const rows = [...document.querySelectorAll('.wizard-cpl')];
-  let firstBad = -1;
-  rows.forEach((row, i) => {
-    const has = !!row.querySelector('.wz-so-cb:checked');
-    const hint = row.querySelector('.wz-so-hint');
-    if (has) {
-      row.classList.remove('wz-invalid');
-      if (hint) hint.remove();
-    } else {
-      row.classList.add('wz-invalid');
-      if (firstBad === -1) firstBad = i;
-      if (!hint) {
-        const soList = row.querySelector('.wz-so-list');
-        if (soList) {
-          const el = document.createElement('p');
-          el.className = 'wz-so-hint';
-          el.textContent = `✗ Pilih minimal 1 SO untuk ${row.dataset.cpl}`;
-          soList.insertAdjacentElement('afterend', el);
+  function collectCriteria() {
+    const weights = collectWeights();
+    const result = [];
+    document.querySelectorAll('.wizard-criteria-comp').forEach((compEl, ci) => {
+      const w = weights[ci];
+      if (!w) return;
+      const criteria = [];
+      compEl.querySelectorAll('.wizard-criteria-row').forEach((row, i) => {
+        const label = CRIT_LABELS[i];
+        const min = parseInt(row.querySelector('.wz-crit-min').value, 10);
+        const max = parseInt(row.querySelector('.wz-crit-max').value, 10);
+        const subjectHtml = row.querySelector('.wz-wysiwyg-area').innerHTML.trim();
+        const subjectText = row.querySelector('.wz-wysiwyg-area').innerText.trim();
+        const subjects = subjectText ? [subjectHtml, `Secara keseluruhan dinilai ${label.toLowerCase()} (skor ${isNaN(min) ? CRIT_DEFAULT[i].score_min : min}-${isNaN(max) ? CRIT_DEFAULT[i].score_max : max})`] : [`Secara keseluruhan dinilai ${label.toLowerCase()}`];
+        criteria.push({
+          level: i + 1,
+          label,
+          score_min: isNaN(min) ? CRIT_DEFAULT[i].score_min : min,
+          score_max: isNaN(max) ? CRIT_DEFAULT[i].score_max : max,
+          subjects,
+        });
+      });
+      result.push({ cat: w.cat, name: w.name, weight: w.weight, cpl_pis: w.cpl_pis, criteria });
+    });
+    return result;
+  }
+
+  // ---------- step navigation ----------
+  function refreshWizardCplDropdowns() {
+    const cpls = collectCpls();
+    document.querySelectorAll('.wz-comp-cpl').forEach(sel => {
+      const currentVal = sel.value;
+      sel.innerHTML = '<option value="">Pilih CPL...</option>' +
+        cpls.map(c => `<option value="${c.code}">${c.code}</option>`).join('');
+      if (cpls.some(c => c.code === currentVal)) {
+        sel.value = currentVal;
+      } else {
+        sel.value = '';
+        const cplRow = sel.closest('.wz-cpl-pi-row');
+        if (cplRow) {
+          const piList = cplRow.querySelector('.wz-pi-list');
+          if (piList) piList.innerHTML = '';
         }
       }
-    }
-  });
-  return firstBad;
-}
+    });
+  }
 
-function validateStep() {
-  const status = document.getElementById('wizard-status');
-  status.innerHTML = '';
-  if (wizardStep === 1) {
-    if (!document.getElementById('wizard-code').value.trim() || !document.getElementById('wizard-name').value.trim()) {
-      status.innerHTML = '<p class="alert-err">✗ Kode dan Nama matakuliah wajib diisi.</p>';
-      return false;
+  function renderWizardStep() {
+    for (let i = 1; i <= 5; i++) {
+      const el = document.getElementById(`wizard-step-${i}`);
+      if (el) el.hidden = wizardStep !== i;
     }
+    document.getElementById('wizard-back').hidden = wizardStep === 1;
+    document.getElementById('wizard-next').textContent = wizardStep === 5 ? (wizardEditCourseId ? 'Update Course' : '+ Create Course') : 'Next';
+    const steps = document.getElementById('wizard-steps');
+    steps.innerHTML = STEP_NAMES.map((s, i) => {
+      const n = i + 1;
+      return `<span class="wizard-step ${wizardStep === n ? 'active' : ''}">${n}. ${s}</span>`;
+    }).join('');
+    if (wizardStep === 3) refreshWizardCplDropdowns();
+    if (wizardStep === 4) renderWeights();
+    if (wizardStep === 5) renderCriteria();
   }
-  if (wizardStep === 2) {
-    const cpls = collectCpls();
-    if (!cpls.length || cpls.some(c => !c.description)) {
-      status.innerHTML = '<p class="alert-err">✗ Isi minimal 1 CPL beserta deskripsinya.</p>';
-      return false;
-    }
-    const firstBad = markCplSoIssues();
-    if (firstBad !== -1) {
-      status.innerHTML = '<p class="alert-err">✗ Setiap CPL harus memilih minimal 1 SO - baris yang bermasalah ditandai merah.</p>';
-      const row = document.querySelectorAll('.wizard-cpl')[firstBad];
-      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return false;
-    }
+
+  // Mark CPL rows that have no SO selected. Returns index of the first bad row (-1 if none).
+  function markCplSoIssues() {
+    const rows = [...document.querySelectorAll('.wizard-cpl')];
+    let firstBad = -1;
+    rows.forEach((row, i) => {
+      const has = !!row.querySelector('.wz-so-cb:checked');
+      const hint = row.querySelector('.wz-so-hint');
+      if (has) {
+        row.classList.remove('wz-invalid');
+        if (hint) hint.remove();
+      } else {
+        row.classList.add('wz-invalid');
+        if (firstBad === -1) firstBad = i;
+        if (!hint) {
+          const soList = row.querySelector('.wz-so-list');
+          if (soList) {
+            const el = document.createElement('p');
+            el.className = 'wz-so-hint';
+            el.textContent = `✗ Pilih minimal 1 SO untuk ${row.dataset.cpl}`;
+            soList.insertAdjacentElement('afterend', el);
+          }
+        }
+      }
+    });
+    return firstBad;
   }
-  if (wizardStep === 3) {
-    const categories = collectComponents();
-    if (!Object.keys(categories).length) {
-      status.innerHTML = '<p class="alert-err">✗ Tambahkan minimal 1 sub-komponen.</p>';
-      return false;
-    }
-    let bad = false;
-    Object.values(categories).forEach(comps => comps.forEach(c => {
-      if (!c.cpl_pis.length) bad = true;
-    }));
-    if (bad) {
-      status.innerHTML = '<p class="alert-err">✗ Setiap sub-komponen harus dipetakan ke minimal 1 CPL/PI.</p>';
-      return false;
-    }
-  }
-  if (wizardStep === 4) {
-    const weights = collectWeights();
-    // Weights may be 0, but they must not be empty/NaN, total must be 100%,
-    // and PBL rule must hold.
-    if (weights.some(w => isNaN(w.weight))) {
-      status.innerHTML = '<p class="alert-err">✗ Isi bobot semua sub-komponen (boleh 0).</p>';
-      return false;
-    }
-    const total = wizardTotalWeight();
-    if (Math.abs(total - 100) > 0.001) {
-      status.innerHTML = `<p class="alert-err">✗ Total bobot harus 100%, sekarang ${total.toFixed(1)}%.</p>`;
-      return false;
-    }
-    if (document.getElementById('wizard-pbl').checked) {
-      const partisipatif = weights.filter(w => w.cat === 'partisipatif').reduce((a, w) => a + w.weight, 0);
-      const proyek = weights.filter(w => w.cat === 'proyek').reduce((a, w) => a + w.weight, 0);
-      if (partisipatif + proyek < 50) {
-        status.innerHTML = `<p class="alert-err">✗ Untuk PBL, Partisipatif + Proyek harus &ge; 50%, sekarang ${(partisipatif + proyek).toFixed(1)}%.</p>`;
+
+  function validateStep() {
+    const status = document.getElementById('wizard-status');
+    status.innerHTML = '';
+    if (wizardStep === 1) {
+      if (!document.getElementById('wizard-code').value.trim() || !document.getElementById('wizard-name').value.trim()) {
+        status.innerHTML = '<p class="alert-err">✗ Kode dan Nama matakuliah wajib diisi.</p>';
         return false;
       }
     }
+    if (wizardStep === 2) {
+      const cpls = collectCpls();
+      if (!cpls.length || cpls.some(c => !c.description)) {
+        status.innerHTML = '<p class="alert-err">✗ Isi minimal 1 CPL beserta deskripsinya.</p>';
+        return false;
+      }
+      const firstBad = markCplSoIssues();
+      if (firstBad !== -1) {
+        status.innerHTML = '<p class="alert-err">✗ Setiap CPL harus memilih minimal 1 SO - baris yang bermasalah ditandai merah.</p>';
+        const row = document.querySelectorAll('.wizard-cpl')[firstBad];
+        if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+      }
+    }
+    if (wizardStep === 3) {
+      const categories = collectComponents();
+      if (!Object.keys(categories).length) {
+        status.innerHTML = '<p class="alert-err">✗ Tambahkan minimal 1 sub-komponen.</p>';
+        return false;
+      }
+      let bad = false;
+      Object.values(categories).forEach(comps => comps.forEach(c => {
+        if (!c.cpl_pis.length) bad = true;
+      }));
+      if (bad) {
+        status.innerHTML = '<p class="alert-err">✗ Setiap sub-komponen harus dipetakan ke minimal 1 CPL/PI.</p>';
+        return false;
+      }
+    }
+    if (wizardStep === 4) {
+      const weights = collectWeights();
+      // Weights may be 0, but they must not be empty/NaN, total must be 100%,
+      // and PBL rule must hold.
+      if (weights.some(w => isNaN(w.weight))) {
+        status.innerHTML = '<p class="alert-err">✗ Isi bobot semua sub-komponen (boleh 0).</p>';
+        return false;
+      }
+      const total = wizardTotalWeight();
+      if (Math.abs(total - 100) > 0.001) {
+        status.innerHTML = `<p class="alert-err">✗ Total bobot harus 100%, sekarang ${total.toFixed(1)}%.</p>`;
+        return false;
+      }
+      if (document.getElementById('wizard-pbl').checked) {
+        const partisipatif = weights.filter(w => w.cat === 'partisipatif').reduce((a, w) => a + w.weight, 0);
+        const proyek = weights.filter(w => w.cat === 'proyek').reduce((a, w) => a + w.weight, 0);
+        if (partisipatif + proyek < 50) {
+          status.innerHTML = `<p class="alert-err">✗ Untuk PBL, Partisipatif + Proyek harus &ge; 50%, sekarang ${(partisipatif + proyek).toFixed(1)}%.</p>`;
+          return false;
+        }
+      }
+    }
+    return true;
   }
-  return true;
-}
 
-async function submitWizard() {
-  const status = document.getElementById('wizard-status');
-  const cpls = collectCpls();
-  const criteriaList = collectCriteria();
-  const categories = {};
-  criteriaList.forEach(item => {
-    if (!item.cat) return;
-    if (!categories[item.cat]) categories[item.cat] = [];
-    categories[item.cat].push({ name: item.name, weight: item.weight, cpl_pis: item.cpl_pis, criteria: item.criteria });
-  });
-  const payload = {
-    course_code: document.getElementById('wizard-code').value.trim(),
-    course_name: document.getElementById('wizard-name').value.trim(),
-    sks: parseInt(document.getElementById('wizard-sks').value, 10) || 0,
-    semester: document.getElementById('wizard-semester').value.trim(),
-    study_program: document.getElementById('wizard-program').value,
-    is_pbl: document.getElementById('wizard-pbl').checked,
-    target_attainment: parseInt(document.getElementById('wizard-target-attainment').value, 10) || 70,
-    cpls,
-    categories,
-  };
-  const url = wizardEditCourseId ? u('api_course', wizardEditCourseId) : u('api_create');
-  const method = wizardEditCourseId ? 'PUT' : 'POST';
-  status.innerHTML = `<p class="alert-info">${wizardEditCourseId ? 'Updating' : 'Creating'} rubric…</p>`;
-  const res = await fetch(url, {
-    method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-  });
-  const out = await res.json();
-  if (res.ok) {
-    clearWizardDraft();
-    closeWizard();
-    showToast(wizardEditCourseId ? `Rubric ${out.course_code || payload.course_code} updated.` : `Rubric ${out.course_code} created. Now create a class.`, 'success');
-    loadCourses();
-    loadDashboard();
-  } else {
-    status.innerHTML = `<p class="alert-err">✗ ${out.error || 'Failed'}</p>`;
+  async function submitWizard() {
+    const status = document.getElementById('wizard-status');
+    const cpls = collectCpls();
+    const criteriaList = collectCriteria();
+    const categories = {};
+    criteriaList.forEach(item => {
+      if (!item.cat) return;
+      if (!categories[item.cat]) categories[item.cat] = [];
+      categories[item.cat].push({ name: item.name, weight: item.weight, cpl_pis: item.cpl_pis, criteria: item.criteria });
+    });
+    const payload = {
+      course_code: document.getElementById('wizard-code').value.trim(),
+      course_name: document.getElementById('wizard-name').value.trim(),
+      sks: parseInt(document.getElementById('wizard-sks').value, 10) || 0,
+      semester: document.getElementById('wizard-semester').value.trim(),
+      study_program: document.getElementById('wizard-program').value,
+      is_pbl: document.getElementById('wizard-pbl').checked,
+      target_attainment: parseInt(document.getElementById('wizard-target-attainment').value, 10) || 60,
+      cpls,
+      categories,
+    };
+    const url = wizardEditCourseId ? u('api_course', wizardEditCourseId) : u('api_create');
+    const method = wizardEditCourseId ? 'PUT' : 'POST';
+    status.innerHTML = `<p class="alert-info">${wizardEditCourseId ? 'Updating' : 'Creating'} rubric…</p>`;
+    const res = await fetch(url, {
+      method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const out = await res.json();
+    if (res.ok) {
+      clearWizardDraft();
+      closeWizard();
+      showToast(wizardEditCourseId ? `Rubric ${out.course_code || payload.course_code} updated.` : `Rubric ${out.course_code} created. Now create a class.`, 'success');
+      loadCourses();
+      loadDashboard();
+    } else {
+      status.innerHTML = `<p class="alert-err">✗ ${out.error || 'Failed'}</p>`;
+    }
   }
-}
 
-// Lock modal: no outside-click / Escape close (prevents losing input).
-document.getElementById('btn-create').addEventListener('click', openWizard);
-document.getElementById('wizard-cancel').addEventListener('click', () => {
-  if (confirm(wizardEditCourseId ? 'Batalkan pengeditan rubric?' : 'Batalkan pembuatan rubric?')) { closeWizard(); clearWizardDraft(); }
-});
-document.getElementById('wizard-close').addEventListener('click', () => {
-  if (confirm(wizardEditCourseId ? 'Batalkan pengeditan rubric?' : 'Batalkan pembuatan rubric?')) { closeWizard(); clearWizardDraft(); }
-});
-document.getElementById('wizard-add-cpl').addEventListener('click', () => { addCplRow(); saveWizardDraft(); });
-document.getElementById('wizard-next').addEventListener('click', () => {
-  if (!validateStep()) return;
-  if (wizardStep < 5) { wizardStep++; renderWizardStep(); }
-  else submitWizard();
-  saveWizardDraft();
-});
-document.getElementById('wizard-back').addEventListener('click', () => {
-  if (wizardStep > 1) { wizardStep--; renderWizardStep(); }
-  saveWizardDraft();
-});
-document.getElementById('wizard-pbl').addEventListener('change', () => {
-  if (wizardStep === 4) updatePblStatus();
-  saveWizardDraft();
-});
-document.getElementById('wizard-program').addEventListener('change', async () => {
-  await loadSoPi();
-  refreshSoViews();
-  saveWizardDraft();
-});
-
-// Save draft on any input/change inside the wizard.
-document.getElementById('wizard-modal').addEventListener('input', e => {
-  if (e.target.closest('#wizard-modal')) saveWizardDraft();
-});
-document.getElementById('wizard-modal').addEventListener('change', e => {
-  if (e.target.closest('#wizard-modal')) {
-    if (e.target.classList.contains('wz-so-cb')) markCplSoIssues();
+  // Lock modal: no outside-click / Escape close (prevents losing input).
+  document.getElementById('btn-create').addEventListener('click', openWizard);
+  document.getElementById('wizard-cancel').addEventListener('click', () => {
+    if (confirm(wizardEditCourseId ? 'Batalkan pengeditan rubric?' : 'Batalkan pembuatan rubric?')) { closeWizard(); clearWizardDraft(); }
+  });
+  document.getElementById('wizard-close').addEventListener('click', () => {
+    if (confirm(wizardEditCourseId ? 'Batalkan pengeditan rubric?' : 'Batalkan pembuatan rubric?')) { closeWizard(); clearWizardDraft(); }
+  });
+  document.getElementById('wizard-add-cpl').addEventListener('click', () => { addCplRow(); saveWizardDraft(); });
+  document.getElementById('wizard-next').addEventListener('click', () => {
+    if (!validateStep()) return;
+    if (wizardStep < 5) { wizardStep++; renderWizardStep(); }
+    else submitWizard();
     saveWizardDraft();
-  }
-});
+  });
+  document.getElementById('wizard-back').addEventListener('click', () => {
+    if (wizardStep > 1) { wizardStep--; renderWizardStep(); }
+    saveWizardDraft();
+  });
+  document.getElementById('wizard-pbl').addEventListener('change', () => {
+    if (wizardStep === 4) updatePblStatus();
+    saveWizardDraft();
+  });
+  document.getElementById('wizard-program').addEventListener('change', async () => {
+    await loadSoPi();
+    refreshSoViews();
+    saveWizardDraft();
+  });
 
-// Target Attainment slider listener
-document.getElementById('wizard-target-attainment').addEventListener('input', e => {
-  document.getElementById('wizard-target-attainment-val').textContent = e.target.value;
-});
+  // Save draft on any input/change inside the wizard.
+  document.getElementById('wizard-modal').addEventListener('input', e => {
+    if (e.target.closest('#wizard-modal')) saveWizardDraft();
+  });
+  document.getElementById('wizard-modal').addEventListener('change', e => {
+    if (e.target.closest('#wizard-modal')) {
+      if (e.target.classList.contains('wz-so-cb')) markCplSoIssues();
+      saveWizardDraft();
+    }
+  });
+
+  // Target Attainment slider listener
+  document.getElementById('wizard-target-attainment').addEventListener('input', e => {
+    document.getElementById('wizard-target-attainment-val').textContent = e.target.value;
+  });
 </script>
 {% endblock %}
