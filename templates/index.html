@@ -90,26 +90,34 @@
   "course_code": "INF2201",
   "course_name": "Pengembangan Aplikasi Berbasis Web",
   "sks": 3,
-  "semester": "Ganjil 2026/2027",
+  "semester": "2026/2027 Ganjil",
   "study_program": "RKS",
   "is_pbl": false,
+  "target_attainment": 60,
   "categories": [
     {
-      "key": "tugas",
-      "label": "Tugas",
+      "key": "partisipatif",
+      "label": "Partisipatif",
       "components": [
         {
-          "name": "Tugas 1 - Pengumpulan",
+          "name": "Keaktifan Diskusi Kelas",
           "weight": 10,
           "cpl_pis": [
-            { "cpl": "CPL1", "so": "SO2", "pi": "2a" }
+            { "cpl": "CPL1", "so": "SO1", "pi": "1a" }
           ],
           "criteria": [
             {
               "level": 1, "label": "Sangat Kurang",
               "score_min": 0, "score_max": 30,
-              "subjects": ["..."]
-            }
+              "subjects": [
+                "Tidak pernah mengajukan pertanyaan atau menjawab pertanyaan dalam diskusi kelas.",
+                "Secara keseluruhan dinilai sangat kurang (skor 0-30)"
+              ]
+            },
+            { "level": 2, "label": "Kurang", "score_min": 31, "score_max": 55, "subjects": ["..."] },
+            { "level": 3, "label": "Cukup", "score_min": 56, "score_max": 70, "subjects": ["..."] },
+            { "level": 4, "label": "Baik", "score_min": 71, "score_max": 89, "subjects": ["..."] },
+            { "level": 5, "label": "Sangat Baik", "score_min": 90, "score_max": 100, "subjects": ["..."] }
           ]
         }
       ]
@@ -120,7 +128,7 @@
       "code": "CPL1",
       "description": "Mampu menganalisis dan merancang solusi keamanan.",
       "proficiency_level": 4,
-      "so_codes": ["SO2", "SO3"]
+      "so_codes": ["SO1"]
     }
   ]
 }</code></pre>
