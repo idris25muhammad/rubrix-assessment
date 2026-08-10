@@ -806,19 +806,18 @@ function refreshSoViews() {
 function renderProgramSelect() {
   const sel = document.getElementById('wizard-program');
   const cu = window.CURRENT_USER || {};
-  if (cu.role === 'tim_kurikulum' && cu.study_program) {
-    const p = programs.find(x => x.code === cu.study_program);
-    sel.innerHTML = p
-      ? `<option value="${p.code}">${esc(p.label)}</option>`
-      : `<option value="${cu.study_program}">${esc(cu.study_program)}</option>`;
-    sel.value = cu.study_program;
-    sel.disabled = true;
-    sel.title = 'Program Studi kamu';
-  } else {
-    sel.innerHTML = programs.map(p =>
-      `<option value="${p.code}" ${p.code === 'RKS' ? 'selected' : ''}>${esc(p.label)}</option>`
-    ).join('');
-    sel.disabled = false;
+  
+  sel.innerHTML = programs.map(p =>
+    `<option value="${p.code}">${esc(p.label)}</option>`
+  ).join('');
+  sel.disabled = false;
+  sel.title = 'Pilih Program Studi';
+
+  const defaultProgram = (cu.role === 'tim_kurikulum' && cu.study_program) ? cu.study_program : 'RKS';
+  if (programs.some(p => p.code === defaultProgram)) {
+    sel.value = defaultProgram;
+  } else if (programs.length > 0) {
+    sel.value = programs[0].code;
   }
 }
 
