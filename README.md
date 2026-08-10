@@ -216,9 +216,9 @@ server {
     }
 }
 ```
-> **Important:** for the sub-path setup, the app must be wrapped with
-> `ProxyFix(..., x_script=1)` in `modules/__init__.py` so Flask honors the
-> `X-Script-Name` header and prefixes all `url_for` URLs with `/rubrix`.
+> The app already enables `ProxyFix(x_for=1, x_proto=1, x_host=1, x_prefix=1)`,
+> so the `X-Script-Name` header above is honored and all `url_for` URLs are
+> prefixed with `/rubrix`.
 
 Enable the site and reload nginx:
 ```bash

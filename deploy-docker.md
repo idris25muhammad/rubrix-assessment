@@ -150,9 +150,9 @@ server {
 }
 ```
 
-**Important:** the app must be wrapped with `ProxyFix(..., x_script=1)` so Flask
-honors the `X-Script-Name` header and generates all `url_for` URLs with the
-`/rubrix` prefix (this is not currently enabled in `modules/__init__.py`).
+**Note:** the app already enables `ProxyFix(..., x_prefix=1)` in
+`modules/__init__.py`, so the `X-Script-Name` header is honored and all `url_for`
+URLs are generated with the `/rubrix` prefix.
 
 ### Default Seeded Accounts
 On first startup the app seeds one `tim_kurikulum` account per study program
