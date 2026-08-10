@@ -263,7 +263,209 @@ def api_levels():
         row = ProficiencyLevel.query.filter_by(level=level).first()
         if row:
             row.label = label
-        else:
-            db.session.add(ProficiencyLevel(level=level, label=label))
     db.session.commit()
     return jsonify({"ok": True})
+
+
+# -------------------------------------------------------------
+# Statistics per Prodi & Semester
+# -------------------------------------------------------------
+from modules.models import Course, Class, Student, Score, Component, Category, Cpl
+from modules.helpers import cpl_pis_of, grade_of_score
+
+def get_prodi_semester_statistics(study_program, semester):
+    courses = Course.query.filter_by(study_program=study_program, semester=semester).all()
+    if not courses:
+        return None
+
+    course_ids = [c.id for c in courses]
+    classes = Class.query.filter(Class.course_id.in_(course_ids)).all()
+    class_ids = [cl.id for cl in classes]
+
+    # Map course components
+    components_by_course = {}
+    for c in courses:
+        comps = []
+        for cat in c.categories:
+            comps.extend(cat.components)
+        components_by_course[c.id] = comps
+
+    # Fetch students and scores
+    students = Student.query.filter(Student.class_id.in_(class_ids)).all()
+    student_ids = [s.id for s in students]
+    scores = Score.query.filter(Score.student_id.in_(student_ids)).all()
+
+    # Map scores by student id
+    scores_by_student = {s.id: {} for s in students}
+    for sc in scores:
+        if sc.student_id in scores_by_student:
+            scores_by_student[sc.student_id][sc.component_id] = sc.score
+
+    # Filter actual students
+    actual_students = []
+    assessed_student_ids = {sc.student_id for sc in scores if sc.score is not None}
+    for s in students:
+        if (s.name and s.name.strip()) or (s.nim and s.nim.strip()) or (s.id in assessed_student_ids):
+            actual_students.append(s)
+
+    class_by_id = {cl.id: cl for cl in classes}
+    course_by_id = {c.id: c for c in courses}
+
+    totals_by_course = {c.id: [] for c in courses}
+    overall_totals = []
+    grade_dist = {"A": 0, "B": 0, "C": 0, "D": 0, "E": 0}
+
+    # Track scores for CPL averages
+    cpl_scores = {}
+
+    for s in actual_students:
+        cl = class_by_id.get(s.class_id)
+        if not cl:
+            continue
+        c = course_by_id.get(cl.course_id)
+        if not c:
+            continue
+        
+        comps = components_by_course.get(c.id, [])
+        student_scores = scores_by_student.get(s.id, {})
+        
+        if not student_scores:
+            continue
+
+        # Compute student total score
+        total_score = sum((student_scores.get(co.id) or 0) * (co.weight / 100.0) for co in comps)
+        totals_by_course[c.id].append(total_score)
+        overall_totals.append(total_score)
+        
+        # Grade
+        g = grade_of_score(total_score)
+        grade_dist[g] += 1
+
+        # CPL mappings
+        for co in comps:
+            score_val = student_scores.get(co.id)
+            if score_val is not None:
+                for mapping in cpl_pis_of(co):
+                    cpl_code = mapping.get("cpl")
+                    if cpl_code:
+                        cpl_scores.setdefault(cpl_code, []).append(score_val)
+
+    # Calculate average and pass rate per course
+    course_stats = []
+    for c in courses:
+        final_scores = totals_by_course[c.id]
+        avg_score = round(sum(final_scores) / len(final_scores), 2) if final_scores else None
+        
+        passed = sum(1 for s in final_scores if grade_of_score(s) in ("A", "B", "C"))
+        pass_rate = round(passed / len(final_scores) * 100, 2) if final_scores else 0
+        
+        c_classes = [cl for cl in classes if cl.course_id == c.id]
+        
+        course_stats.append({
+            "course_code": c.course_code,
+            "course_name": c.course_name,
+            "sks": c.sks,
+            "class_count": len(c_classes),
+            "avg_score": avg_score,
+            "pass_rate": pass_rate
+        })
+
+    # CPL averages
+    cpl_stats = []
+    for code, vals in cpl_scores.items():
+        avg = round(sum(vals) / len(vals), 2) if vals else None
+        cpl_stats.append({
+            "cpl_code": code,
+            "avg_score": avg
+        })
+    cpl_stats.sort(key=lambda x: x["cpl_code"])
+
+    return {
+        "total_courses": len(courses),
+        "total_classes": len(classes),
+        "total_students": len(actual_students),
+        "total_assessed": len(assessed_student_ids),
+        "grade_distribution": grade_dist,
+        "cpl_stats": cpl_stats,
+        "course_stats": course_stats
+    }
+
+
+@bp.route("/statistics")
+@role_required(ROLE_TIM_KURIKULUM)
+def statistics():
+    return render_template("statistics.html")
+
+
+@bp.route("/api/statistics/semesters")
+@api_login_required
+def api_statistics_semesters():
+    user = current_user()
+    if not user or user["role"] != ROLE_TIM_KURIKULUM:
+        return jsonify({"error": "not authorized"}), 403
+    
+    study_program = user.get("study_program")
+    if not study_program:
+        return jsonify([])
+        
+    semesters = (
+        db.session.query(Course.semester)
+        .filter_by(study_program=study_program)
+        .distinct()
+        .all()
+    )
+    sem_list = [s[0] for s in semesters if s[0] and s[0].strip()]
+    sem_list.sort(reverse=True)
+    return jsonify(sem_list)
+
+
+@bp.route("/api/statistics")
+@api_login_required
+def api_statistics():
+    user = current_user()
+    if not user or user["role"] != ROLE_TIM_KURIKULUM:
+        return jsonify({"error": "not authorized"}), 403
+        
+    study_program = user.get("study_program")
+    if not study_program:
+        return jsonify({"error": "user has no study program"}), 400
+        
+    semester = request.args.get("semester", "").strip()
+    if not semester:
+        # Default to the latest semester
+        latest_course = (
+            Course.query.filter_by(study_program=study_program)
+            .order_by(Course.created_at.desc())
+            .first()
+        )
+        if latest_course:
+            semester = latest_course.semester
+            
+    if not semester:
+        return jsonify({
+            "total_courses": 0,
+            "total_classes": 0,
+            "total_students": 0,
+            "total_assessed": 0,
+            "grade_distribution": {"A": 0, "B": 0, "C": 0, "D": 0, "E": 0},
+            "cpl_stats": [],
+            "course_stats": [],
+            "semester": ""
+        })
+        
+    stats = get_prodi_semester_statistics(study_program, semester)
+    if stats is None:
+        return jsonify({
+            "total_courses": 0,
+            "total_classes": 0,
+            "total_students": 0,
+            "total_assessed": 0,
+            "grade_distribution": {"A": 0, "B": 0, "C": 0, "D": 0, "E": 0},
+            "cpl_stats": [],
+            "course_stats": [],
+            "semester": semester
+        })
+        
+    stats["semester"] = semester
+    stats["study_program"] = study_program
+    return jsonify(stats)

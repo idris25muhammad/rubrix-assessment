@@ -8,7 +8,6 @@
     <p>Set up courses, classes, and assessment components seamlessly via an interactive wizard or JSON file upload.</p>
   </div>
   <div class="head-actions">
-    <button class="btn btn-ghost" id="btn-refresh">Refresh</button>
     <button class="btn btn-outline" id="btn-create">+ Create Rubric</button>
     <button class="btn btn-teal" id="btn-upload">
       <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
@@ -575,8 +574,6 @@
     if (res.ok) { closeEdit(); showToast('Course updated.', 'success'); loadCourses(); }
     else document.getElementById('edit-status').innerHTML = `<p class="alert-err">✗ ${out.error}</p>`;
   });
-
-  document.getElementById('btn-refresh').addEventListener('click', () => { loadCourses(); loadDashboard(); });
 
   function triggerFilter() {
     const query = document.getElementById('course-search').value.trim();

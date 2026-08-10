@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+{% block title %}Statistik Kurikulum &middot; RubriX{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+<section class="page-head">
+  <div>
+    <h1>Statistik Kurikulum (<span id="program-label">-</span>)</h1>
+    <p>Visualisasi capaian CPL, sebaran nilai akhir, dan perbandingan matakuliah per semester.</p>
+  </div>
+  <div class="head-actions">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <label for="stats-semester" style="font-size: 14px; font-weight: 500; color: var(--text);">Semester</label>
+      <select id="stats-semester" class="search-input" style="width: 220px; height: 38px; border-radius: 8px; border: 1px solid var(--border); padding: 0 10px; font-size: 14px; background: var(--card); color: var(--text);"></select>
+    </div>
+  </div>
+</section>
+
+<!-- Summary Cards -->
+<section class="stat-grid" id="stats-summary-grid">
+  <div class="card stat">
+    <div class="stat-top">
+      <span class="stat-icon" style="background: #e0f2fe; color: #0284c7;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </span>
+      <div>
+        <div class="stat-label">Mata Kuliah</div>
+        <div class="stat-value" id="card-courses">0</div>
+      </div>
+    </div>
+  </div>
+  <div class="card stat">
+    <div class="stat-top">
+      <span class="stat-icon" style="background: #e0f7fa; color: #00838f;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </span>
+      <div>
+        <div class="stat-label">Kelas</div>
+        <div class="stat-value" id="card-classes">0</div>
+      </div>
+    </div>
+  </div>
+  <div class="card stat">
+    <div class="stat-top">
+      <span class="stat-icon" style="background: #e8f5e9; color: #2e7d32;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </span>
+      <div>
+        <div class="stat-label">Total Mahasiswa</div>
+        <div class="stat-value" id="card-students">0</div>
+      </div>
+    </div>
+  </div>
+  <div class="card stat">
+    <div class="stat-top">
+      <span class="stat-icon" style="background: #fdf2e9; color: #d84315;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </span>
+      <div>
+        <div class="stat-label">Mahasiswa Dinilai</div>
+        <div class="stat-value" id="card-assessed">0</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Main Visualizations -->
+<section class="chart-grid" style="margin-bottom: 20px;">
+  <!-- CPL Attainment -->
+  <div class="card chart-card col-7">
+    <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; font-weight: 600;">Capaian Rata-Rata CPL (Target Batas: 60)</h3>
+    <div style="position: relative; height: 320px;">
+      <canvas id="chart-cpl-attainment"></canvas>
+    </div>
+  </div>
+
+  <!-- Grade Distribution -->
+  <div class="card chart-card col-3">
+    <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; font-weight: 600;">Sebaran Grade Nilai Akhir</h3>
+    <div style="position: relative; height: 320px;">
+      <canvas id="chart-grade-distribution"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- Course Performance Comparison -->
+<section class="card" style="margin-bottom: 30px;">
+  <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; font-weight: 600;">Performa Matakuliah</h3>
+  <div class="table-responsive">
+    <table class="table" style="width: 100%; border-collapse: collapse; text-align: left;">
+      <thead>
+        <tr style="border-bottom: 2px solid var(--border);">
+          <th style="padding: 12px 8px; font-weight: 600; color: var(--muted);">Kode</th>
+          <th style="padding: 12px 8px; font-weight: 600; color: var(--muted);">Nama Matakuliah</th>
+          <th style="padding: 12px 8px; font-weight: 600; color: var(--muted); text-align: right;">SKS</th>
+          <th style="padding: 12px 8px; font-weight: 600; color: var(--muted); text-align: right;">Jumlah Kelas</th>
+          <th style="padding: 12px 8px; font-weight: 600; color: var(--muted); text-align: right;">Rata-rata Nilai</th>
+          <th style="padding: 12px 8px; font-weight: 600; color: var(--muted); text-align: right;">Persentase Kelulusan (>= C)</th>
+        </tr>
+      </thead>
+      <tbody id="course-performance-body">
+        <tr>
+          <td colspan="6" style="padding: 24px; text-align: center; color: var(--muted);">Memuat data...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+let chartCpl = null;
+let chartGrade = null;
+
+function u(route, ...args) {
+  const parts = ['/rubrix/sopi'];
+  if (route) parts.push(route);
+  if (args.length) parts.push(...args);
+  return parts.join('/').replace(/\/+/g, '/');
+}
+
+async function loadSemesters() {
+  try {
+    const res = await fetch(u('api/statistics/semesters'));
+    const semesters = await res.json();
+    const select = document.getElementById('stats-semester');
+    
+    if (!semesters || semesters.length === 0) {
+      select.innerHTML = '<option value="">Tidak ada data semester</option>';
+      document.getElementById('course-performance-body').innerHTML = `
+        <tr>
+          <td colspan="6" style="padding: 24px; text-align: center; color: var(--muted);">
+            Belum ada matakuliah yang terdaftar untuk Program Studi Anda.
+          </td>
+        </tr>`;
+      return;
+    }
+    
+    select.innerHTML = semesters.map(s => `<option value="${s}">${s}</option>`).join('');
+    
+    // Trigger first load
+    loadStatistics(select.value);
+    
+    select.addEventListener('change', (e) => {
+      loadStatistics(e.target.value);
+    });
+  } catch (e) {
+    console.error('Failed to load semesters:', e);
+  }
+}
+
+async function loadStatistics(semester) {
+  if (!semester) return;
+  try {
+    const res = await fetch(u('api/statistics') + '?semester=' + encodeURIComponent(semester));
+    const data = await res.json();
+    
+    // Update labels and summary cards
+    document.getElementById('program-label').textContent = data.study_program || '-';
+    document.getElementById('card-courses').textContent = data.total_courses || 0;
+    document.getElementById('card-classes').textContent = data.total_classes || 0;
+    document.getElementById('card-students').textContent = data.total_students || 0;
+    document.getElementById('card-assessed').textContent = data.total_assessed || 0;
+    
+    // 1. Render CPL Attainment Chart
+    renderCplChart(data.cpl_stats || []);
+    
+    // 2. Render Grade Distribution Chart
+    renderGradeChart(data.grade_distribution || {});
+    
+    // 3. Render Course Table
+    renderCourseTable(data.course_stats || []);
+  } catch (e) {
+    console.error('Failed to load statistics:', e);
+  }
+}
+
+function renderCplChart(cplStats) {
+  if (chartCpl) {
+    chartCpl.destroy();
+  }
+  
+  const ctx = document.getElementById('chart-cpl-attainment').getContext('2d');
+  
+  if (!cplStats || cplStats.length === 0) {
+    // Empty state
+    chartCpl = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: ['No Data'], datasets: [{ data: [0] }] },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+    return;
+  }
+  
+  const labels = cplStats.map(x => x.cpl_code);
+  const scores = cplStats.map(x => x.avg_score || 0);
+  
+  // Custom HSL/Teal colors: green/teal if >= 60, coral/red if < 60
+  const backgroundColors = scores.map(s => s >= 60 ? 'rgba(20, 184, 166, 0.85)' : 'rgba(239, 68, 68, 0.85)');
+  const borderColors = scores.map(s => s >= 60 ? 'rgb(20, 184, 166)' : 'rgb(239, 68, 68)');
+  
+  chartCpl = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Rata-rata Skor CPL',
+        data: scores,
+        backgroundColor: backgroundColors,
+        borderColor: borderColors,
+        borderWidth: 1.5,
+        borderRadius: 6,
+        barPercentage: 0.6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const val = context.raw;
+              const status = val >= 60 ? 'Tercapai' : 'Di Bawah Target';
+              return ` Skor: ${val} (${status})`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          min: 0,
+          max: 100,
+          grid: { color: 'rgba(0, 0, 0, 0.05)' },
+          ticks: { font: { family: 'Figtree, sans-serif' } }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: 'Figtree, sans-serif', weight: 'bold' } }
+        }
+      },
+      // Draw horizontal target line at 60
+      plugins: [{
+        id: 'targetLine',
+        afterDraw(chart) {
+          const { ctx, chartArea: { left, right }, scales: { y } } = chart;
+          const yVal = y.getPixelForValue(60);
+          ctx.save();
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 6]);
+          ctx.beginPath();
+          ctx.moveTo(left, yVal);
+          ctx.lineTo(right, yVal);
+          ctx.stroke();
+          ctx.restore();
+          
+          // Draw "Target: 60" text right above the line
+          ctx.save();
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
+          ctx.font = '11px bold Figtree, sans-serif';
+          ctx.fillText('Target Batas: 60', left + 10, yVal - 5);
+          ctx.restore();
+        }
+      }]
+    }
+  });
+}
+
+function renderGradeChart(gradeDist) {
+  if (chartGrade) {
+    chartGrade.destroy();
+  }
+  
+  const ctx = document.getElementById('chart-grade-distribution').getContext('2d');
+  const labels = ['A', 'B', 'C', 'D', 'E'];
+  const values = labels.map(g => gradeDist[g] || 0);
+  const total = values.reduce((a, b) => a + b, 0);
+  
+  if (total === 0) {
+    chartGrade = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Belum Ada Nilai'],
+        datasets: [{
+          data: [1],
+          backgroundColor: ['rgba(0, 0, 0, 0.05)'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+      }
+    });
+    return;
+  }
+  
+  chartGrade = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: [
+          '#10b981', // A - Emerald
+          '#3b82f6', // B - Blue
+          '#f59e0b', // C - Amber
+          '#f97316', // D - Orange
+          '#ef4444'  // E - Red
+        ],
+        borderWidth: 2,
+        borderColor: 'var(--card)'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            boxWidth: 12,
+            font: { family: 'Figtree, sans-serif', size: 12 }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const count = context.raw;
+              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+              return ` ${context.label}: ${count} mahasiswa (${pct}%)`;
+            }
+          }
+        }
+      },
+      cutout: '65%'
+    }
+  });
+}
+
+function renderCourseTable(courseStats) {
+  const tbody = document.getElementById('course-performance-body');
+  if (!courseStats || courseStats.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="padding: 24px; text-align: center; color: var(--muted);">
+          Tidak ada data matakuliah untuk semester ini.
+        </td>
+      </tr>`;
+    return;
+  }
+  
+  tbody.innerHTML = courseStats.map(c => {
+    const avg = c.avg_score !== null ? c.avg_score.toFixed(2) : '-';
+    // Color style for pass rate badge
+    const badgeBg = c.pass_rate >= 75 ? '#e6f4ea' : (c.pass_rate >= 50 ? '#fef7e0' : '#fce8e6');
+    const badgeColor = c.pass_rate >= 75 ? '#137333' : (c.pass_rate >= 50 ? '#b06000' : '#c5221f');
+    
+    return `
+      <tr style="border-bottom: 1px solid var(--border); hover: background-color: var(--card-hover);">
+        <td style="padding: 12px 8px;" class="mono">${esc(c.course_code)}</td>
+        <td style="padding: 12px 8px; font-weight: 500;">${esc(c.course_name)}</td>
+        <td style="padding: 12px 8px; text-align: right;">${c.sks}</td>
+        <td style="padding: 12px 8px; text-align: right;">${c.class_count}</td>
+        <td style="padding: 12px 8px; text-align: right; font-weight: 600;">${avg}</td>
+        <td style="padding: 12px 8px; text-align: right;">
+          <span style="display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: 600; background: ${badgeBg}; color: ${badgeColor};">
+            ${c.pass_rate.toFixed(1)}%
+          </span>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadSemesters();
+});
+</script>
+
+<style>
+/* Responsive layout enhancements */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+</style>
+{% endblock %}
