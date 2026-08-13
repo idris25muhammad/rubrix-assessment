@@ -67,6 +67,8 @@
         The course file is exported from the <b>ProdiSync</b> app - or you can create it manually
         following the <a href="{{ url_for('courses.api_course_template') }}" class="link-download">example JSON
           template</a>.
+        File JSON tidak selalu menyertakan pemetaan CPL/PI. Jika ada sub-komponen yang belum dipetakan,
+        upload akan membuka wizard untuk melengkapi pemetaannya sebelum course dibuat.
         After uploading, create one or more classes to start assessing.
       </p>
 
@@ -462,6 +464,7 @@
   }
 
   let wizardEditCourseId = null;
+  let wizardFromUpload = false;
 
   async function openEdit(id) {
     try {
@@ -485,6 +488,7 @@
     if (!d) return;
 
     wizardEditCourseId = id;
+    wizardFromUpload = false;
     wizardStep = 1;
     document.getElementById('wizard-title').textContent = 'Edit Rubric';
     document.getElementById('wizard-status').innerHTML = '';
@@ -502,6 +506,7 @@
 
     await loadSoPi();
 
+    wizardCats = (d.categories || []).map(c => ({ key: c.key, label: c.label }));
     buildCplList();
     buildWizardCategories();
     buildWizardWeights();
@@ -521,7 +526,7 @@
       catData[cat.key] = cat.components || [];
     });
 
-    WIZARD_CATEGORIES.forEach(cat => {
+    wizardCats.forEach(cat => {
       const card = document.querySelector(`.wizard-cat[data-cat="${cat.key}"]`);
       const list = card.querySelector('.wizard-comp-list');
       list.innerHTML = '';
@@ -724,8 +729,9 @@
     e.target.value = '';
   });
 
-  function validateStructure(data) {
+  function validateStructure(data, opts) {
     const errors = [];
+    const strict = !opts || opts.requireCplPis !== false;
     const top = ['course_code', 'course_name', 'categories'];
     for (const k of top) if (!(k in data)) errors.push(`Missing required field "${k}"`);
     const validCodes = new Set();
@@ -749,16 +755,19 @@
             errors.push(`Component "${cname}" needs "weight"`);
             return;
           }
+          if (!String(comp.name || '').trim()) {
+            errors.push(`Component #${ri + 1} needs a "name"`);
+          }
           if (typeof comp.weight !== 'number' || comp.weight <= 0) {
             errors.push(`Component "${cname}" weight must be a positive number`);
           }
-          if (!Array.isArray(comp.cpl_pis) || !comp.cpl_pis.length) {
+          if (strict && (!Array.isArray(comp.cpl_pis) || !comp.cpl_pis.length)) {
             errors.push(`Component "${cname}" needs at least one "cpl_pis" mapping`);
           }
           wsum += comp.weight || 0;
         });
       });
-      if (Math.abs(wsum - 100) > 0.001) errors.push(`Total weight is ${wsum.toFixed(1)}% - must be 100%`);
+      if (strict && Math.abs(wsum - 100) > 0.001) errors.push(`Total weight is ${wsum.toFixed(1)}% - must be 100%`);
     }
     if (!Array.isArray(data.cpls) || !data.cpls.length) {
       errors.push('Course must define at least one "cpls" entry');
@@ -770,7 +779,7 @@
         }
       });
     }
-    if (data.is_pbl) {
+    if (strict && data.is_pbl) {
       const byKey = {};
       (data.categories || []).forEach(c => byKey[c.key] = c);
       let pbl = 0;
@@ -781,6 +790,16 @@
       if (pbl < 50) errors.push(`PBL requires Partisipatif + Proyek >= 50%, currently ${pbl.toFixed(1)}%`);
     }
     return errors;
+  }
+
+  function countMissingPi(data) {
+    let n = 0;
+    (data.categories || []).forEach(cat => {
+      (cat.components || []).forEach(comp => {
+        if (!Array.isArray(comp.cpl_pis) || !comp.cpl_pis.length) n++;
+      });
+    });
+    return n;
   }
 
   async function handleFile(file) {
@@ -794,9 +813,22 @@
         statusEl.innerHTML = `<p class="alert-err">✗ Not valid JSON: ${err.message}</p>`;
         return;
       }
-      const errors = validateStructure(data);
+      const errors = validateStructure(data, { requireCplPis: false });
       if (errors.length) {
         statusEl.innerHTML = `<p class="alert-err">✗ Invalid structure:</p><ul class="err-list">${errors.map(x => `<li>${x}</li>`).join('')}</ul>`;
+        return;
+      }
+      const missingPi = countMissingPi(data);
+      if (missingPi > 0) {
+        closeModal();
+        openWizardFromUpload(data);
+        showToast(`JSON valid. ${missingPi} sub-komponen belum dipetakan ke CPL/PI - lengkapi pemetaannya lalu lanjutkan pembuatan.`, 'info');
+        return;
+      }
+      // All components already carry CPL/PI mappings: validate strictly then upload directly.
+      const strictErrors = validateStructure(data);
+      if (strictErrors.length) {
+        statusEl.innerHTML = `<p class="alert-err">✗ Invalid structure:</p><ul class="err-list">${strictErrors.map(x => `<li>${x}</li>`).join('')}</ul>`;
         return;
       }
       statusEl.innerHTML = '<p class="alert-info">Uploading…</p>';
@@ -826,6 +858,8 @@
     { key: 'aas', label: 'AAS' },
     { key: 'proyek', label: 'Proyek' },
   ];
+  // Categories the wizard currently renders (standard six by default; replaced by the uploaded file's categories when continuing an upload).
+  let wizardCats = WIZARD_CATEGORIES;
   const STEP_NAMES = ['Course Info', 'CPL & SO', 'Komponen & PI', 'Bobot & PBL', 'Kriteria'];
   const PROF_LEVELS = [
     { v: 1, t: 'to have experienced or been exposed to' },
@@ -856,6 +890,15 @@
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // Render uploaded criteria subjects into the wizard's WYSIWYG area, dropping the
+  // auto-appended "Secara keseluruhan dinilai ..." phrase to avoid duplication on save.
+  function buildSubjectHtml(subjects) {
+    if (!Array.isArray(subjects) || !subjects.length) return '';
+    const items = subjects.filter(s => !/^Secara keseluruhan dinilai/i.test(String(s).trim()));
+    if (!items.length) return '';
+    return `<ul>${items.map(s => `<li>${esc(s)}</li>`).join('')}</ul>`;
   }
 
   async function loadSoPi() {
@@ -907,6 +950,8 @@
 
   async function openWizard() {
     wizardEditCourseId = null;
+    wizardFromUpload = false;
+    wizardCats = WIZARD_CATEGORIES;
     document.getElementById('wizard-title').textContent = 'Create Rubric';
     wizardStep = 1;
     document.getElementById('wizard-code').value = '';
@@ -947,8 +992,87 @@
     wizardEditCourseId = null;
   }
 
+  // Continue an uploaded JSON through the wizard: pre-fill everything the file already
+  // provides (course info, CPLs, components, weights, criteria) and jump to step 3 so the
+  // user manually maps each component to CPL/PI before the course is created.
+  async function openWizardFromUpload(data) {
+    wizardEditCourseId = null;
+    wizardFromUpload = true;
+    clearWizardDraft();
+    document.getElementById('wizard-title').textContent = 'Lanjutkan Upload - Pemetaan CPL/PI';
+    document.getElementById('wizard-status').innerHTML = '';
+    wizardStep = 1;
+
+    document.getElementById('wizard-code').value = data.course_code || '';
+    document.getElementById('wizard-name').value = data.course_name || '';
+    document.getElementById('wizard-sks').value = data.sks || 3;
+    setSemesterValue(data.semester || '');
+
+    weightState = {};
+    criteriaDraft = {};
+
+    try {
+      programs = await fetch(u('programs')).then(r => r.json());
+    } catch (e) { programs = []; }
+    renderProgramSelect();
+    const progSel = document.getElementById('wizard-program');
+    if (data.study_program && [...progSel.options].some(o => o.value === data.study_program)) {
+      progSel.value = data.study_program;
+    }
+    try {
+      soPi = await fetch(u('so_pi') + '?program=' + encodeURIComponent(progSel.value || 'RKS')).then(r => r.json());
+    } catch (e) { soPi = { student_outcome: [], proficiency_levels: PROF_LEVELS }; }
+    soByCode = {};
+    soPi.student_outcome.forEach(so => soByCode[so.so_code] = so);
+
+    document.getElementById('wizard-pbl').checked = !!data.is_pbl;
+    const targetVal = data.target_attainment !== undefined ? data.target_attainment : 60;
+    document.getElementById('wizard-target-attainment').value = targetVal;
+    document.getElementById('wizard-target-attainment-val').textContent = targetVal;
+
+    wizardCats = (data.categories || []).map(c => ({ key: c.key, label: c.label }));
+
+    buildCplList();
+    const cplWrap = document.getElementById('wizard-cpl-list');
+    cplWrap.innerHTML = '';
+    (data.cpls && data.cpls.length ? data.cpls : [null]).forEach(c => addCplRow(c));
+
+    buildWizardCategories(true);
+    buildWizardWeights();
+    buildWizardCriteria();
+
+    (data.categories || []).forEach(cat => {
+      const card = document.querySelector(`.wizard-cat[data-cat="${cat.key}"]`);
+      if (!card) return;
+      const list = card.querySelector('.wizard-comp-list');
+      list.innerHTML = '';
+      const comps = cat.components || [];
+      if (!comps.length) addWizardComponent(cat.key);
+      else comps.forEach(c => addWizardComponent(cat.key, c));
+      renumberWizardComponents(card);
+
+      comps.forEach(comp => {
+        const ckey = `${cat.key}|${comp.name}`;
+        if (typeof comp.weight === 'number') weightState[ckey] = comp.weight;
+        if (Array.isArray(comp.criteria) && comp.criteria.length) {
+          criteriaDraft[ckey] = comp.criteria.map(cr => ({
+            label: cr.label,
+            score_min: cr.score_min,
+            score_max: cr.score_max,
+            subject: buildSubjectHtml(cr.subjects),
+          }));
+        }
+      });
+    });
+
+    wizardStep = 3;
+    renderWizardStep();
+    wizardModal.hidden = false;
+  }
+
   // ---- Wizard draft persistence (cookies) ----
   function saveWizardDraft() {
+    if (wizardFromUpload) return;
     const draft = {
       course_code: document.getElementById('wizard-code').value,
       course_name: document.getElementById('wizard-name').value,
@@ -987,7 +1111,7 @@
     (d.cpls && d.cpls.length ? d.cpls : [null]).forEach(c => addCplRow(c));
     // Components per category
     const catData = d.categories || {};
-    WIZARD_CATEGORIES.forEach(cat => {
+    wizardCats.forEach(cat => {
       const card = document.querySelector(`.wizard-cat[data-cat="${cat.key}"]`);
       const list = card.querySelector('.wizard-comp-list');
       list.innerHTML = '';
@@ -1081,9 +1205,9 @@
   }
 
   // ---------- Step 3: components per category with CPL/PI ----------
-  function buildWizardCategories() {
+  function buildWizardCategories(skipDefaults) {
     const wrap = document.getElementById('wizard-categories');
-    wrap.innerHTML = WIZARD_CATEGORIES.map(cat => `
+    wrap.innerHTML = wizardCats.map(cat => `
     <div class="wizard-cat" data-cat="${cat.key}">
       <div class="wizard-cat-head">
         <b>${cat.label}</b>
@@ -1108,6 +1232,7 @@
       const catKey = card.dataset.cat;
       const addBtn = card.querySelector('.wizard-cat-body > button');
       addBtn.addEventListener('click', () => addWizardComponent(catKey));
+      if (skipDefaults) return;
 
       const jsonKey = mapping[catKey];
       const pblData = defaultInstruments && defaultInstruments.rubrik_penilaian_pbl;
@@ -1223,7 +1348,7 @@
 
   function collectComponents() {
     const categories = {};
-    for (const cat of WIZARD_CATEGORIES) {
+    for (const cat of wizardCats) {
       const comps = [];
       document.querySelectorAll(`.wizard-cat[data-cat="${cat.key}"] .wizard-comp`).forEach(row => {
         const nameEl = row.querySelector('.wz-comp-name');
@@ -1252,7 +1377,7 @@
 
   function buildWizardWeights() {
     const wrap = document.getElementById('wizard-weights');
-    wrap.innerHTML = WIZARD_CATEGORIES.map(cat => `
+    wrap.innerHTML = wizardCats.map(cat => `
     <div class="wizard-cat" data-cat="${cat.key}">
       <div class="wizard-cat-head"><b>${cat.label}</b><span class="wizard-cat-count">0</span></div>
       <div class="wizard-cat-body"><div class="wizard-weight-list"></div></div>
@@ -1267,12 +1392,12 @@
     const components = collectComponents();
     // Prune stale state keys for removed components.
     const activeKeys = new Set();
-    for (const cat of WIZARD_CATEGORIES) {
+    for (const cat of wizardCats) {
       (components[cat.key] || []).forEach(c => activeKeys.add(weightKey(cat, c.name)));
     }
     Object.keys(weightState).forEach(k => { if (!activeKeys.has(k)) delete weightState[k]; });
 
-    WIZARD_CATEGORIES.forEach(cat => {
+    wizardCats.forEach(cat => {
       const card = document.querySelector(`#wizard-weights .wizard-cat[data-cat="${cat.key}"]`);
       const list = card.querySelector('.wizard-weight-list');
       const comps = components[cat.key] || [];
@@ -1321,7 +1446,7 @@
 
   function pblWeight() {
     let total = 0;
-    for (const cat of WIZARD_CATEGORIES) {
+    for (const cat of wizardCats) {
       if (cat.key !== 'partisipatif' && cat.key !== 'proyek') continue;
       document.querySelectorAll(`#wizard-weights .wizard-cat[data-cat="${cat.key}"] .wz-comp-weight`).forEach(inp => {
         const v = parseFloat(inp.value);
@@ -1348,7 +1473,7 @@
   function collectWeights() {
     const categories = collectComponents();
     const weights = [];
-    for (const cat of WIZARD_CATEGORIES) {
+    for (const cat of wizardCats) {
       (categories[cat.key] || []).forEach(c => {
         const key = weightKey(cat, c.name);
         const v = weightState[key];
@@ -1627,6 +1752,8 @@
       if (!categories[item.cat]) categories[item.cat] = [];
       categories[item.cat].push({ name: item.name, weight: item.weight, cpl_pis: item.cpl_pis, criteria: item.criteria });
     });
+    const category_labels = {};
+    wizardCats.forEach(c => { category_labels[c.key] = c.label; });
     const payload = {
       course_code: document.getElementById('wizard-code').value.trim(),
       course_name: document.getElementById('wizard-name').value.trim(),
@@ -1637,6 +1764,7 @@
       target_attainment: parseInt(document.getElementById('wizard-target-attainment').value, 10) || 60,
       cpls,
       categories,
+      category_labels,
     };
     const url = wizardEditCourseId ? u('api_course', wizardEditCourseId) : u('api_create');
     const method = wizardEditCourseId ? 'PUT' : 'POST';

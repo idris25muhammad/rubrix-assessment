@@ -115,8 +115,29 @@ def build_rubric_from_wizard(payload):
 
     # Build categories / components.
     cats_in = payload.get("categories") or {}
-    categories = []
+    if not isinstance(cats_in, dict):
+        cats_in = {}
+    cat_labels = payload.get("category_labels") or {}
+    if not isinstance(cat_labels, dict):
+        cat_labels = {}
+
+    # Standard categories first (preserving order), then any extra categories
+    # provided by the payload (e.g. an uploaded JSON that uses custom keys).
+    # Only categories actually present in the payload are emitted, so categories
+    # with zero components are not created.
+    category_defs = []
+    seen = set()
     for key, label in CATEGORIES:
+        if key in cats_in:
+            category_defs.append((key, label))
+            seen.add(key)
+    for key in cats_in.keys():
+        if key not in seen:
+            category_defs.append((key, str(cat_labels.get(key) or key).strip() or key))
+            seen.add(key)
+
+    categories = []
+    for key, label in category_defs:
         comps_in = cats_in.get(key) or []
         if not isinstance(comps_in, list):
             comps_in = []
