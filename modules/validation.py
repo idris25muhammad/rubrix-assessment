@@ -40,9 +40,9 @@ def validate_course_json(data):
             weight = comp.get("weight")
             if not isinstance(weight, (int, float)) or weight < 0:
                 raise ValueError(f"Component '{comp.get('name')}' weight must be >= 0")
-            cpl_pis = comp.get("cpl_pis")
-            if not isinstance(cpl_pis, list) or not cpl_pis:
-                raise ValueError(f"Component '{comp.get('name')}' needs at least one cpl_pis mapping")
+            cpl_pis = comp.get("cpl_pis") or []
+            if not isinstance(cpl_pis, list):
+                raise ValueError(f"Component '{comp.get('name')}' cpl_pis must be a list")
             for m in cpl_pis:
                 cpl_code = m.get("cpl")
                 so_code = m.get("so")

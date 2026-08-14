@@ -2,11 +2,13 @@
 {% block title %}Login &middot; RubriX{% endblock %}
 
 {% block content %}
-<section class="auth-wrap">
-  <div class="card auth-card">
-    <img class="auth-logo" src="{{ url_for('static', filename='images/rubrix_logo.png') }}" alt="RubriX">
-    <h1>Sign in</h1>
-    <p class="auth-sub">rubric-based assessment &amp; portfolio analytics</p>
+<div class="login100-wrap">
+  <form class="login100-form" method="post" novalidate>
+    <div class="login100-form-brand">
+      <img class="auth-logo" src="{{ url_for('static', filename='images/rubrix_logo.png') }}" alt="RubriX">
+    </div>
+    <span class="login100-form-title">Login to continue</span>
+    <p class="login100-form-sub">rubric-based assessment &amp; portfolio analytics</p>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -16,17 +18,23 @@
       {% endif %}
     {% endwith %}
 
-    <form method="post" class="auth-form">
-      <label class="upload-field">
-        <span>Email</span>
-        <input type="email" name="email" required autofocus placeholder="nama@polibatam.ac.id">
-      </label>
-      <label class="upload-field">
-        <span>Password</span>
-        <input type="password" name="password" required placeholder="••••••••">
-      </label>
-      <button class="btn btn-primary btn-block" type="submit">Sign in</button>
-    </form>
+    <div class="wrap-input100">
+      <input class="input100" type="email" name="email" required autofocus placeholder="Email">
+      <span class="focus-input100"></span>
+    </div>
+
+    <div class="wrap-input100">
+      <input class="input100" type="password" name="password" required placeholder="Password">
+      <span class="focus-input100"></span>
+    </div>
+
+    <div class="container-login100-form-btn">
+      <button class="login100-form-btn" type="submit">Login</button>
+    </div>
+  </form>
+
+  <div class="login100-more" style="background-image: url('{{ url_for('static', filename='images/ilustrasi.webp') }}');">
+    <div class="login100-more-overlay"></div>
   </div>
-</section>
+</div>
 {% endblock %}

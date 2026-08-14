@@ -166,8 +166,6 @@ def build_rubric_from_wizard(payload):
                 if pi_code not in valid_pis:
                     raise ValueError(f"PI '{pi_code}' tidak valid untuk SO '{so_code}' pada komponen '{name}'")
                 mappings.append({"cpl": cpl_code, "so": so_code, "pi": pi_code})
-            if not mappings:
-                raise ValueError(f"Komponen '{name}' belum dipetakan ke CPL/PI")
             criteria_in = comp.get("criteria")
             if isinstance(criteria_in, list) and len(criteria_in) == 5:
                 criteria = []

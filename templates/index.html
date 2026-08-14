@@ -507,6 +507,7 @@
     await loadSoPi();
 
     wizardCats = (d.categories || []).map(c => ({ key: c.key, label: c.label }));
+    wizardCatCpls = computeCatCpls(d.categories);
     buildCplList();
     buildWizardCategories();
     buildWizardWeights();
@@ -876,6 +877,8 @@
   let defaultInstruments = null;
   let weightState = {};
   let criteriaDraft = {}; // component key -> array of {label, score_min, score_max, subject}
+  // catKey -> array of CPL codes available for that category (from uploaded JSON / loaded course).
+  let wizardCatCpls = {};
 
   const CRIT_LABELS = ['Sangat Kurang', 'Kurang', 'Cukup', 'Baik', 'Sangat Baik'];
   const CRIT_DEFAULT = [
@@ -952,6 +955,7 @@
     wizardEditCourseId = null;
     wizardFromUpload = false;
     wizardCats = WIZARD_CATEGORIES;
+    wizardCatCpls = {};
     document.getElementById('wizard-title').textContent = 'Create Rubric';
     wizardStep = 1;
     document.getElementById('wizard-code').value = '';
@@ -1031,6 +1035,7 @@
     document.getElementById('wizard-target-attainment-val').textContent = targetVal;
 
     wizardCats = (data.categories || []).map(c => ({ key: c.key, label: c.label }));
+    wizardCatCpls = computeCatCpls(data.categories);
 
     buildCplList();
     const cplWrap = document.getElementById('wizard-cpl-list');
@@ -1204,6 +1209,19 @@
     return cpls;
   }
 
+  // catKey -> distinct CPL codes used by components of that category in the source data.
+  function computeCatCpls(categories) {
+    const map = {};
+    (categories || []).forEach(cat => {
+      const codes = new Set();
+      (cat.components || []).forEach(comp => {
+        (comp.cpl_pis || []).forEach(m => { if (m.cpl) codes.add(m.cpl); });
+      });
+      map[cat.key] = [...codes];
+    });
+    return map;
+  }
+
   // ---------- Step 3: components per category with CPL/PI ----------
   function buildWizardCategories(skipDefaults) {
     const wrap = document.getElementById('wizard-categories');
@@ -1305,8 +1323,16 @@
     <div class="wz-pi-list"></div>
     <button class="icon-btn icon-danger" type="button" title="Hapus"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
     const sel = cplRow.querySelector('.wz-comp-cpl');
+    const catCard = compRow.closest('.wizard-cat');
+    const catKey = catCard ? catCard.dataset.cat : null;
+    let cplOptions = collectCpls();
+    const allowed = catKey ? (wizardCatCpls[catKey] || []) : [];
+    if (allowed.length) {
+      const allowedSet = new Set(allowed);
+      cplOptions = cplOptions.filter(c => allowedSet.has(c.code));
+    }
     sel.innerHTML = '<option value="">Pilih CPL...</option>' +
-      collectCpls().map(c => `<option value="${c.code}">${c.code}</option>`).join('');
+      cplOptions.map(c => `<option value="${c.code}">${c.code}</option>`).join('');
     if (mapping) sel.value = mapping.cpl || '';
     sel.addEventListener('change', () => renderPiOptions(cplRow, mapping));
     cplRow.querySelector('.icon-btn').addEventListener('click', () => cplRow.remove());
@@ -1403,15 +1429,19 @@
       const comps = components[cat.key] || [];
       card.querySelector('.wizard-cat-count').textContent = comps.length;
       list.innerHTML = comps.map((c, i) => {
-        const label = c.cpl_pis.map(m => `${m.cpl}-${m.pi}`).join(', ');
-        const key = weightKey(cat, c.name);
-        const val = weightState[key] != null ? weightState[key] : '';
-        return `
+      const label = c.cpl_pis.map(m => `${m.cpl}-${m.pi}`).join(', ');
+      const key = weightKey(cat, c.name);
+      let val = weightState[key] != null ? weightState[key] : '';
+      if (!c.cpl_pis.length) {
+        weightState[key] = 0;
+        val = 0;
+      }
+      return `
         <div class="wizard-comp">
           <span class="wizard-comp-no">${i + 1}</span>
-          <span class="wz-w-name">${esc(c.name)} <small class="wz-w-label">(${esc(label)})</small></span>
+          <span class="wz-w-name">${esc(c.name)} <small class="wz-w-label">${label ? `(${esc(label)})` : '<em>(tanpa CPL)</em>'}</small></span>
           <div class="wz-weight-wrap">
-            <input type="number" class="wz-comp-weight" data-key="${key}" min="0" max="100" step="0.5" placeholder="Bobot %" value="${val}">
+            <input type="number" class="wz-comp-weight" data-key="${key}" min="0" max="100" step="0.5" placeholder="Bobot %" value="${val}" ${c.cpl_pis.length ? '' : 'disabled'}>
             <span>%</span>
           </div>
         </div>`;
@@ -1708,23 +1738,10 @@
         status.innerHTML = '<p class="alert-err">✗ Tambahkan minimal 1 sub-komponen.</p>';
         return false;
       }
-      let bad = false;
-      Object.values(categories).forEach(comps => comps.forEach(c => {
-        if (!c.cpl_pis.length) bad = true;
-      }));
-      if (bad) {
-        status.innerHTML = '<p class="alert-err">✗ Setiap sub-komponen harus dipetakan ke minimal 1 CPL/PI.</p>';
-        return false;
-      }
     }
     if (wizardStep === 4) {
       const weights = collectWeights();
-      // Weights may be 0, but they must not be empty/NaN, total must be 100%,
-      // and PBL rule must hold.
-      if (weights.some(w => isNaN(w.weight))) {
-        status.innerHTML = '<p class="alert-err">✗ Isi bobot semua sub-komponen (boleh 0).</p>';
-        return false;
-      }
+      // Hanya yang wajib: total 100% dan rule PBL. Komponen tanpa CPL otomatis 0%.
       const total = wizardTotalWeight();
       if (Math.abs(total - 100) > 0.001) {
         status.innerHTML = `<p class="alert-err">✗ Total bobot harus 100%, sekarang ${total.toFixed(1)}%.</p>`;
