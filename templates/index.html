@@ -353,6 +353,7 @@
     uploadCplPis = {};
     uploadCplMeta = {};
     applyStep1ReadOnly(false);
+    applyStep2ReadOnly(false);
     wizardStep = 1;
     activeCriteriaIndex = 0;
     document.getElementById('wizard-title').textContent = 'Edit Rubric';
@@ -659,6 +660,7 @@
     uploadCplPis = {};
     uploadCplMeta = {};
     applyStep1ReadOnly(false);
+    applyStep2ReadOnly(false);
     activeCriteriaIndex = 0;
     wizardCats = WIZARD_CATEGORIES;
     wizardCatCpls = {};
@@ -817,6 +819,7 @@
     });
 
     applyStep1ReadOnly(true, !(Number(data.sks) > 0));
+    applyStep2ReadOnly(true);
     wizardStep = 1;
     renderWizardStep();
     wizardModal.hidden = false;
@@ -1511,6 +1514,23 @@
         el.disabled = isReadOnly;
       }
     });
+  }
+
+  function applyStep2ReadOnly(isReadOnly) {
+    const step2 = document.getElementById('wizard-step-2');
+    if (!step2) return;
+    step2.querySelectorAll('input, select, textarea').forEach(el => {
+      el.disabled = isReadOnly;
+    });
+    step2.querySelectorAll('.wizard-cpl-head .icon-btn').forEach(btn => {
+      btn.hidden = isReadOnly;
+      btn.disabled = isReadOnly;
+    });
+    const addBtn = document.getElementById('wizard-add-cpl');
+    if (addBtn) {
+      addBtn.hidden = isReadOnly;
+      addBtn.disabled = isReadOnly;
+    }
   }
 
   function renderWizardStep() {
