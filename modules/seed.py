@@ -3,25 +3,41 @@ import os
 
 from config import BASE_DIR
 
-from modules.auth import ROLE_TIM_KURIKULUM, hash_password
+from modules.auth import ROLE_ADMIN, ROLE_KPS, hash_password
 from modules.models import Pi, ProficiencyLevel, So, User, db
 
-# One tim_kurikulum account per study program (each manages exactly one program).
+ADMIN_ACCOUNTS = [
+    {"name": "Admin", "email": "admin@polibatam.ac.id", "role": ROLE_ADMIN, "study_program": None},
+    {"name": "Kajur Teknik Informatika", "email": "kajur-if@polibatam.ac.id", "role": ROLE_ADMIN, "study_program": None},
+]
+
+# One KPS account per study program (each manages exactly one program).
 # Password defaults to the email, as requested.
-TIM_KURIKULUM_ACCOUNTS = [
-    {"name": "Tim Kurikulum RKS", "email": "rks@polibatam.ac.id", "role": ROLE_TIM_KURIKULUM, "study_program": "RKS"},
-    {"name": "Tim Kurikulum D3 Teknik Informatika", "email": "ti@polibatam.ac.id", "role": ROLE_TIM_KURIKULUM, "study_program": "D3-TI"},
-    {"name": "Tim Kurikulum D4 Teknologi Rekayasa Multimedia", "email": "trm@polibatam.ac.id", "role": ROLE_TIM_KURIKULUM, "study_program": "D4-TRM"},
-    {"name": "Tim Kurikulum D3 Teknologi Geomatika", "email": "tg@polibatam.ac.id", "role": ROLE_TIM_KURIKULUM, "study_program": "D3-TG"},
-    {"name": "Tim Kurikulum D4 Animasi", "email": "an@polibatam.ac.id", "role": ROLE_TIM_KURIKULUM, "study_program": "D4-ANIM"},
-    {"name": "Tim Kurikulum D4 Teknologi Rekayasa Perangkat Lunak", "email": "trpl@polibatam.ac.id", "role": ROLE_TIM_KURIKULUM, "study_program": "D4-TRPL"},
-    {"name": "Tim Kurikulum D4 Teknologi Permainan", "email": "tp@polibatam.ac.id", "role": ROLE_TIM_KURIKULUM, "study_program": "D4-TP"},
-    {"name": "Tim Kurikulum S2 Teknik Komputer", "email": "s2tk@polibatam.ac.id", "role": ROLE_TIM_KURIKULUM, "study_program": "S2-TK"},
+KPS_ACCOUNTS = [
+    {"name": "KPS RKS", "email": "rks@polibatam.ac.id", "role": ROLE_KPS, "study_program": "RKS"},
+    {"name": "KPS D3 Teknik Informatika", "email": "ti@polibatam.ac.id", "role": ROLE_KPS, "study_program": "D3-TI"},
+    {"name": "KPS D4 Teknologi Rekayasa Multimedia", "email": "trm@polibatam.ac.id", "role": ROLE_KPS, "study_program": "D4-TRM"},
+    {"name": "KPS D3 Teknologi Geomatika", "email": "tg@polibatam.ac.id", "role": ROLE_KPS, "study_program": "D3-TG"},
+    {"name": "KPS D4 Animasi", "email": "an@polibatam.ac.id", "role": ROLE_KPS, "study_program": "D4-ANIM"},
+    {"name": "KPS D4 Teknologi Rekayasa Perangkat Lunak", "email": "trpl@polibatam.ac.id", "role": ROLE_KPS, "study_program": "D4-TRPL"},
+    {"name": "KPS D4 Teknologi Permainan", "email": "tp@polibatam.ac.id", "role": ROLE_KPS, "study_program": "D4-TP"},
+    {"name": "KPS S2 Teknik Komputer", "email": "s2tk@polibatam.ac.id", "role": ROLE_KPS, "study_program": "S2-TK"},
 ]
 
 
 def seed_users():
-    for acc in TIM_KURIKULUM_ACCOUNTS:
+    for acc in ADMIN_ACCOUNTS:
+        existing = User.query.filter_by(email=acc["email"]).first()
+        if not existing:
+            db.session.add(User(
+                name=acc["name"],
+                email=acc["email"],
+                password_hash=hash_password(acc["email"]),
+                role=acc["role"],
+                study_program=None,
+            ))
+
+    for acc in KPS_ACCOUNTS:
         sp = acc.get("study_program") or "RKS"
         existing = User.query.filter_by(email=acc["email"]).first()
         if existing:
@@ -75,6 +91,7 @@ def seed_so_pi():
                     so_id=so_row.id,
                     pi_code=pi["pi_code"],
                     pi_description=pi.get("pi_description", ""),
+                    proficiency_level=int(pi.get("proficiency_level") or 3),
                     sort_order=pi_i,
                 ))
 

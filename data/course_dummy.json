@@ -15,7 +15,7 @@
           "name": "Keaktifan Diskusi Kelas",
           "weight": 10,
           "cpl_pis": [
-            { "cpl": "CPL1", "so": "SO1", "pi": "1a" }
+            { "cpl": "CPL1", "so": "SO1", "pi": "PI-01.1" }
           ],
           "criteria": [
             { "level": 1, "label": "Sangat Kurang", "score_min": 0, "score_max": 30, "subjects": ["Tidak pernah mengajukan pertanyaan atau menjawab pertanyaan dalam diskusi kelas.", "Secara keseluruhan dinilai sangat kurang."] },
@@ -29,7 +29,7 @@
           "name": "Kehadiran & Profesionalitas",
           "weight": 10,
           "cpl_pis": [
-            { "cpl": "CPL1", "so": "SO1", "pi": "1b" }
+            { "cpl": "CPL1", "so": "SO1", "pi": "PI-01.2" }
           ],
           "criteria": [
             { "level": 1, "label": "Sangat Kurang", "score_min": 0, "score_max": 30, "subjects": ["Sering terlambat masuk kelas dan tidak disiplin mengumpulkan tugas.", "Secara keseluruhan dinilai sangat kurang."] },
@@ -49,7 +49,7 @@
           "name": "Tugas Mandiri 1",
           "weight": 10,
           "cpl_pis": [
-            { "cpl": "CPL2", "so": "SO2", "pi": "2a" }
+            { "cpl": "CPL2", "so": "SO2", "pi": "PI-02.1" }
           ],
           "criteria": [
             { "level": 1, "label": "Sangat Kurang", "score_min": 0, "score_max": 30, "subjects": ["Hasil tugas sangat minim, tidak sesuai dengan instruksi yang diberikan.", "Secara keseluruhan dinilai sangat kurang."] },
@@ -63,7 +63,7 @@
           "name": "Tugas Mandiri 2",
           "weight": 10,
           "cpl_pis": [
-            { "cpl": "CPL2", "so": "SO2", "pi": "2b" }
+            { "cpl": "CPL2", "so": "SO2", "pi": "PI-02.2" }
           ],
           "criteria": [
             { "level": 1, "label": "Sangat Kurang", "score_min": 0, "score_max": 30, "subjects": ["Hasil tugas sangat minim, tidak sesuai dengan instruksi yang diberikan.", "Secara keseluruhan dinilai sangat kurang."] },
@@ -83,7 +83,7 @@
           "name": "Kuis 1",
           "weight": 5,
           "cpl_pis": [
-            { "cpl": "CPL3", "so": "SO3", "pi": "3a" }
+            { "cpl": "CPL3", "so": "SO3", "pi": "PI-03.1" }
           ],
           "criteria": [
             { "level": 1, "label": "Sangat Kurang", "score_min": 0, "score_max": 30, "subjects": ["Jawaban kuis salah semua atau tidak menjawab pertanyaan sama sekali.", "Secara keseluruhan dinilai sangat kurang."] },
@@ -97,7 +97,7 @@
           "name": "Kuis 2",
           "weight": 5,
           "cpl_pis": [
-            { "cpl": "CPL3", "so": "SO3", "pi": "3b" }
+            { "cpl": "CPL3", "so": "SO3", "pi": "PI-03.2" }
           ],
           "criteria": [
             { "level": 1, "label": "Sangat Kurang", "score_min": 0, "score_max": 30, "subjects": ["Jawaban kuis salah semua atau tidak menjawab pertanyaan sama sekali.", "Secara keseluruhan dinilai sangat kurang."] },
@@ -117,7 +117,7 @@
           "name": "Ujian Teori ATS",
           "weight": 10,
           "cpl_pis": [
-            { "cpl": "CPL4", "so": "SO5", "pi": "5a" }
+            { "cpl": "CPL4", "so": "SO5", "pi": "PI-05.1" }
           ],
           "criteria": [
             { "level": 1, "label": "Sangat Kurang", "score_min": 0, "score_max": 30, "subjects": ["Gagal menjelaskan konsep-konsep utama materi ujian teori.", "Secara keseluruhan dinilai sangat kurang."] },
@@ -131,7 +131,7 @@
           "name": "Ujian Praktik ATS",
           "weight": 10,
           "cpl_pis": [
-            { "cpl": "CPL4", "so": "SO5", "pi": "5b" }
+            { "cpl": "CPL4", "so": "SO5", "pi": "PI-05.2" }
           ],
           "criteria": [
             { "level": 1, "label": "Sangat Kurang", "score_min": 0, "score_max": 30, "subjects": ["Tidak mampu menjalankan prosedur praktikum dasar atau terjadi kesalahan fatal.", "Secara keseluruhan dinilai sangat kurang."] },
@@ -151,7 +151,7 @@
           "name": "Ujian Teori AAS",
           "weight": 10,
           "cpl_pis": [
-            { "cpl": "CPL4", "so": "SO5", "pi": "5a" }
+            { "cpl": "CPL4", "so": "SO5", "pi": "PI-05.1" }
           ],
           "criteria": [
             { "level": 1, "label": "Sangat Kurang", "score_min": 0, "score_max": 30, "subjects": ["Gagal menjelaskan konsep-konsep utama materi ujian teori.", "Secara keseluruhan dinilai sangat kurang."] },
@@ -165,7 +165,7 @@
           "name": "Ujian Praktik AAS",
           "weight": 10,
           "cpl_pis": [
-            { "cpl": "CPL4", "so": "SO5", "pi": "5b" }
+            { "cpl": "CPL4", "so": "SO5", "pi": "PI-05.2" }
           ],
           "criteria": [
             { "level": 1, "label": "Sangat Kurang", "score_min": 0, "score_max": 30, "subjects": ["Tidak mampu menjalankan prosedur praktikum dasar atau terjadi kesalahan fatal.", "Secara keseluruhan dinilai sangat kurang."] },
@@ -185,7 +185,7 @@
           "name": "Laporan Akhir Proyek",
           "weight": 5,
           "cpl_pis": [
-            { "cpl": "CPL5", "so": "SO8", "pi": "8a" }
+            { "cpl": "CPL5", "so": "SO8", "pi": "PI-08.1" }
           ],
           "criteria": [
             { "level": 1, "label": "Sangat Kurang", "score_min": 0, "score_max": 30, "subjects": ["Proyek tidak selesai atau hasil pengerjaan sangat minim.", "Secara keseluruhan dinilai sangat kurang."] },
@@ -199,7 +199,7 @@
           "name": "Demo Alat/Aplikasi Proyek",
           "weight": 5,
           "cpl_pis": [
-            { "cpl": "CPL5", "so": "SO8", "pi": "8b" }
+            { "cpl": "CPL5", "so": "SO8", "pi": "PI-08.2" }
           ],
           "criteria": [
             { "level": 1, "label": "Sangat Kurang", "score_min": 0, "score_max": 30, "subjects": ["Proyek tidak selesai atau hasil pengerjaan sangat minim.", "Secara keseluruhan dinilai sangat kurang."] },
@@ -216,32 +216,52 @@
     {
       "code": "CPL1",
       "description": "Mampu menganalisis dan merancang solusi keamanan.",
-      "proficiency_level": 4,
-      "so_codes": ["SO1"]
+      "proficiency_level": 3,
+      "so_codes": ["SO1"],
+      "assessment_rubric": {
+        "PI-01.1": { "1": "Sangat kurang", "2": "Kurang", "3": "Cukup", "4": "Baik", "5": "Sangat baik" },
+        "PI-01.2": { "1": "Sangat kurang", "2": "Kurang", "3": "Cukup", "4": "Baik", "5": "Sangat baik" }
+      }
     },
     {
       "code": "CPL2",
       "description": "Mampu menerapkan pemrograman aman untuk pengembangan web.",
-      "proficiency_level": 4,
-      "so_codes": ["SO2"]
+      "proficiency_level": 3,
+      "so_codes": ["SO2"],
+      "assessment_rubric": {
+        "PI-02.1": { "1": "Sangat kurang", "2": "Kurang", "3": "Cukup", "4": "Baik", "5": "Sangat baik" },
+        "PI-02.2": { "1": "Sangat kurang", "2": "Kurang", "3": "Cukup", "4": "Baik", "5": "Sangat baik" }
+      }
     },
     {
       "code": "CPL3",
       "description": "Mampu merancang arsitektur sistem informasi aman.",
-      "proficiency_level": 4,
-      "so_codes": ["SO3"]
+      "proficiency_level": 3,
+      "so_codes": ["SO3"],
+      "assessment_rubric": {
+        "PI-03.1": { "1": "Sangat kurang", "2": "Kurang", "3": "Cukup", "4": "Baik", "5": "Sangat baik" },
+        "PI-03.2": { "1": "Sangat kurang", "2": "Kurang", "3": "Cukup", "4": "Baik", "5": "Sangat baik" }
+      }
     },
     {
       "code": "CPL4",
       "description": "Mampu merumuskan kebijakan keamanan siber.",
-      "proficiency_level": 4,
-      "so_codes": ["SO5"]
+      "proficiency_level": 3,
+      "so_codes": ["SO5"],
+      "assessment_rubric": {
+        "PI-05.1": { "1": "Sangat kurang", "2": "Kurang", "3": "Cukup", "4": "Baik", "5": "Sangat baik" },
+        "PI-05.2": { "1": "Sangat kurang", "2": "Kurang", "3": "Cukup", "4": "Baik", "5": "Sangat baik" }
+      }
     },
     {
       "code": "CPL5",
       "description": "Mampu melakukan audit sistem keamanan jaringan komputer.",
-      "proficiency_level": 4,
-      "so_codes": ["SO8"]
+      "proficiency_level": 3,
+      "so_codes": ["SO8"],
+      "assessment_rubric": {
+        "PI-08.1": { "1": "Sangat kurang", "2": "Kurang", "3": "Cukup", "4": "Baik", "5": "Sangat baik" },
+        "PI-08.2": { "1": "Sangat kurang", "2": "Kurang", "3": "Cukup", "4": "Baik", "5": "Sangat baik" }
+      }
     }
   ]
 }

@@ -55,11 +55,15 @@
     <div class="modal-body">
       <label class="upload-field">
         <span>PI Code</span>
-        <input type="text" id="pi-code" maxlength="30" placeholder="contoh: 11a">
+        <input type="text" id="pi-code" maxlength="30" placeholder="contoh: PI-11.1">
       </label>
       <label class="upload-field">
         <span>Deskripsi PI</span>
         <textarea id="pi-description" rows="3" maxlength="1000" placeholder="Deskripsi performance indicator..."></textarea>
+      </label>
+      <label class="upload-field">
+        <span>Proficiency Level</span>
+        <select id="pi-proficiency-level"></select>
       </label>
       <div id="pi-status"></div>
       <div class="modal-actions">
@@ -154,15 +158,21 @@ function renderSoPi() {
         </div>
       </div>
       <div class="sopi-pi-list">
-        ${(so.performance_indicator || []).map(pi => `
+        ${(so.performance_indicator || []).map(pi => {
+          const lvl = pi.proficiency_level || 3;
+          const lvlObj = (soPiData.proficiency_levels || []).find(l => l.level === lvl);
+          const lvlLabel = lvlObj ? `Level ${lvl} (${lvlObj.label})` : `Level ${lvl}`;
+          return `
           <div class="sopi-pi">
             <span class="chip">${esc(pi.pi_code)}</span>
+            <span class="chip" style="background:#eef2ff;color:#3730a3;" title="${esc(lvlLabel)}">Lv ${lvl}</span>
             <span class="sopi-pi-desc">${esc(pi.pi_description || '')}</span>
             <div class="sopi-pi-actions">
               <button class="icon-btn" title="Edit PI" data-pi-edit="${pi.id}">${ICON_EDIT}</button>
               <button class="icon-btn icon-danger" title="Delete PI" data-pi-del="${pi.id}">${ICON_TRASH}</button>
             </div>
-          </div>`).join('') || '<p class="empty">Belum ada PI.</p>'}
+          </div>`;
+        }).join('') || '<p class="empty">Belum ada PI.</p>'}
       </div>
       <button class="btn btn-outline btn-sm" data-pi-add="${so.id}">+ Tambah PI</button>
     </div>`).join('');
@@ -218,6 +228,21 @@ async function deleteSo(id) {
   else { showToast('Gagal menghapus SO.', 'error'); }
 }
 
+function renderPiProficiencyOptions(selected) {
+  const sel = document.getElementById('pi-proficiency-level');
+  const levels = (soPiData && soPiData.proficiency_levels && soPiData.proficiency_levels.length)
+    ? soPiData.proficiency_levels
+    : [
+        { level: 1, label: 'Level 1' },
+        { level: 2, label: 'Level 2' },
+        { level: 3, label: 'Level 3' },
+        { level: 4, label: 'Level 4' },
+        { level: 5, label: 'Level 5' },
+      ];
+  sel.innerHTML = levels.map(l => `<option value="${l.level}">${l.level}. ${esc(l.label)}</option>`).join('');
+  sel.value = String(selected || 3);
+}
+
 // ---- PI ----
 function openPiModal(id, soId) {
   editPiId = id || null;
@@ -225,11 +250,13 @@ function openPiModal(id, soId) {
   document.getElementById('pi-modal-title').textContent = id ? 'Edit PI' : 'Add PI';
   document.getElementById('pi-code').value = '';
   document.getElementById('pi-description').value = '';
+  renderPiProficiencyOptions(3);
   document.getElementById('pi-status').innerHTML = '';
   if (id && piCache[id]) {
     const pi = piCache[id];
     document.getElementById('pi-code').value = pi.pi_code;
     document.getElementById('pi-description').value = pi.pi_description || '';
+    renderPiProficiencyOptions(pi.proficiency_level || 3);
   }
   document.getElementById('pi-modal').hidden = false;
 }
@@ -238,6 +265,7 @@ async function savePi() {
   const payload = {
     pi_code: document.getElementById('pi-code').value.trim(),
     pi_description: document.getElementById('pi-description').value.trim(),
+    proficiency_level: parseInt(document.getElementById('pi-proficiency-level').value, 10) || 3,
   };
   const statusEl = document.getElementById('pi-status');
   if (!editPiSoId) { statusEl.innerHTML = '<p class="alert-err">SO tidak ditemukan.</p>'; return; }

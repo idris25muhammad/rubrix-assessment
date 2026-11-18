@@ -1,4 +1,5 @@
 import json
+from urllib.parse import urlparse
 
 from modules.models import Component
 
@@ -99,3 +100,26 @@ def _cpls_list(cpl_rows):
             }
         )
     return result
+
+
+def angkatan_from_nim(nim):
+    """Extract cohort year from Polibatam NIM (digits 4-5 = 2-digit year, e.g. 33123xxxx -> '2023')."""
+    s = str(nim or "").strip()
+    if len(s) >= 5 and s[:5].isdigit():
+        return str(2000 + int(s[3:5]))
+    return "Tidak diketahui"
+
+
+def validate_assessment_url(url):
+    """Validate an optional http/https URL. Returns (cleaned_url_or_None, error_msg_or_None)."""
+    if url is None:
+        return None, None
+    s = str(url).strip()
+    if not s:
+        return None, None
+    parsed = urlparse(s)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return None, f"URL tidak valid: '{s}' (harus diawali http:// atau https://)"
+    if len(s) > 500:
+        return None, "URL terlalu panjang (maksimal 500 karakter)"
+    return s, None

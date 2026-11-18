@@ -36,7 +36,7 @@
         <tr>
           <th>Code</th>
           <th>Course Name</th>
-          {% if user.role == 'tim_kurikulum' %}
+          {% if user.role in ('admin', 'kps') %}
           <th>Dosen Pembuat</th>
           {% endif %}
           <th>SKS</th>
@@ -48,7 +48,7 @@
       </thead>
       <tbody id="course-body">
         <tr>
-          <td colspan="{% if user.role == 'tim_kurikulum' %}8{% else %}7{% endif %}" class="empty">Loading…</td>
+          <td colspan="{% if user.role in ('admin', 'kps') %}8{% else %}7{% endif %}" class="empty">Loading…</td>
         </tr>
       </tbody>
     </table>
@@ -105,7 +105,7 @@
           "name": "Keaktifan Diskusi Kelas",
           "weight": 10,
           "cpl_pis": [
-            { "cpl": "CPL1", "so": "SO1", "pi": "1a" }
+            { "cpl": "CPL1", "so": "SO1", "pi": "PI-01.1" }
           ],
           "criteria": [
             {
@@ -129,8 +129,11 @@
     {
       "code": "CPL1",
       "description": "Mampu menganalisis dan merancang solusi keamanan.",
-      "proficiency_level": 4,
-      "so_codes": ["SO1"]
+      "proficiency_level": 3,
+      "so_codes": ["SO1"],
+      "assessment_rubric": {
+        "PI-01.1": { "1": "...", "2": "...", "3": "...", "4": "...", "5": "..." }
+      }
     }
   ]
 }</code></pre>
@@ -269,28 +272,6 @@
     </div>
   </div>
 </div>
-
-<!-- Share course modal -->
-<div class="modal-overlay" id="share-modal" hidden>
-  <div class="modal modal-upload">
-    <div class="modal-head">
-      <h3>Bagikan Course</h3>
-      <button class="modal-close" id="share-close">&times;</button>
-    </div>
-    <div class="modal-body">
-      <p class="sub" id="share-course-name"></p>
-      <label class="upload-field">
-        <span>Cari akun (nama / email)</span>
-        <input type="text" id="share-search" placeholder="Ketik nama atau email…">
-      </label>
-      <div id="share-user-list" class="share-user-list"></div>
-      <div id="share-status"></div>
-      <div class="modal-actions">
-        <button class="btn btn-primary" id="share-save">Simpan</button>
-      </div>
-    </div>
-  </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -334,7 +315,8 @@
     const data = await res.json();
     const courses = data.courses || [];
     const body = document.getElementById('course-body');
-    const colspan = USER_ROLE === 'tim_kurikulum' ? 8 : 7;
+    const showOwnerCol = USER_ROLE === 'admin' || USER_ROLE === 'kps';
+    const colspan = showOwnerCol ? 8 : 7;
 
     if (!courses.length) {
       body.innerHTML = `<tr><td colspan="${colspan}" class="empty">No courses yet. Start your assessment with course assesment wizard or upload a course JSON to get started.</td></tr>`;
@@ -343,23 +325,21 @@
     }
     body.innerHTML = courses.map(c => `
     <tr>
-      <td class="mono">${c.course_code}</td>
-      <td>${c.course_name}</td>
-      ${USER_ROLE === 'tim_kurikulum' ? `<td>${c.owner_name}</td>` : ''}
+      <td class="mono">${esc(c.course_code)}</td>
+      <td>${esc(c.course_name)}${c.is_assigned ? ' <span class="role-badge" style="margin-left:6px;font-size:11px;">Ditugaskan</span>' : ''}</td>
+      ${showOwnerCol ? `<td>${esc(c.owner_name)}</td>` : ''}
       <td class="num">${c.sks}</td>
-      <td>${c.semester}</td>
+      <td>${esc(c.semester)}</td>
       <td class="num">${c.component_count}</td>
       <td class="num">${c.class_count}</td>
       <td class="actions">
         <a class="btn btn-primary btn-sm" href="${u('manage_classes', c.id)}">Manage Class</a>
-        ${c.can_share ? `<button class="icon-btn" title="Share" data-share="${c.id}" data-name="${esc(c.course_name)}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>` : ''}
-        ${c.can_share ? `<button class="icon-btn" title="Edit" data-edit="${c.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>` : ''}
-        ${c.can_share ? `<button class="icon-btn icon-danger" title="Delete" data-del="${c.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
+        ${c.can_edit ? `<button class="icon-btn" title="Edit" data-edit="${c.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>` : ''}
+        ${c.can_delete ? `<button class="icon-btn icon-danger" title="Delete" data-del="${c.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
       </td>
     </tr>`).join('');
     document.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openEdit(b.dataset.edit)));
     document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => deleteCourse(b.dataset.del)));
-    document.querySelectorAll('[data-share]').forEach(b => b.addEventListener('click', () => openShareModal(b.dataset.share, b.dataset.name)));
     renderPagination(data);
   }
 
@@ -394,77 +374,9 @@
     }
   }
 
-  // ---- Share course ----
-  let shareUsers = [];
-  let shareSelected = new Set();
-  let shareCourseId = null;
-
-  async function loadShareOptions() {
-    try {
-      const res = await fetch(u('share_options'));
-      shareUsers = await res.json();
-    } catch (e) { shareUsers = []; }
-    renderShareUsers();
-  }
-
-  function renderShareUsers() {
-    const q = document.getElementById('share-search').value.trim().toLowerCase();
-    const list = document.getElementById('share-user-list');
-    const filtered = shareUsers.filter(u =>
-      !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-    );
-    if (!filtered.length) {
-      list.innerHTML = '<p class="empty">Tidak ada user yang cocok.</p>';
-      return;
-    }
-    list.innerHTML = filtered.map(u => `
-    <label class="share-user-item wizard-check">
-      <input type="checkbox" class="share-user-cb" value="${u.id}" ${shareSelected.has(u.id) ? 'checked' : ''}>
-      <span><b>${esc(u.name)}</b> <span class="weight">${esc(u.email)}</span></span>
-    </label>`).join('');
-    list.querySelectorAll('.share-user-cb').forEach(cb => cb.addEventListener('change', () => {
-      const id = parseInt(cb.value, 10);
-      if (cb.checked) shareSelected.add(id); else shareSelected.delete(id);
-    }));
-  }
-
-  async function openShareModal(id, name) {
-    shareCourseId = parseInt(id, 10);
-    shareSelected = new Set();
-    document.getElementById('share-course-name').textContent = name || '';
-    document.getElementById('share-search').value = '';
-    document.getElementById('share-status').innerHTML = '';
-    try {
-      const res = await fetch(u('api_course', shareCourseId));
-      const data = await res.json();
-      (data.course && data.course.shared_with || []).forEach(i => shareSelected.add(i));
-    } catch (e) { }
-    if (!shareUsers.length) await loadShareOptions(); else renderShareUsers();
-    document.getElementById('share-modal').hidden = false;
-  }
-
-  async function saveShare() {
-    const statusEl = document.getElementById('share-status');
-    const res = await fetch(u('api_course_share', shareCourseId), {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_ids: [...shareSelected] })
-    });
-    const out = await res.json();
-    if (res.ok) {
-      document.getElementById('share-modal').hidden = true;
-      showToast('Pengaturan berbagi disimpan.', 'success');
-      loadCourses();
-    } else {
-      statusEl.innerHTML = `<p class="alert-err">✗ ${esc(out.error)}</p>`;
-    }
-  }
-
-  function closeShareModal() {
-    document.getElementById('share-modal').hidden = true;
-  }
-
   let wizardEditCourseId = null;
   let wizardFromUpload = false;
+  let uploadCplRubric = {};
 
   async function openEdit(id) {
     try {
@@ -489,7 +401,10 @@
 
     wizardEditCourseId = id;
     wizardFromUpload = false;
+    uploadCplRubric = {};
+    applyStep1ReadOnly(false);
     wizardStep = 1;
+    activeCriteriaIndex = 0;
     document.getElementById('wizard-title').textContent = 'Edit Rubric';
     document.getElementById('wizard-status').innerHTML = '';
 
@@ -568,15 +483,6 @@
   document.getElementById('edit-modal').addEventListener('click', e => {
     if (e.target === document.getElementById('edit-modal')) closeEdit();
   });
-  document.getElementById('share-close').addEventListener('click', closeShareModal);
-  document.getElementById('share-modal').addEventListener('click', e => {
-    if (e.target === document.getElementById('share-modal')) closeShareModal();
-  });
-  document.getElementById('share-save').addEventListener('click', saveShare);
-  document.getElementById('share-search').addEventListener('input', renderShareUsers);
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && !document.getElementById('share-modal').hidden) closeShareModal();
-  });
   document.getElementById('edit-save').addEventListener('click', async () => {
     const payload = {
       course_code: document.getElementById('edit-code').value.trim(),
@@ -638,7 +544,8 @@
     const startYear = currentMonth >= 6 ? currentYear : currentYear - 1;
     const numYears = 5;
     let html = '<option value="">Pilih Semester...</option>';
-    for (let i = 0; i < numYears; i++) {
+    // Include 3 years back through 4 years ahead
+    for (let i = -3; i < numYears; i++) {
       const y1 = startYear + i;
       const y2 = y1 + 1;
       const term = `${y1}/${y2}`;
@@ -943,7 +850,7 @@
     sel.disabled = false;
     sel.title = 'Pilih Program Studi';
 
-    const defaultProgram = (cu.role === 'tim_kurikulum' && cu.study_program) ? cu.study_program : 'RKS';
+    const defaultProgram = (cu.role === 'kps' && cu.study_program) ? cu.study_program : 'RKS';
     if (programs.some(p => p.code === defaultProgram)) {
       sel.value = defaultProgram;
     } else if (programs.length > 0) {
@@ -954,6 +861,9 @@
   async function openWizard() {
     wizardEditCourseId = null;
     wizardFromUpload = false;
+    uploadCplRubric = {};
+    applyStep1ReadOnly(false);
+    activeCriteriaIndex = 0;
     wizardCats = WIZARD_CATEGORIES;
     wizardCatCpls = {};
     document.getElementById('wizard-title').textContent = 'Create Rubric';
@@ -1002,6 +912,13 @@
   async function openWizardFromUpload(data) {
     wizardEditCourseId = null;
     wizardFromUpload = true;
+    uploadCplRubric = {};
+    (data.cpls || []).forEach(c => {
+      if (c && c.code && c.assessment_rubric && typeof c.assessment_rubric === 'object' && Object.keys(c.assessment_rubric).length) {
+        uploadCplRubric[c.code] = c.assessment_rubric;
+      }
+    });
+    activeCriteriaIndex = 0;
     clearWizardDraft();
     document.getElementById('wizard-title').textContent = 'Lanjutkan Upload - Pemetaan CPL/PI';
     document.getElementById('wizard-status').innerHTML = '';
@@ -1034,8 +951,10 @@
     document.getElementById('wizard-target-attainment').value = targetVal;
     document.getElementById('wizard-target-attainment-val').textContent = targetVal;
 
-    wizardCats = (data.categories || []).map(c => ({ key: c.key, label: c.label }));
-    wizardCatCpls = computeCatCpls(data.categories);
+    wizardCats = (data.categories && data.categories.length)
+      ? data.categories.map(c => ({ key: c.key, label: c.label }))
+      : WIZARD_CATEGORIES;
+    wizardCatCpls = {};
 
     buildCplList();
     const cplWrap = document.getElementById('wizard-cpl-list');
@@ -1046,31 +965,8 @@
     buildWizardWeights();
     buildWizardCriteria();
 
-    (data.categories || []).forEach(cat => {
-      const card = document.querySelector(`.wizard-cat[data-cat="${cat.key}"]`);
-      if (!card) return;
-      const list = card.querySelector('.wizard-comp-list');
-      list.innerHTML = '';
-      const comps = cat.components || [];
-      if (!comps.length) addWizardComponent(cat.key);
-      else comps.forEach(c => addWizardComponent(cat.key, c));
-      renumberWizardComponents(card);
-
-      comps.forEach(comp => {
-        const ckey = `${cat.key}|${comp.name}`;
-        if (typeof comp.weight === 'number') weightState[ckey] = comp.weight;
-        if (Array.isArray(comp.criteria) && comp.criteria.length) {
-          criteriaDraft[ckey] = comp.criteria.map(cr => ({
-            label: cr.label,
-            score_min: cr.score_min,
-            score_max: cr.score_max,
-            subject: buildSubjectHtml(cr.subjects),
-          }));
-        }
-      });
-    });
-
-    wizardStep = 3;
+    applyStep1ReadOnly(true);
+    wizardStep = 1;
     renderWizardStep();
     wizardModal.hidden = false;
   }
@@ -1150,6 +1046,7 @@
     const row = document.createElement('div');
     row.className = 'wizard-cpl';
     row.dataset.cpl = (cpl && cpl.code) || `CPL${idx}`;
+    row.dataset.proficiencyLevel = (cpl && cpl.proficiency_level) || 3;
     row.innerHTML = `
     <div class="wizard-cpl-head">
       <b class="wz-cpl-code">${row.dataset.cpl}</b>
@@ -1159,22 +1056,10 @@
       <span>Deskripsi CPL (sama dengan RPS)</span>
       <textarea class="wz-cpl-desc" rows="2" maxlength="500" placeholder="Deskripsi capaian pembelajaran..."></textarea>
     </label>
-    <label class="upload-field">
-      <span>Proficiency Level</span>
-      <select class="wz-cpl-level"></select>
-    </label>
     <div class="upload-field">
       <span>SO (boleh lebih dari satu)</span>
       <div class="wz-so-list"></div>
     </div>`;
-    const levelSel = row.querySelector('.wz-cpl-level');
-    const levels = (soPi && soPi.proficiency_levels && soPi.proficiency_levels.length)
-      ? soPi.proficiency_levels.map(p => ({ v: p.level, t: p.label }))
-      : PROF_LEVELS;
-    levelSel.innerHTML = levels.map(p =>
-      `<option value="${p.v}">${p.v}. ${esc(p.t)}</option>`
-    ).join('');
-    levelSel.value = (cpl && cpl.proficiency_level) || '3';
     const soList = row.querySelector('.wz-so-list');
     const sos = soPi && soPi.student_outcome ? soPi.student_outcome : [];
     const selected = cpl && cpl.so_codes ? cpl.so_codes : [];
@@ -1202,9 +1087,13 @@
     const cpls = [];
     document.querySelectorAll('.wizard-cpl').forEach(row => {
       const desc = row.querySelector('.wz-cpl-desc').value.trim();
-      const level = parseInt(row.querySelector('.wz-cpl-level').value, 10);
+      const level = parseInt(row.dataset.proficiencyLevel, 10) || 3;
       const soCodes = [...row.querySelectorAll('.wz-so-cb:checked')].map(cb => cb.value);
-      cpls.push({ code: row.dataset.cpl, description: desc, proficiency_level: level, so_codes: soCodes });
+      const obj = { code: row.dataset.cpl, description: desc, proficiency_level: level, so_codes: soCodes };
+      if (uploadCplRubric[row.dataset.cpl]) {
+        obj.assessment_rubric = uploadCplRubric[row.dataset.cpl];
+      }
+      cpls.push(obj);
     });
     return cpls;
   }
@@ -1237,53 +1126,10 @@
       </div>
     </div>`).join('');
 
-    const mapping = {
-      'partisipatif': '1_partisipatif',
-      'tugas': '2_tugas',
-      'kuis': '3_kuis',
-      'ats': '4_ats',
-      'aas': '5_aas',
-      'proyek': '6_proyek'
-    };
-
     wrap.querySelectorAll('.wizard-cat').forEach(card => {
       const catKey = card.dataset.cat;
       const addBtn = card.querySelector('.wizard-cat-body > button');
       addBtn.addEventListener('click', () => addWizardComponent(catKey));
-      if (skipDefaults) return;
-
-      const jsonKey = mapping[catKey];
-      const pblData = defaultInstruments && defaultInstruments.rubrik_penilaian_pbl;
-      const catData = pblData && pblData[jsonKey];
-
-      if (catData && Array.isArray(catData.sub_komponen) && catData.sub_komponen.length > 0) {
-        catData.sub_komponen.forEach(sub => {
-          // Seed the component
-          addWizardComponent(catKey, { name: sub.nama });
-
-          // Seed the weight (convert "10%" -> 10)
-          const ckey = `${catKey}|${sub.nama}`;
-          const weightVal = parseFloat(sub.bobot) || 0;
-          weightState[ckey] = weightVal;
-
-          // Seed the criteria (levels 1-5)
-          const levels = ['level_1', 'level_2', 'level_3', 'level_4', 'level_5'];
-          criteriaDraft[ckey] = levels.map((lvlKey, idx) => {
-            const bulletPoints = sub.kriteria_level[lvlKey] || [];
-            const subjectHtml = bulletPoints.length ? `<ul>${bulletPoints.map(p => `<li>${p}</li>`).join('')}</ul>` : '';
-            return {
-              label: CRIT_LABELS[idx],
-              score_min: CRIT_DEFAULT[idx].score_min,
-              score_max: CRIT_DEFAULT[idx].score_max,
-              subject: subjectHtml
-            };
-          });
-        });
-      } else {
-        // Fallback to default single component
-        const defName = catKey === 'ats' ? 'ATS' : catKey === 'aas' ? 'AAS' : card.querySelector('.wizard-cat-head b').textContent;
-        addWizardComponent(catKey, { name: defName });
-      }
     });
   }
 
@@ -1332,7 +1178,11 @@
       cplOptions = cplOptions.filter(c => allowedSet.has(c.code));
     }
     sel.innerHTML = '<option value="">Pilih CPL...</option>' +
-      cplOptions.map(c => `<option value="${c.code}">${c.code}</option>`).join('');
+      cplOptions.map(c => {
+        const desc = (c.description || '').trim();
+        const shortDesc = desc.length > 90 ? desc.slice(0, 90) + '…' : desc;
+        return `<option value="${esc(c.code)}">${esc(c.code)}${shortDesc ? ' - ' + esc(shortDesc) : ''}</option>`;
+      }).join('');
     if (mapping) sel.value = mapping.cpl || '';
     sel.addEventListener('change', () => renderPiOptions(cplRow, mapping));
     cplRow.querySelector('.icon-btn').addEventListener('click', () => cplRow.remove());
@@ -1347,24 +1197,46 @@
     if (!cplCode) return;
     const cpl = collectCpls().find(c => c.code === cplCode);
     if (!cpl) return;
-    // Only PIs from the SOs chosen for this CPL.
-    const pis = [];
+
+    // Collect valid PIs from SO-PI database for the CPL's SOs.
+    const dbPis = [];
     cpl.so_codes.forEach(soCode => {
       const so = soByCode[soCode];
       if (so) {
         so.performance_indicator.forEach(pi => {
-          pis.push({ pi_code: pi.pi_code, pi_description: pi.pi_description, so: soCode });
+          dbPis.push({ pi_code: pi.pi_code, pi_description: pi.pi_description, so: soCode });
         });
       }
     });
+
+    let pis = dbPis;
+    let errorHtml = '';
+
+    if (wizardFromUpload) {
+      const rubricMap = uploadCplRubric[cplCode];
+      const rubricKeys = rubricMap ? Object.keys(rubricMap) : [];
+      if (!rubricKeys.length) {
+        piList.innerHTML = `<span class="alert-err wz-pi-error" style="display:inline-block;font-size:12px;">Belum diisi — PI untuk ${esc(cplCode)} belum tersedia di JSON.</span>`;
+        return;
+      }
+      const keySet = new Set(rubricKeys);
+      pis = dbPis.filter(p => keySet.has(p.pi_code));
+      const matchedCodes = new Set(pis.map(p => p.pi_code));
+      const missingKeys = rubricKeys.filter(k => !matchedCodes.has(k));
+      if (missingKeys.length) {
+        errorHtml = `<span class="alert-err wz-pi-error" style="display:block;font-size:12px;margin-top:4px;">Belum diisi — kode PI (${missingKeys.map(esc).join(', ')}) tidak sesuai dengan master SO-PI.</span>`;
+      }
+    }
+
     const seen = new Set();
-    piList.innerHTML = pis.map(pi => {
+    const checkboxesHtml = pis.map(pi => {
       const key = `${pi.so}-${pi.pi_code}`;
       if (seen.has(key)) return '';
       seen.add(key);
       const checked = mapping && mapping.so === pi.so && mapping.pi === pi.pi_code;
-      return `<label class="wizard-check"><input type="checkbox" class="wz-pi-cb" value="${pi.so}|${pi.pi_code}" ${checked ? 'checked' : ''}> <span><b>${pi.pi_code}</b> - ${esc(pi.pi_description)}</span></label>`;
+      return `<label class="wizard-check"><input type="checkbox" class="wz-pi-cb" value="${pi.so}|${pi.pi_code}" ${checked ? 'checked' : ''}> <span><b>${esc(pi.pi_code)}</b> - ${esc(pi.pi_description)}</span></label>`;
     }).join('');
+    piList.innerHTML = checkboxesHtml + errorHtml;
   }
 
   function renumberWizardComponents(card) {
@@ -1526,45 +1398,149 @@
     return { min: def.score_min, max: def.score_max };
   }
 
-  function renderCriteria() {
-    const weights = collectWeights();
-    const wrap = document.getElementById('wizard-criteria');
-    if (!weights.length) {
-      wrap.innerHTML = '<p class="empty">Belum ada komponen.</p>';
-      return;
+  let activeCriteriaIndex = 0;
+
+  function _stripHtmlText(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html || '';
+    return (tmp.innerText || tmp.textContent || '').trim();
+  }
+
+  function _defaultLevelsForCount(count) {
+    if (count === 5) {
+      return CRIT_DEFAULT.map((d, i) => ({ label: CRIT_LABELS[i], score_min: d.score_min, score_max: d.score_max }));
     }
-    wrap.innerHTML = weights.map((w, ci) => {
+    if (count === 4) {
+      return [
+        { label: 'Kurang', score_min: 0, score_max: 55 },
+        { label: 'Cukup', score_min: 56, score_max: 70 },
+        { label: 'Baik', score_min: 71, score_max: 89 },
+        { label: 'Sangat Baik', score_min: 90, score_max: 100 },
+      ];
+    }
+    if (count === 3) {
+      return [
+        { label: 'Kurang', score_min: 0, score_max: 59 },
+        { label: 'Cukup', score_min: 60, score_max: 79 },
+        { label: 'Baik', score_min: 80, score_max: 100 },
+      ];
+    }
+    const step = Math.floor(100 / Math.max(1, count));
+    const res = [];
+    for (let i = 0; i < count; i++) {
+      const smin = i === 0 ? 0 : res[i - 1].score_max + 1;
+      const smax = i === count - 1 ? 100 : Math.min(100, smin + step - 1);
+      res.push({ label: CRIT_LABELS[i] || `Level ${i + 1}`, score_min: smin, score_max: smax });
+    }
+    return res;
+  }
+
+  function _criteriaFilledCount(ckey) {
+    const list = criteriaDraft[ckey] || [];
+    let count = 0;
+    for (let i = 0; i < list.length; i++) {
+      if (list[i] && _stripHtmlText(list[i].subject)) count++;
+    }
+    return count;
+  }
+
+  function _ensureCriteriaDraft(weights) {
+    weights.forEach(w => {
       const ckey = weightKey({ key: w.cat }, w.name);
       const saved = criteriaDraft[ckey];
-      return `
-    <div class="wizard-criteria-comp" data-ci="${ci}">
-      <div class="wizard-cat-head"><b>${esc(w.name)}</b><span class="chip">${w.cpl_pis.map(m => `${m.cpl}-${m.pi}`).join(', ')}</span></div>
-      <div class="wizard-criteria-levels">
-        ${[0, 1, 2, 3, 4].map(i => {
-        const r = critRange(i, saved);
-        return `
-          <div class="wizard-criteria-row">
-            <span class="wz-lv-badge">L${i + 1}</span>
-            <span class="wz-crit-label-readonly">${CRIT_LABELS[i]}</span>
-            <input type="number" class="wz-crit-min" value="${r.min}">
-            <span>-</span>
-            <input type="number" class="wz-crit-max" value="${r.max}">
-            <div class="wz-wysiwyg">
-              <div class="wz-wysiwyg-toolbar">
-                <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
-                <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
-                <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
-                <button type="button" data-cmd="insertUnorderedList" title="List">•≡</button>
-              </div>
-              <div class="wz-wysiwyg-area" contenteditable="true" data-placeholder="Kriteria yang harus dipenuhi...">${saved && saved[i] && saved[i].subject ? saved[i].subject : ''}</div>
-            </div>
-          </div>`;
-      }).join('')}
-      </div>
-    </div>`;
-    }).join('');
+      const count = (Array.isArray(saved) && saved.length) ? saved.length : 5;
+      const defs = _defaultLevelsForCount(count);
+      const next = [];
+      for (let i = 0; i < count; i++) {
+        const s = saved && saved[i];
+        next[i] = {
+          label: (s && s.label) ? s.label : defs[i].label,
+          score_min: (s && typeof s.score_min === 'number' && !isNaN(s.score_min)) ? s.score_min : defs[i].score_min,
+          score_max: (s && typeof s.score_max === 'number' && !isNaN(s.score_max)) ? s.score_max : defs[i].score_max,
+          subject: (s && s.subject) ? s.subject : '',
+        };
+      }
+      criteriaDraft[ckey] = next;
+    });
+  }
 
-    // Wire WYSIWYG toolbar buttons
+  function renderCriteria() {
+    const weights = collectWeights().filter(w => w.weight > 0);
+    const wrap = document.getElementById('wizard-criteria');
+    if (!weights.length) {
+      wrap.innerHTML = '<p class="empty">Belum ada komponen dengan bobot &gt; 0%.</p>';
+      return;
+    }
+    _ensureCriteriaDraft(weights);
+    if (activeCriteriaIndex < 0 || activeCriteriaIndex >= weights.length) {
+      activeCriteriaIndex = 0;
+    }
+
+    wrap.innerHTML = `<div class="wizard-criteria-accordion">${weights.map((w, ci) => {
+      const ckey = weightKey({ key: w.cat }, w.name);
+      const saved = criteriaDraft[ckey] || [];
+      const totalLv = saved.length || 5;
+      const filled = _criteriaFilledCount(ckey);
+      const badgeCls = filled === totalLv ? 'done' : (filled > 0 ? 'partial' : '');
+      const cObj = wizardCats.find(c => c.key === w.cat);
+      const cLbl = cObj ? cObj.label : w.cat;
+      const isOpen = ci === activeCriteriaIndex;
+      return `
+      <div class="wizard-criteria-comp ${isOpen ? 'open' : ''}" data-ci="${ci}">
+        <button type="button" class="wizard-criteria-acc-head" data-acc-toggle="${ci}">
+          <span class="wizard-criteria-acc-title">
+            <b>${esc(w.name)}</b>
+            <span class="chip">${esc(cLbl)} · ${w.weight}%</span>
+            ${w.cpl_pis.length ? `<span class="chip">${w.cpl_pis.map(m => `${m.cpl}-${m.pi}`).join(', ')}</span>` : ''}
+          </span>
+          <span class="wizard-criteria-acc-right">
+            <span class="wizard-criteria-badge ${badgeCls}" data-badge-ci="${ci}">${filled}/${totalLv}</span>
+            <span class="wizard-criteria-chevron">▼</span>
+          </span>
+        </button>
+        <div class="wizard-criteria-levels" ${isOpen ? '' : 'hidden'}>
+          ${saved.map((item, i) => `
+              <div class="wizard-criteria-row">
+                <span class="wz-lv-badge wz-lv-${i + 1}">Kriteria ${i + 1}</span>
+                <span class="wz-crit-label-readonly">${esc(item.label || CRIT_LABELS[i] || `Level ${i + 1}`)}</span>
+                <input type="number" class="wz-crit-min" value="${item.score_min}">
+                <span>-</span>
+                <input type="number" class="wz-crit-max" value="${item.score_max}">
+                <div class="wz-wysiwyg">
+                  <div class="wz-wysiwyg-toolbar">
+                    <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+                    <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+                    <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+                    <button type="button" data-cmd="insertUnorderedList" title="List">•≡</button>
+                  </div>
+                  <div class="wz-wysiwyg-area" contenteditable="true" data-placeholder="Kriteria yang harus dipenuhi...">${item.subject || ''}</div>
+                </div>
+              </div>`).join('')}
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+
+    wrap.querySelectorAll('[data-acc-toggle]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ci = parseInt(btn.dataset.accToggle, 10);
+        const compEl = btn.closest('.wizard-criteria-comp');
+        const wasOpen = compEl.classList.contains('open');
+        wrap.querySelectorAll('.wizard-criteria-comp').forEach(el => {
+          el.classList.remove('open');
+          const lv = el.querySelector('.wizard-criteria-levels');
+          if (lv) lv.hidden = true;
+        });
+        if (!wasOpen) {
+          compEl.classList.add('open');
+          const lv = compEl.querySelector('.wizard-criteria-levels');
+          if (lv) lv.hidden = false;
+          activeCriteriaIndex = ci;
+        } else {
+          activeCriteriaIndex = -1;
+        }
+      });
+    });
+
     wrap.querySelectorAll('.wz-wysiwyg-toolbar button').forEach(btn => {
       btn.addEventListener('mousedown', e => e.preventDefault());
       btn.addEventListener('click', () => {
@@ -1575,21 +1551,9 @@
       });
     });
 
-    // Save criteria edits live
-    wrap.querySelectorAll('.wizard-criteria-comp').forEach((compEl) => {
-      const ci = parseInt(compEl.dataset.ci, 10);
-      const w = weights[ci];
-      if (!w) return;
-      const ckey = weightKey({ key: w.cat }, w.name);
-      criteriaDraft[ckey] = [];
-      compEl.querySelectorAll('.wizard-criteria-row').forEach((row, i) => {
+    wrap.querySelectorAll('.wizard-criteria-comp').forEach(compEl => {
+      compEl.querySelectorAll('.wizard-criteria-row').forEach(row => {
         const area = row.querySelector('.wz-wysiwyg-area');
-        criteriaDraft[ckey][i] = {
-          label: CRIT_LABELS[i],
-          score_min: parseInt(row.querySelector('.wz-crit-min').value, 10),
-          score_max: parseInt(row.querySelector('.wz-crit-max').value, 10),
-          subject: area ? area.innerHTML : '',
-        };
         const grab = () => grabCriteriaFor(area);
         row.querySelectorAll('.wz-crit-min, .wz-crit-max').forEach(inp => inp.addEventListener('input', () => { grab(); saveWizardDraft(); }));
         if (area) area.addEventListener('input', () => { grab(); saveWizardDraft(); });
@@ -1603,46 +1567,55 @@
     const compEl = row.closest('.wizard-criteria-comp');
     const ci = parseInt(compEl.dataset.ci, 10);
     const i = [...compEl.querySelectorAll('.wizard-criteria-row')].indexOf(row);
-    const key = [...compEl.querySelectorAll('.wizard-criteria-row')];
-    // find component key from ci -> weights
-    const weights = collectWeights();
+    const weights = collectWeights().filter(w => w.weight > 0);
     const w = weights[ci];
     if (!w) return;
     const ckey = weightKey({ key: w.cat }, w.name);
     if (!criteriaDraft[ckey]) criteriaDraft[ckey] = [];
+    const existingLabel = (criteriaDraft[ckey][i] && criteriaDraft[ckey][i].label) || CRIT_LABELS[i] || `Level ${i + 1}`;
     criteriaDraft[ckey][i] = {
-      label: CRIT_LABELS[i],
+      label: existingLabel,
       score_min: parseInt(row.querySelector('.wz-crit-min').value, 10),
       score_max: parseInt(row.querySelector('.wz-crit-max').value, 10),
       subject: area.innerHTML,
+      _fromRubric: false,
+      _fromUploadJson: false,
     };
+    const badge = document.querySelector(`[data-badge-ci="${ci}"]`);
+    if (badge) {
+      const totalLv = criteriaDraft[ckey].length || 5;
+      const filled = _criteriaFilledCount(ckey);
+      badge.textContent = `${filled}/${totalLv}`;
+      badge.className = `wizard-criteria-badge ${filled === totalLv ? 'done' : (filled > 0 ? 'partial' : '')}`;
+    }
   }
 
   function collectCriteria() {
     const weights = collectWeights();
-    const result = [];
-    document.querySelectorAll('.wizard-criteria-comp').forEach((compEl, ci) => {
-      const w = weights[ci];
-      if (!w) return;
-      const criteria = [];
-      compEl.querySelectorAll('.wizard-criteria-row').forEach((row, i) => {
-        const label = CRIT_LABELS[i];
-        const min = parseInt(row.querySelector('.wz-crit-min').value, 10);
-        const max = parseInt(row.querySelector('.wz-crit-max').value, 10);
-        const subjectHtml = row.querySelector('.wz-wysiwyg-area').innerHTML.trim();
-        const subjectText = row.querySelector('.wz-wysiwyg-area').innerText.trim();
-        const subjects = subjectText ? [subjectHtml, `Secara keseluruhan dinilai ${label.toLowerCase()}.`] : [`Secara keseluruhan dinilai ${label.toLowerCase()}.`];
-        criteria.push({
+    _ensureCriteriaDraft(weights);
+    return weights.map(w => {
+      const ckey = weightKey({ key: w.cat }, w.name);
+      const saved = criteriaDraft[ckey] || [];
+      const defs = _defaultLevelsForCount(saved.length || 5);
+      const criteria = saved.map((item, i) => {
+        const label = item.label || defs[i].label;
+        const min = parseInt(item.score_min, 10);
+        const max = parseInt(item.score_max, 10);
+        const subjectHtml = (item.subject || '').trim();
+        const subjectText = _stripHtmlText(subjectHtml);
+        const subjects = subjectText
+          ? [subjectHtml, `Secara keseluruhan dinilai ${label.toLowerCase()}.`]
+          : [`Secara keseluruhan dinilai ${label.toLowerCase()}.`];
+        return {
           level: i + 1,
           label,
-          score_min: isNaN(min) ? CRIT_DEFAULT[i].score_min : min,
-          score_max: isNaN(max) ? CRIT_DEFAULT[i].score_max : max,
+          score_min: isNaN(min) ? defs[i].score_min : min,
+          score_max: isNaN(max) ? defs[i].score_max : max,
           subjects,
-        });
+        };
       });
-      result.push({ cat: w.cat, name: w.name, weight: w.weight, cpl_pis: w.cpl_pis, criteria });
+      return { cat: w.cat, name: w.name, weight: w.weight, cpl_pis: w.cpl_pis, criteria };
     });
-    return result;
   }
 
   // ---------- step navigation ----------
@@ -1651,7 +1624,11 @@
     document.querySelectorAll('.wz-comp-cpl').forEach(sel => {
       const currentVal = sel.value;
       sel.innerHTML = '<option value="">Pilih CPL...</option>' +
-        cpls.map(c => `<option value="${c.code}">${c.code}</option>`).join('');
+        cpls.map(c => {
+          const desc = (c.description || '').trim();
+          const shortDesc = desc.length > 90 ? desc.slice(0, 90) + '…' : desc;
+          return `<option value="${esc(c.code)}">${esc(c.code)}${shortDesc ? ' - ' + esc(shortDesc) : ''}</option>`;
+        }).join('');
       if (cpls.some(c => c.code === currentVal)) {
         sel.value = currentVal;
       } else {
@@ -1661,6 +1638,18 @@
           const piList = cplRow.querySelector('.wz-pi-list');
           if (piList) piList.innerHTML = '';
         }
+      }
+    });
+  }
+
+  function applyStep1ReadOnly(isReadOnly) {
+    const step1 = document.getElementById('wizard-step-1');
+    if (!step1) return;
+    step1.querySelectorAll('input, select, textarea').forEach(el => {
+      if (el.id === 'wizard-target-attainment') {
+        el.disabled = false;
+      } else {
+        el.disabled = isReadOnly;
       }
     });
   }
@@ -1675,8 +1664,20 @@
     const steps = document.getElementById('wizard-steps');
     steps.innerHTML = STEP_NAMES.map((s, i) => {
       const n = i + 1;
-      return `<span class="wizard-step ${wizardStep === n ? 'active' : ''}">${n}. ${s}</span>`;
+      const clickable = wizardFromUpload ? `data-goto-step="${n}" style="cursor:pointer;"` : '';
+      return `<span class="wizard-step ${wizardStep === n ? 'active' : ''}" ${clickable}>${n}. ${s}</span>`;
     }).join('');
+    if (wizardFromUpload) {
+      steps.querySelectorAll('[data-goto-step]').forEach(el => {
+        el.addEventListener('click', () => {
+          const target = parseInt(el.dataset.gotoStep, 10);
+          if (target >= 1 && target <= 5) {
+            wizardStep = target;
+            renderWizardStep();
+          }
+        });
+      });
+    }
     if (wizardStep === 3) refreshWizardCplDropdowns();
     if (wizardStep === 4) renderWeights();
     if (wizardStep === 5) renderCriteria();
@@ -1713,6 +1714,7 @@
     const status = document.getElementById('wizard-status');
     status.innerHTML = '';
     if (wizardStep === 1) {
+      if (wizardFromUpload) return true;
       if (!document.getElementById('wizard-code').value.trim() || !document.getElementById('wizard-name').value.trim()) {
         status.innerHTML = '<p class="alert-err">✗ Kode dan Nama matakuliah wajib diisi.</p>';
         return false;
@@ -1737,6 +1739,28 @@
       if (!Object.keys(categories).length) {
         status.innerHTML = '<p class="alert-err">✗ Tambahkan minimal 1 sub-komponen.</p>';
         return false;
+      }
+      const piErrors = [...document.querySelectorAll('#wizard-step-3 .wz-pi-error')];
+      if (piErrors.length) {
+        status.innerHTML = '<p class="alert-err">✗ Ada CPL yang PI-nya belum diisi atau tidak sesuai dengan master SO-PI. Perbaiki terlebih dahulu sebelum melanjutkan.</p>';
+        piErrors[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+      }
+      if (wizardFromUpload) {
+        const selectedWithoutPi = [...document.querySelectorAll('#wizard-step-3 .wz-cpl-pi-row')].find(row => {
+          const cplSel = row.querySelector('.wz-comp-cpl');
+          return cplSel && cplSel.value && !row.querySelector('.wz-pi-cb:checked');
+        });
+        if (selectedWithoutPi) {
+          status.innerHTML = '<p class="alert-err">✗ Setiap CPL yang dipilih harus mencentang minimal 1 PI.</p>';
+          selectedWithoutPi.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return false;
+        }
+        const totalMapped = Object.values(categories).flat().reduce((acc, c) => acc + (c.cpl_pis || []).length, 0);
+        if (!totalMapped) {
+          status.innerHTML = '<p class="alert-err">✗ Petakan minimal 1 sub-komponen ke CPL dan PI sebelum melanjutkan.</p>';
+          return false;
+        }
       }
     }
     if (wizardStep === 4) {
@@ -1763,6 +1787,33 @@
     const status = document.getElementById('wizard-status');
     const cpls = collectCpls();
     const criteriaList = collectCriteria();
+
+    // Finalization validation: ensure all CPL/CLO and PI are mapped to the rubric
+    const unmappedWeighted = criteriaList.filter(item => item.weight > 0 && !(item.cpl_pis && item.cpl_pis.length));
+    if (unmappedWeighted.length) {
+      status.innerHTML = `<p class="alert-err">✗ Komponen berbobot berikut belum dipetakan ke CPL/PI: ${unmappedWeighted.map(i => esc(i.name)).join(', ')}. Silakan kaji ulang sebelum membuat rubrik.</p>`;
+      return;
+    }
+    const usedCpls = new Set(criteriaList.flatMap(item => (item.cpl_pis || []).map(m => m.cpl)));
+    const unmappedCpls = cpls.filter(c => !usedCpls.has(c.code)).map(c => c.code);
+    if (unmappedCpls.length) {
+      status.innerHTML = `<p class="alert-err">✗ CPL/CLO berikut belum dipetakan ke komponen rubrik: ${unmappedCpls.map(esc).join(', ')}. Silakan kaji ulang sebelum membuat rubrik.</p>`;
+      return;
+    }
+    const usedCplPis = new Set(criteriaList.flatMap(item => (item.cpl_pis || []).map(m => `${m.cpl}|${m.pi}`)));
+    const unmappedPis = [];
+    cpls.forEach(c => {
+      if (c.assessment_rubric && typeof c.assessment_rubric === 'object') {
+        Object.keys(c.assessment_rubric).forEach(pi => {
+          if (!usedCplPis.has(`${c.code}|${pi}`)) unmappedPis.push(`${c.code}-${pi}`);
+        });
+      }
+    });
+    if (unmappedPis.length) {
+      status.innerHTML = `<p class="alert-err">✗ PI berikut belum dipetakan ke komponen rubrik: ${unmappedPis.map(esc).join(', ')}. Silakan kaji ulang sebelum membuat rubrik.</p>`;
+      return;
+    }
+
     const categories = {};
     criteriaList.forEach(item => {
       if (!item.cat) return;

@@ -25,6 +25,12 @@ def validate_course_json(data):
     sopi = _load_so_pi(program)
     so_map = {so["so_code"]: so for so in sopi["student_outcome"]}
 
+    cpl_rubric_pis = {
+        cpl.get("code"): set(cpl["assessment_rubric"].keys())
+        for cpl in (data.get("cpls") or [])
+        if isinstance(cpl, dict) and cpl.get("code") and isinstance(cpl.get("assessment_rubric"), dict)
+    }
+
     # Collect component CPL-PI mappings.
     component_cpls = {}  # cpl_code -> set of pi codes used
 
@@ -52,6 +58,7 @@ def validate_course_json(data):
                 if so_code not in so_map:
                     raise ValueError(f"SO '{so_code}' tidak ditemukan di set SO-PI prodi '{program}'")
                 valid_pis = {p["pi_code"] for p in so_map[so_code]["performance_indicator"]}
+                valid_pis |= cpl_rubric_pis.get(cpl_code, set())
                 if pi_code not in valid_pis:
                     raise ValueError(
                         f"PI '{pi_code}' is not valid for SO '{so_code}' in component '{comp.get('name')}'"

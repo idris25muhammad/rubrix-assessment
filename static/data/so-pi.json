@@ -6,23 +6,23 @@
       "so_description": "Mampu mengidentifikasi dan menerapkan pengetahuan yang dibutuhkan dalam matematika, ilmu alam, komputasi, dasar-dasar rekayasa, dan keahlian teknik yang sesuai dengan disiplin untuk prosedur, proses, sistem, atau metodologi rekayasa yang telah ditentukan dan diterapkan.",
       "performance_indicator": [
         {
-          "pi_code": "1a",
+          "pi_code": "PI-01.1",
           "pi_description": "Menerapkan dasar-dasar jaringan, kriptografi, dan sistem operasi untuk menyelesaikan permasalahan keamanan."
         },
         {
-          "pi_code": "1b",
+          "pi_code": "PI-01.2",
           "pi_description": "Menggunakan alat keamanan siber (misalnya Wireshark, Metasploit) untuk analisis ancaman."
         },
         {
-          "pi_code": "1c",
+          "pi_code": "PI-01.3",
           "pi_description": "Menyelesaikan masalah menggunakan pemrograman aman dan otomatisasi."
         },
         {
-          "pi_code": "1d",
+          "pi_code": "PI-01.4",
           "pi_description": "Menganalisis kerentanan perangkat lunak menggunakan teknik reverse engineering atau analisis statis/dinamis."
         },
         {
-          "pi_code": "1e",
+          "pi_code": "PI-01.5",
           "pi_description": "Menerapkan prinsip-prinsip dasar kriptografi dalam perlindungan data."
         }
       ]
@@ -32,11 +32,11 @@
       "so_description": "Mampu mengidentifikasi, menyimpulkan, merumuskan, meneliti dan mengevaluasi literatur, serta menganalisis permasalahan rekayasa yang didefinisikan secara luas dengan mencapai kesimpulan yang dapat dibuktikan menggunakan alat analisis yang sesuai dengan disiplin atau bidang spesialisasi.",
       "performance_indicator": [
         {
-          "pi_code": "2a",
+          "pi_code": "PI-02.1",
           "pi_description": "Menggunakan dan mengutip standar/literatur yang relevan dalam keamanan siber."
         },
         {
-          "pi_code": "2b",
+          "pi_code": "PI-02.2",
           "pi_description": "Menganalisis dan membandingkan pendekatan atau kerangka kerja alternatif untuk menyelesaikan masalah keamanan siber yang terdefinisi."
         }
       ]
@@ -46,19 +46,19 @@
       "so_description": "Mampu merancang sistem, komponen, atau proses untuk memenuhi kebutuhan yang teridentifikasi dalam menyelesaikan permasalahan rekayasa yang didefinisikan secara luas dan sesuai dengan disiplin, dengan mempertimbangkan dampaknya dalam aspek kesehatan, keselamatan, ekonomi, hukum, masyarakat, dan lingkungan.",
       "performance_indicator": [
         {
-          "pi_code": "3a",
+          "pi_code": "PI-03.1",
           "pi_description": "Merancang arsitektur sistem yang aman."
         },
         {
-          "pi_code": "3b",
+          "pi_code": "PI-03.2",
           "pi_description": "Membangun komponen keamanan yang sesuai dengan praktik terbaik."
         },
         {
-          "pi_code": "3c",
+          "pi_code": "PI-03.3",
           "pi_description": "Mengevaluasi pertukaran (trade-off) dan memberikan justifikasi atas keputusan desain."
         },
         {
-          "pi_code": "3d",
+          "pi_code": "PI-03.4",
           "pi_description": "Menerapkan kerangka kerja berbasis risiko (misalnya ISO 27001, KAMI V4) dalam proses desain."
         }
       ]
@@ -68,19 +68,19 @@
       "so_description": "Mampu menemukan, memilih, dan mengorganisasi data relevan dari kode, basis data, dan literatur; serta merancang dan melakukan eksperimen untuk menghasilkan kesimpulan yang valid dalam investigasi terhadap permasalahan rekayasa yang didefinisikan secara luas.",
       "performance_indicator": [
         {
-          "pi_code": "4a",
+          "pi_code": "PI-04.1",
           "pi_description": "Menganalisis data monitoring/log untuk mengidentifikasi ancaman."
         },
         {
-          "pi_code": "4b",
+          "pi_code": "PI-04.2",
           "pi_description": "Memberikan rekomendasi berbasis bukti (evidence-based)."
         },
         {
-          "pi_code": "4c",
+          "pi_code": "PI-04.3",
           "pi_description": "Menggunakan metode pengujian terstruktur (misalnya MITRE ATT&CK, OWASP)."
         },
         {
-          "pi_code": "4d",
+          "pi_code": "PI-04.4",
           "pi_description": "Melakukan penetration test atau audit keamanan."
         }
       ]
@@ -90,11 +90,11 @@
       "so_description": "Mampu menggunakan dan memanfaatkan semua sumber daya dan teknologi yang dibutuhkan, termasuk prediksi dan pemodelan, untuk menyelesaikan permasalahan rekayasa yang didefinisikan secara luas.",
       "performance_indicator": [
         {
-          "pi_code": "5a",
+          "pi_code": "PI-05.1",
           "pi_description": "Mengevaluasi dampak pengujian terhadap kesinambungan atau keamanan sistem."
         },
         {
-          "pi_code": "5b",
+          "pi_code": "PI-05.2",
           "pi_description": "Menggunakan alat simulasi atau pemodelan (misalnya threat modeling, network emulation) untuk memprediksi dan mengurangi risiko keamanan."
         }
       ]
@@ -104,11 +104,11 @@
       "so_description": "Mampu secara konsisten mematuhi etika profesional dan norma praktik teknologi rekayasa termasuk kepatuhan terhadap hukum nasional dan internasional, dengan menghormati keberagaman dan inklusi.",
       "performance_indicator": [
         {
-          "pi_code": "6a",
+          "pi_code": "PI-06.1",
           "pi_description": "Mengintegrasikan pertimbangan hukum dan etika dalam desain keamanan."
         },
         {
-          "pi_code": "6b",
+          "pi_code": "PI-06.2",
           "pi_description": "Mengidentifikasi dan merespons isu etika dalam praktik keamanan siber melalui studi kasus atau skenario."
         }
       ]
@@ -118,15 +118,15 @@
       "so_description": "Mampu berfungsi secara efektif dalam menyelesaikan berbagai tugas, baik secara individu maupun sebagai anggota atau pemimpin dalam tim yang beragam, inklusif, dan multidisipliner di berbagai lingkungan kerja.",
       "performance_indicator": [
         {
-          "pi_code": "7a",
+          "pi_code": "PI-07.1",
           "pi_description": "Bekerja sama dalam menyelesaikan tugas dan berkontribusi pada tujuan tim."
         },
         {
-          "pi_code": "7b",
+          "pi_code": "PI-07.2",
           "pi_description": "Memimpin tim, menyelesaikan konflik, dan mengelola dinamika kelompok."
         },
         {
-          "pi_code": "7c",
+          "pi_code": "PI-07.3",
           "pi_description": "Melakukan refleksi terhadap kinerja tim dan mengusulkan perbaikan."
         }
       ]
@@ -136,15 +136,15 @@
       "so_description": "Mampu menerapkan komunikasi tertulis, lisan, dan grafis secara efektif dan inklusif dalam berbagai komunitas dan lingkungan yang didefinisikan secara luas dengan memperhatikan perbedaan budaya, bahasa, dan cara belajar.",
       "performance_indicator": [
         {
-          "pi_code": "8a",
+          "pi_code": "PI-08.1",
           "pi_description": "Menyusun laporan teknis dan dokumentasi secara jelas."
         },
         {
-          "pi_code": "8b",
+          "pi_code": "PI-08.2",
           "pi_description": "Berkomunikasi secara efektif dengan tim teknis maupun non-teknis."
         },
         {
-          "pi_code": "8c",
+          "pi_code": "PI-08.3",
           "pi_description": "Mengembangkan diagram visual (misalnya model ancaman, alur sistem) untuk mendukung penjelasan teknis."
         }
       ]
@@ -154,11 +154,11 @@
       "so_description": "Mampu menerapkan prinsip-prinsip manajemen rekayasa dalam proyek, baik sebagai anggota maupun pemimpin dalam tim multidisipliner.",
       "performance_indicator": [
         {
-          "pi_code": "9a",
+          "pi_code": "PI-09.1",
           "pi_description": "Menerapkan alat agile atau manajemen proyek untuk mengoordinasikan hasil kerja."
         },
         {
-          "pi_code": "9b",
+          "pi_code": "PI-09.2",
           "pi_description": "Mengembangkan dan mengelola jadwal proyek, pencapaian target (milestone), dan sumber daya untuk mencapai tujuan yang telah ditentukan."
         }
       ]
@@ -168,11 +168,11 @@
       "so_description": "Mampu secara mandiri melakukan pengembangan diri dan pembelajaran sepanjang hayat, serta berpikir kritis dan inovatif.",
       "performance_indicator": [
         {
-          "pi_code": "10a",
+          "pi_code": "PI-10.1",
           "pi_description": "Menunjukkan kemampuan belajar mandiri melalui jurnal reflektif, sumber daring, atau eksplorasi mandiri yang relevan dengan topik PBL."
         },
         {
-          "pi_code": "10b",
+          "pi_code": "PI-10.2",
           "pi_description": "Mengusulkan dan menerapkan ide atau pendekatan inovatif dalam menyelesaikan masalah kompleks keamanan siber dalam proyek PBL multidisipliner."
         }
       ]

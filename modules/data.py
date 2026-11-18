@@ -79,8 +79,12 @@ def _get_course_structure(course_id):
             {
                 "id": cl.id,
                 "name": cl.name,
-                "lecturer": cl.lecturer,
+                "lecturer_id": cl.lecturer_id,
+                "lecturer": cl.lecturer_user.name if cl.lecturer_user else (cl.lecturer or ""),
+                "academic_year": cl.academic_year or "",
                 "owner_id": cl.owner_id,
+                "assessment_links": cl.assessment_links_dict(),
+                "assessment_links_count": cl.assessment_links_count(),
                 "student_count": Student.query.filter(
                     Student.class_id == cl.id,
                     db.func.trim(Student.nim) != "",
@@ -118,23 +122,14 @@ def _get_class_data(class_id):
 
 
 def user_owns_course(user, course_id):
+    from modules.permissions import can_view_course
+
     course = db.session.get(Course, course_id)
-    if not course:
-        return False
-    if user["role"] == "tim_kurikulum":
-        program = (user.get("study_program") or "").strip() or "RKS"
-        return course.study_program == program
-    return course.owner_id == user["id"] or user["id"] in course.get_shared_with()
+    return can_view_course(user, course)
 
 
 def user_owns_class(user, class_id):
+    from modules.permissions import can_view_class
+
     klass = db.session.get(Class, class_id)
-    if not klass:
-        return False
-    course = klass.course
-    if user["role"] == "tim_kurikulum":
-        program = (user.get("study_program") or "").strip() or "RKS"
-        return bool(course and course.study_program == program)
-    if course and (course.owner_id == user["id"] or user["id"] in course.get_shared_with()):
-        return True
-    return klass.owner_id == user["id"]
+    return can_view_class(user, klass)

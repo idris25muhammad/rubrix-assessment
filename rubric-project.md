@@ -8,21 +8,21 @@ Let lecturers grade students against a two-level hierarchical rubric (categories
 
 ## 2. Scope / Architecture
 
-- **Backend:** Flask app factory (`modules/`) — blueprints: `auth`, `dashboard`, `users`, `courses`; services: `portfolio`, `excel`, `data`, `helpers`, `validation`, `seeder`, `rubric_builder`.
-- **ORM:** SQLAlchemy 2 (`modules/models.py`) — tables: `users`, `courses` (is_pbl, owner_id), `classes` (owner_id, name, lecturer), `categories`, `components` (cpl_pis JSON), `criteria`, `criteria_subjects`, `students`, `scores`, `cpls` (proficiency_level, so_codes).
+- **Backend:** Flask app factory (`modules/`) — blueprints: `auth`, `dashboard`, `users`, `courses`, `sopi`; services: `permissions`, `portfolio`, `excel`, `data`, `helpers`, `validation`, `seeder`, `rubric_builder`.
+- **ORM:** SQLAlchemy 2 (`modules/models.py`) — tables: `users`, `courses` (is_pbl, owner_id), `classes` (owner_id, lecturer_id, name, lecturer, academic_year, soal_ats_teori, soal_ats_praktikum, soal_aas_teori, soal_aas_praktikum), `categories`, `components` (cpl_pis JSON), `criteria`, `criteria_subjects`, `students`, `scores`, `cpls` (proficiency_level, so_codes), `so_pis`, `performance_indicators`, `proficiency_levels`.
 - **Migrations:** Flask-Migrate / Alembic (`migrations/`) — schema managed via `flask db migrate` / `flask db upgrade`.
 - **DB:** MySQL (default, via PyMySQL) or SQLite (set `RKS_DB_ENGINE`), both configured through `SQLALCHEMY_DATABASE_URI` in `.env`.
 - **Auth:** Argon2 password hashing; session-based login; default password = email.
 - **Frontend:** Server-rendered Jinja2 + vanilla JS, Chart.js via CDN, SVG icons, toast notifications (top-right).
-- **Roles:** `tim_kurikulum` (manages users, sees all courses/classes) and `lecturer` (only own courses/classes).
+- **Roles:** `admin` (kajur, akses penuh), `kps` (per program studi; kelola user prodi/dosen, SO-PI & statistik prodinya, lihat/edit mata kuliah prodinya), and `lecturer` (mata kuliah milik sendiri + kelas yang di-assign via `lecturer_id`).
 
 ## 3. Features
 
 ### 3.1 Auth
 - **`/` is the login page.** `/dashboard` is the main app page (requires login).
 - Login / logout. Change password.
-- Users seeded from https://rks.polibatam.ac.id/#dosen — 13 lecturers + tim_kurikulum account. Email is the username; **default password is the email**.
-- `tim_kurikulum` can create/edit/delete users (name, email, role, password).
+- Seeded accounts: `admin@polibatam.ac.id`, `kajur-if@polibatam.ac.id` (`admin`), plus KPS accounts per prodi (`kps`). Email is the username; **default password is the email**.
+- `admin` manages all users; `kps` can create/edit/delete `kps` and `lecturer` accounts (cannot create/edit/delete `admin`).
 
 ### 3.2 Dashboard (`/dashboard`)
 - 4 summary cards (courses, classes, students, students assessed) scoped to the user.
@@ -37,8 +37,13 @@ Let lecturers grade students against a two-level hierarchical rubric (categories
 - PIs offered are only those belonging to the SOs chosen for that CPL. If PBL, Partisipatif + Proyek ≥ 50% (validated).
 
 ### 3.4 Manage Classes (`/courses/<id>/classes`)
-- Create/edit/delete classes (name + lecturer), 40 student rows each.
-- Per class: **Assess**, **Show Portfolio**. Top-right: **Show Combined Portfolio** (all classes of the course).
+- Create/edit/delete classes (name + lecturer dropdown via `lecturer_id` + `academic_year`), 40 student rows each.
+- Per class: **Assess**, **Show Portfolio**, **Rubrik SID**, **Soal Asesmen** (4 URLs: ATS/AAS Teori & Praktikum). Top-right: **Show Combined Portfolio** (course owner, KPS prodi, or admin).
+- Assigned lecturers (`lecturer_id == user.id`) only see their assigned classes and cannot delete classes or edit the course rubric.
+
+### 3.7 Statistik (`/sopi/statistics`)
+- Accessible to `admin` (all prodi or filter by prodi) and `kps` (own prodi).
+- Supports filtering by **Angkatan** (derived from NIM digits 4–5) or **Tahun Ajaran** (`classes.academic_year`), plus comparison chart.
 
 ### 3.5 Assess (per class, spreadsheet)
 - No/NIM/Nama columns (royal blue), then category groups → component columns with SO-PI chips, numeric 0–100 cells, Total (unfilled = 0) and Grade (A ≥85 … E) as last columns.
@@ -63,7 +68,11 @@ Let lecturers grade students against a two-level hierarchical rubric (categories
 | GET/POST | `/api/classes/<id>/export` `/import` | Excel roundtrip |
 | GET | `/api/classes/<id>/portfolio` | per-class portfolio |
 | GET | `/api/courses/<id>/portfolio` | combined portfolio |
-| GET/POST/PUT/DELETE | `/users/api/users...` | user management (tim_kurikulum) |
+| GET/POST/PUT/DELETE | `/users/api/users...` | user management (`admin`, `kps`) |
+| GET | `/api/users/lecturers` | list all user accounts for class lecturer picker |
+| GET/PUT | `/api/classes/<id>/assessment-links` | get / save 4 assessment question links per class |
+| GET | `/sopi/api/statistics/filters` | available angkatan, academic years, and programs |
+| GET | `/sopi/api/statistics` | curriculum statistics (`mode=angkatan|tahun_ajaran`, `value`, `study_program`) |
 
 ## 5. Non-functional
 

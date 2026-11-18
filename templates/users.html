@@ -5,7 +5,7 @@
 <section class="page-head">
   <div>
     <h1>Manage Users</h1>
-    <p>Create, edit, or remove accounts. Tim Kurikulum manages all users.</p>
+    <p>Create, edit, or remove accounts. Admin manages all users; KPS manages KPS and lecturer accounts.</p>
   </div>
   <div class="head-actions">
     <button class="btn btn-primary" id="btn-add-user">Add User</button>
@@ -54,12 +54,15 @@
       <label class="upload-field">
         <span>Role</span>
         <select id="user-role">
-          <option value="lecturer">Lecturer</option>
-          <option value="tim_kurikulum">Tim Kurikulum</option>
+          <option value="lecturer">Dosen</option>
+          <option value="kps">KPS</option>
+          {% if user and user.role == 'admin' %}
+          <option value="admin">Admin</option>
+          {% endif %}
         </select>
       </label>
       <label class="upload-field" id="user-programs-field" hidden>
-        <span>Program Studi (Tim Kurikulum)</span>
+        <span id="user-programs-label">Program Studi</span>
         <select id="user-programs"></select>
       </label>
       <label class="upload-field">
@@ -98,19 +101,25 @@ async function loadUsers() {
   usersCache = {};
   users.forEach(x => usersCache[x.id] = x);
   const body = document.getElementById('user-body');
+  const isKpsViewer = window.CURRENT_USER && window.CURRENT_USER.role === 'kps';
+  const roleLabel = r => r === 'admin' ? 'Admin' : (r === 'kps' ? 'KPS' : 'Dosen');
   if (!users.length) {
     body.innerHTML = '<tr><td colspan="4" class="empty">No users found.</td></tr>';
   } else {
-    body.innerHTML = users.map(u => `
+    body.innerHTML = users.map(u => {
+      const canModify = !(isKpsViewer && u.role === 'admin');
+      const spBadge = u.study_program ? ` (${esc(u.study_program)})` : '';
+      return `
       <tr>
-        <td>${u.name}</td>
-        <td class="mono">${u.email}</td>
-        <td><span class="role-badge">${u.role}</span></td>
+        <td>${esc(u.name)}</td>
+        <td class="mono">${esc(u.email)}</td>
+        <td><span class="role-badge">${roleLabel(u.role)}${spBadge}</span></td>
         <td class="actions">
-          <button class="icon-btn" title="Edit" data-edit="${u.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
-          <button class="icon-btn icon-danger" title="Delete" data-del="${u.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+          ${canModify ? `<button class="icon-btn" title="Edit" data-edit="${u.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>` : ''}
+          ${canModify ? `<button class="icon-btn icon-danger" title="Delete" data-del="${u.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
         </td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
   }
   document.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openUserModal(b.dataset.edit)));
   document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => deleteUser(b.dataset.del)));
@@ -151,15 +160,27 @@ document.getElementById('btn-show-all').addEventListener('click', () => {
 });
 
 function renderUserPrograms(selected) {
+  const role = document.getElementById('user-role').value;
   const wrap = document.getElementById('user-programs');
-  const value = selected || 'RKS';
-  wrap.innerHTML = userPrograms.map(p => `<option value="${p.code}">${esc(p.label)}</option>`).join('');
-  if (userPrograms.some(p => p.code === value)) wrap.value = value;
+  const opts = role === 'lecturer'
+    ? ['<option value="">— Opsional —</option>', ...userPrograms.map(p => `<option value="${p.code}">${esc(p.label)}</option>`)]
+    : userPrograms.map(p => `<option value="${p.code}">${esc(p.label)}</option>`);
+  wrap.innerHTML = opts.join('');
+  const value = selected || (role === 'kps' ? 'RKS' : '');
+  if (value && userPrograms.some(p => p.code === value)) {
+    wrap.value = value;
+  } else if (role === 'lecturer') {
+    wrap.value = '';
+  }
 }
 
 function updateUserProgramsField() {
   const role = document.getElementById('user-role').value;
-  document.getElementById('user-programs-field').hidden = role !== 'tim_kurikulum';
+  const field = document.getElementById('user-programs-field');
+  const label = document.getElementById('user-programs-label');
+  field.hidden = role === 'admin';
+  label.textContent = role === 'kps' ? 'Program Studi (Wajib untuk KPS)' : 'Program Studi (Opsional)';
+  renderUserPrograms(document.getElementById('user-programs').value);
 }
 
 function openUserModal(id) {
@@ -170,15 +191,15 @@ function openUserModal(id) {
   document.getElementById('user-role').value = 'lecturer';
   document.getElementById('user-password').value = '';
   document.getElementById('user-status').innerHTML = '';
-  renderUserPrograms([]);
+  updateUserProgramsField();
   if (id && usersCache[id]) {
     const u = usersCache[id];
     document.getElementById('user-name').value = u.name;
     document.getElementById('user-email').value = u.email;
     document.getElementById('user-role').value = u.role;
-    renderUserPrograms(u.study_program || 'RKS');
+    updateUserProgramsField();
+    renderUserPrograms(u.study_program || '');
   }
-  updateUserProgramsField();
   document.getElementById('user-modal').hidden = false;
   
 }
@@ -194,7 +215,7 @@ async function saveUser() {
     role: document.getElementById('user-role').value,
     password: document.getElementById('user-password').value,
   };
-  if (payload.role === 'tim_kurikulum') {
+  if (payload.role !== 'admin') {
     payload.study_program = document.getElementById('user-programs').value;
   }
   const statusEl = document.getElementById('user-status');

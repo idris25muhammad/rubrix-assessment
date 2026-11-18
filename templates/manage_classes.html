@@ -55,11 +55,57 @@
       </label>
       <label class="upload-field">
         <span>Lecturer</span>
-        <input type="text" id="class-lecturer" maxlength="120" placeholder="Fulan Fulltank">
+        <input type="text" id="class-lecturer-search" placeholder="Cari nama atau email dosen..." style="margin-bottom: 6px;">
+        <select id="class-lecturer-id"></select>
       </label>
       <div id="class-status"></div>
       <div class="modal-actions">
         <button class="btn btn-primary" id="class-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assessment links modal -->
+<div class="modal-overlay" id="assessment-modal" hidden>
+  <div class="modal modal-upload">
+    <div class="modal-head">
+      <h3>Soal Asesmen — <span id="assessment-class-name"></span></h3>
+      <button class="modal-close" id="assessment-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="sub">Masukkan tautan Google Drive / URL soal untuk masing-masing asesmen (opsional).</p>
+      <label class="upload-field">
+        <span>ATS Teori</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="url" id="link-ats-teori" placeholder="https://drive.google.com/..." style="flex:1;">
+          <a id="open-ats-teori" class="btn btn-outline btn-sm" target="_blank" rel="noopener noreferrer" hidden title="Buka Link">↗</a>
+        </div>
+      </label>
+      <label class="upload-field">
+        <span>ATS Praktikum</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="url" id="link-ats-praktikum" placeholder="https://drive.google.com/..." style="flex:1;">
+          <a id="open-ats-praktikum" class="btn btn-outline btn-sm" target="_blank" rel="noopener noreferrer" hidden title="Buka Link">↗</a>
+        </div>
+      </label>
+      <label class="upload-field">
+        <span>AAS Teori</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="url" id="link-aas-teori" placeholder="https://drive.google.com/..." style="flex:1;">
+          <a id="open-aas-teori" class="btn btn-outline btn-sm" target="_blank" rel="noopener noreferrer" hidden title="Buka Link">↗</a>
+        </div>
+      </label>
+      <label class="upload-field">
+        <span>AAS Praktikum</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="url" id="link-aas-praktikum" placeholder="https://drive.google.com/..." style="flex:1;">
+          <a id="open-aas-praktikum" class="btn btn-outline btn-sm" target="_blank" rel="noopener noreferrer" hidden title="Buka Link">↗</a>
+        </div>
+      </label>
+      <div id="assessment-status"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="assessment-save">Simpan</button>
       </div>
     </div>
   </div>
@@ -71,6 +117,33 @@
 const COURSE_ID = {{ course_id }};
 const CAN_MANAGE = {{ can_manage | tojson }};
 let editClassId = null;
+let assessmentClassId = null;
+let classesCache = {};
+let lecturersList = [];
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+async function loadLecturers() {
+  try {
+    lecturersList = await fetch(u('api_lecturers')).then(r => r.json());
+  } catch (e) {
+    lecturersList = [];
+  }
+}
+
+function renderLecturerOptions(selectedId, filterText = '') {
+  const sel = document.getElementById('class-lecturer-id');
+  const q = filterText.trim().toLowerCase();
+  const filtered = lecturersList.filter(l =>
+    !q || l.name.toLowerCase().includes(q) || l.email.toLowerCase().includes(q) || String(l.id) === String(selectedId)
+  );
+  const roleLabel = r => r === 'admin' ? 'Admin' : (r === 'kps' ? 'KPS' : 'Dosen');
+  sel.innerHTML = '<option value="">— Pilih Dosen —</option>' +
+    filtered.map(l => `<option value="${l.id}">${esc(l.name)} (${roleLabel(l.role)})</option>`).join('');
+  if (selectedId) sel.value = String(selectedId);
+}
 
 async function loadCourse() {
   const d = await fetch(u('api_classes', COURSE_ID)).then(r => r.json());
@@ -81,60 +154,72 @@ async function loadCourse() {
   const meta = document.getElementById('sheet-meta');
   meta.innerHTML = `
     <div class="meta-grid">
-      <div><span>Course</span><b>${d.course.course_code} · ${d.course.course_name}</b></div>
+      <div><span>Course</span><b>${esc(d.course.course_code)} · ${esc(d.course.course_name)}</b></div>
       <div><span>SKS</span><b>${d.course.sks}</b></div>
-      <div><span>Semester</span><b>${d.course.semester}</b></div>
-      <div><span>Program</span><b>${d.course.study_program}</b></div>
+      <div><span>Semester</span><b>${esc(d.course.semester)}</b></div>
+      <div><span>Program</span><b>${esc(d.course.study_program)}</b></div>
     </div>`;
-  renderClasses(d.classes);
+  renderClasses(d.classes || []);
 }
 
 async function renderClasses(classes) {
+  classesCache = {};
+  classes.forEach(cl => { classesCache[cl.id] = cl; });
   const body = document.getElementById('class-body');
   if (!classes.length) {
     body.innerHTML = '<tr><td colspan="4" class="empty">No classes yet. Add one to start assessing.</td></tr>';
     return;
   }
-  body.innerHTML = classes.map(cl => `
+  body.innerHTML = classes.map(cl => {
+    const linkCount = cl.assessment_links_count || 0;
+    return `
     <tr>
-      <td><b>${cl.name}</b></td>
-      <td>${cl.lecturer || '-'}</td>
+      <td><b>${esc(cl.name)}</b></td>
+      <td>${esc(cl.lecturer || '-')}</td>
       <td class="num">${cl.student_count ?? '-'}</td>
       <td class="actions">
         <a class="btn btn-primary btn-sm" href="${u('assess', cl.id)}">Assess</a>
         <a class="btn btn-outline btn-sm" href="${u('portfolio', cl.id)}">Show Portfolio</a>
         <a class="btn btn-outline btn-sm" href="${u('api_export_sid', cl.id)}" title="Rubrik SID">Rubrik SID</a>
-        ${CAN_MANAGE ? `<button class="icon-btn" title="Edit" data-edit="${cl.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>` : ''}
-        ${CAN_MANAGE ? `<button class="icon-btn icon-danger" title="Delete" data-del="${cl.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
+        ${cl.can_edit ? `<button class="btn btn-outline btn-sm" data-assess-links="${cl.id}">Soal Asesmen (${linkCount}/4)</button>` : ''}
+        ${cl.can_edit ? `<button class="icon-btn" title="Edit" data-edit="${cl.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>` : ''}
+        ${cl.can_delete ? `<button class="icon-btn icon-danger" title="Delete" data-del="${cl.id}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
+  document.querySelectorAll('[data-assess-links]').forEach(b => b.addEventListener('click', () => openAssessmentModal(b.dataset.assessLinks)));
   document.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openClassModal(b.dataset.edit)));
   document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => deleteClass(b.dataset.del)));
 }
 
-function openClassModal(id) {
+async function openClassModal(id) {
   editClassId = id || null;
-  document.getElementById('class-modal-title').textContent = id ? 'Edit Class' : 'Add Class';
-  document.getElementById('class-name').value = '';
-  document.getElementById('class-lecturer').value = '';
+  if (!lecturersList.length) await loadLecturers();
+  const cl = id ? classesCache[id] : null;
+  document.getElementById('class-modal-title').textContent = cl ? 'Edit Class' : 'Add Class';
+  document.getElementById('class-name').value = cl ? cl.name : '';
+  document.getElementById('class-lecturer-search').value = '';
+  renderLecturerOptions(cl ? cl.lecturer_id : null, '');
   document.getElementById('class-status').innerHTML = '';
   document.getElementById('class-modal').hidden = false;
-  
 }
+
 function closeClassModal() {
   document.getElementById('class-modal').hidden = true;
-  
 }
 
 async function saveClass() {
   const name = document.getElementById('class-name').value.trim();
-  const lecturer = document.getElementById('class-lecturer').value.trim();
+  const lecturerVal = document.getElementById('class-lecturer-id').value;
+  const lecturer_id = lecturerVal ? parseInt(lecturerVal, 10) : null;
   const statusEl = document.getElementById('class-status');
   if (!name) { statusEl.innerHTML = '<p class="alert-err">✗ Class name is required.</p>'; return; }
   const url = editClassId ? u('api_class', editClassId) : u('api_classes', COURSE_ID);
   const method = editClassId ? 'PUT' : 'POST';
   const res = await fetch(url, {
-    method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, lecturer })
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, lecturer_id })
   });
   const out = await res.json();
   if (res.ok) {
@@ -142,7 +227,7 @@ async function saveClass() {
     showToast(editClassId ? 'Class updated.' : `Class ${name} created.`, 'success');
     loadCourse();
   } else {
-    statusEl.innerHTML = `<p class="alert-err">✗ ${out.error}</p>`;
+    statusEl.innerHTML = `<p class="alert-err">✗ ${esc(out.error)}</p>`;
   }
 }
 
@@ -157,21 +242,99 @@ async function deleteClass(id) {
   }
 }
 
+// ---- Assessment links modal ----
+const LINK_FIELDS = [
+  { input: 'link-ats-teori', open: 'open-ats-teori', key: 'soal_ats_teori' },
+  { input: 'link-ats-praktikum', open: 'open-ats-praktikum', key: 'soal_ats_praktikum' },
+  { input: 'link-aas-teori', open: 'open-aas-teori', key: 'soal_aas_teori' },
+  { input: 'link-aas-praktikum', open: 'open-aas-praktikum', key: 'soal_aas_praktikum' },
+];
+
+function syncOpenLinkBtn(inputId, openId) {
+  const val = document.getElementById(inputId).value.trim();
+  const a = document.getElementById(openId);
+  if (val && /^https?:\/\//i.test(val)) {
+    a.href = val;
+    a.hidden = false;
+  } else {
+    a.removeAttribute('href');
+    a.hidden = true;
+  }
+}
+
+LINK_FIELDS.forEach(f => {
+  document.getElementById(f.input).addEventListener('input', () => syncOpenLinkBtn(f.input, f.open));
+});
+
+async function openAssessmentModal(id) {
+  assessmentClassId = id;
+  const cl = classesCache[id];
+  document.getElementById('assessment-class-name').textContent = cl ? cl.name : '';
+  document.getElementById('assessment-status').innerHTML = '';
+  const res = await fetch(u('api_class_assessment_links', id));
+  const data = await res.json();
+  LINK_FIELDS.forEach(f => {
+    document.getElementById(f.input).value = (res.ok && data[f.key]) ? data[f.key] : '';
+    syncOpenLinkBtn(f.input, f.open);
+  });
+  document.getElementById('assessment-modal').hidden = false;
+}
+
+function closeAssessmentModal() {
+  document.getElementById('assessment-modal').hidden = true;
+}
+
+async function saveAssessmentLinks() {
+  const payload = {};
+  LINK_FIELDS.forEach(f => {
+    payload[f.key] = document.getElementById(f.input).value.trim();
+  });
+  const statusEl = document.getElementById('assessment-status');
+  const res = await fetch(u('api_class_assessment_links', assessmentClassId), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const out = await res.json();
+  if (res.ok) {
+    closeAssessmentModal();
+    showToast('Tautan soal asesmen disimpan.', 'success');
+    loadCourse();
+  } else {
+    statusEl.innerHTML = `<p class="alert-err">✗ ${esc(out.error)}</p>`;
+  }
+}
+
 if (CAN_MANAGE) {
   document.getElementById('btn-add-class').addEventListener('click', () => openClassModal());
   document.getElementById('btn-combined').addEventListener('click', () => {
     window.location.href = u('portfolio_course', COURSE_ID);
   });
 }
+document.getElementById('class-lecturer-search').addEventListener('input', e => {
+  const curVal = document.getElementById('class-lecturer-id').value;
+  renderLecturerOptions(curVal, e.target.value);
+});
 document.getElementById('class-close').addEventListener('click', closeClassModal);
 document.getElementById('class-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('class-modal')) closeClassModal();
 });
 document.getElementById('class-save').addEventListener('click', saveClass);
+
+document.getElementById('assessment-close').addEventListener('click', closeAssessmentModal);
+document.getElementById('assessment-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('assessment-modal')) closeAssessmentModal();
+});
+document.getElementById('assessment-save').addEventListener('click', saveAssessmentLinks);
+
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && !document.getElementById('class-modal').hidden) closeClassModal();
+  if (e.key === 'Escape') {
+    if (!document.getElementById('class-modal').hidden) closeClassModal();
+    if (!document.getElementById('assessment-modal').hidden) closeAssessmentModal();
+  }
 });
 
+loadLecturers();
 loadCourse();
 </script>
 {% endblock %}

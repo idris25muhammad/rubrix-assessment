@@ -1,13 +1,26 @@
 import json
+import re
 
 from flask import Blueprint, jsonify, render_template, request, send_file
 
 from modules.auth import api_login_required, current_user, login_required
-from modules.data import _get_class_data, _get_course_structure, user_owns_class, user_owns_course
+from modules.data import _get_class_data, _get_course_structure
 from modules.seeder import seed_course_data
 from modules.excel import build_sid_workbook, build_workbook, load_workbook_bytes, workbook_bytes
-from modules.helpers import cpl_pis_of
+from modules.helpers import cpl_pis_of, validate_assessment_url
 from modules.models import Category, Class, Component, Course, Score, Student, Cpl, Criteria, CriteriaSubject, User, db
+from modules.permissions import (
+    can_delete_class,
+    can_delete_course,
+    can_edit_class,
+    can_edit_course,
+    can_view_class,
+    can_view_course,
+    is_admin,
+    is_kps,
+    scoped_courses_query,
+    user_program,
+)
 from modules.portfolio import compute_portfolio
 
 bp = Blueprint("courses", __name__)
@@ -16,16 +29,7 @@ MAX_STUDENTS = 40
 
 
 def _courses_for_user(user, q_param="", semester="", page=1, per_page=10):
-    q = Course.query
-    if user["role"] == "tim_kurikulum":
-        program = (user.get("study_program") or "").strip() or "RKS"
-        q = q.filter(Course.study_program == program)
-    else:
-        accessible_ids = {
-            c.id for c in Course.query.all()
-            if c.owner_id == user["id"] or user["id"] in c.get_shared_with()
-        }
-        q = Course.query.filter(Course.id.in_(accessible_ids))
+    q = scoped_courses_query(user)
 
     if q_param:
         q = q.filter(
@@ -58,8 +62,9 @@ def _courses_for_user(user, q_param="", semester="", page=1, per_page=10):
                 .filter(Category.course_id == c.id).count(),
                 "class_count": Class.query.filter_by(course_id=c.id).count(),
                 "owner_name": c.owner.name if c.owner else "-",
-                "can_share": user["role"] == "tim_kurikulum" or c.owner_id == user["id"],
-                "shared": user["id"] in c.get_shared_with(),
+                "can_edit": can_edit_course(user, c),
+                "can_delete": can_delete_course(user, c),
+                "is_assigned": not is_admin(user) and not is_kps(user) and c.owner_id != user["id"],
             }
         )
     return {
@@ -77,10 +82,10 @@ def _courses_for_user(user, q_param="", semester="", page=1, per_page=10):
 @login_required
 def manage_classes_page(course_id):
     user = current_user()
-    if not user_owns_course(user, course_id):
-        return jsonify({"error": "not authorized"}), 403
     course = db.session.get(Course, course_id)
-    can_manage = can_manage_course(user, course)
+    if not can_view_course(user, course):
+        return jsonify({"error": "not authorized"}), 403
+    can_manage = can_edit_course(user, course)
     return render_template("manage_classes.html", course_id=course_id, can_manage=can_manage)
 
 
@@ -88,7 +93,8 @@ def manage_classes_page(course_id):
 @login_required
 def assess_page(class_id):
     user = current_user()
-    if not user_owns_class(user, class_id):
+    klass = db.session.get(Class, class_id)
+    if not can_view_class(user, klass):
         return jsonify({"error": "not authorized"}), 403
     return render_template("assess.html", class_id=class_id)
 
@@ -97,7 +103,8 @@ def assess_page(class_id):
 @login_required
 def portfolio_page(class_id):
     user = current_user()
-    if not user_owns_class(user, class_id):
+    klass = db.session.get(Class, class_id)
+    if not can_view_class(user, klass):
         return jsonify({"error": "not authorized"}), 403
     return render_template("portfolio.html", class_id=class_id)
 
@@ -106,7 +113,8 @@ def portfolio_page(class_id):
 @login_required
 def portfolio_course_page(course_id):
     user = current_user()
-    if not user_owns_course(user, course_id):
+    course = db.session.get(Course, course_id)
+    if not can_edit_course(user, course):
         return jsonify({"error": "not authorized"}), 403
     return render_template("portfolio_course.html", course_id=course_id)
 
@@ -127,16 +135,7 @@ def api_courses():
 @api_login_required
 def api_semesters():
     user = current_user()
-    if user["role"] == "tim_kurikulum":
-        program = (user.get("study_program") or "").strip() or "RKS"
-        semesters = db.session.query(Course.semester).filter(Course.study_program == program).distinct().all()
-    else:
-        accessible_ids = {
-            c.id for c in Course.query.all()
-            if c.owner_id == user["id"] or user["id"] in c.get_shared_with()
-        }
-        semesters = db.session.query(Course.semester).filter(Course.id.in_(accessible_ids)).distinct().all()
-
+    semesters = scoped_courses_query(user).with_entities(Course.semester).distinct().all()
     sem_list = [s[0] for s in semesters if s[0] and s[0].strip()]
     sem_list.sort(reverse=True)
     return jsonify(sem_list)
@@ -217,67 +216,40 @@ def api_programs():
 @api_login_required
 def api_dashboard():
     user = current_user()
-    if user["role"] == "tim_kurikulum":
-        program = (user.get("study_program") or "").strip() or "RKS"
-        course_ids = [c.id for c in Course.query.filter_by(study_program=program).all()]
-        course_count = len(course_ids)
-        if course_ids:
-            class_q = Class.query.filter(Class.course_id.in_(course_ids))
-            class_ids = [cl.id for cl in class_q.all()]
-            class_count = len(class_ids)
-            if class_ids:
-                student_count = Student.query.filter(
-                    Student.class_id.in_(class_ids),
-                    db.func.trim(Student.nim) != "",
-                    db.func.trim(Student.name) != "",
-                ).count()
-                assessed_count = db.session.query(Score.student_id).join(Student).filter(
-                    Student.class_id.in_(class_ids)
-                ).distinct().count()
-                total_scores = Score.query.join(Student).filter(
-                    Student.class_id.in_(class_ids)
-                ).count()
-            else:
-                student_count = 0
-                assessed_count = 0
-                total_scores = 0
-        else:
-            class_count = 0
-            student_count = 0
-            assessed_count = 0
-            total_scores = 0
+    courses = scoped_courses_query(user).all()
+    course_ids = [c.id for c in courses]
+    course_count = len(course_ids)
+
+    if is_admin(user) or is_kps(user):
+        class_ids = [cl.id for cl in Class.query.filter(Class.course_id.in_(course_ids)).all()] if course_ids else []
     else:
-        accessible_courses = [
-            c.id for c in Course.query.all()
-            if c.owner_id == user["id"] or user["id"] in c.get_shared_with()
-        ]
-        course_count = len(accessible_courses)
-
-        classes_q = Class.query.filter(
-            (Class.owner_id == user["id"]) | (Class.course_id.in_(accessible_courses))
-        ) if accessible_courses else Class.query.filter_by(owner_id=user["id"])
-
-        class_count = classes_q.count()
-        user_class_ids = [cl.id for cl in classes_q.all()]
-        
-        if user_class_ids:
-            student_count = Student.query.filter(
-                Student.class_id.in_(user_class_ids),
-                db.func.trim(Student.nim) != "",
-                db.func.trim(Student.name) != ""
-            ).count()
-            
-            assessed_count = db.session.query(Score.student_id).join(Student).filter(
-                Student.class_id.in_(user_class_ids)
-            ).distinct().count()
-            
-            total_scores = Score.query.join(Student).filter(
-                Student.class_id.in_(user_class_ids)
-            ).count()
+        owned_course_ids = [c.id for c in courses if c.owner_id == user["id"]]
+        if owned_course_ids:
+            classes_q = Class.query.filter(
+                db.or_(Class.lecturer_id == user["id"], Class.course_id.in_(owned_course_ids))
+            )
         else:
-            student_count = 0
-            assessed_count = 0
-            total_scores = 0
+            classes_q = Class.query.filter(Class.lecturer_id == user["id"])
+        class_ids = [cl.id for cl in classes_q.all()]
+
+    class_count = len(class_ids)
+    if class_ids:
+        student_count = Student.query.filter(
+            Student.class_id.in_(class_ids),
+            db.func.trim(Student.nim) != "",
+            db.func.trim(Student.name) != "",
+        ).count()
+        assessed_count = db.session.query(Score.student_id).join(Student).filter(
+            Student.class_id.in_(class_ids)
+        ).distinct().count()
+        total_scores = Score.query.join(Student).filter(
+            Student.class_id.in_(class_ids)
+        ).count()
+    else:
+        student_count = 0
+        assessed_count = 0
+        total_scores = 0
+
     return jsonify(
         {
             "course_count": course_count,
@@ -366,9 +338,10 @@ def update_course_rubric(course, data):
 @api_login_required
 def api_course_editable(course_id):
     user = current_user()
-    if not user_owns_course(user, course_id):
+    course = db.session.get(Course, course_id)
+    if not can_edit_course(user, course):
         return jsonify({"error": "not authorized"}), 403
-    
+
     editable, reason = check_course_editable(course_id)
     return jsonify({"editable": editable, "error": reason})
 
@@ -377,115 +350,124 @@ def api_course_editable(course_id):
 @api_login_required
 def api_course(course_id):
     user = current_user()
+    course = db.session.get(Course, course_id)
     if request.method == "GET":
-        if not user_owns_course(user, course_id):
+        if not can_view_course(user, course):
             return jsonify({"error": "not authorized"}), 403
         structure = _get_course_structure(course_id)
         if not structure:
             return jsonify({"error": "course not found"}), 404
         return jsonify(structure)
     if request.method == "DELETE":
-        course = db.session.get(Course, course_id)
-        if not can_manage_course(user, course):
+        if not can_delete_course(user, course):
             return jsonify({"error": "not authorized"}), 403
         if course:
             db.session.delete(course)
             db.session.commit()
         return jsonify({"ok": True})
     if request.method == "PUT":
-        course = db.session.get(Course, course_id)
-        if not can_manage_course(user, course):
+        if not can_edit_course(user, course):
             return jsonify({"error": "not authorized"}), 403
         if not course:
             return jsonify({"error": "course not found"}), 404
-            
+
         editable, reason = check_course_editable(course_id)
         if not editable:
             return jsonify({"error": reason}), 400
-            
+
         payload = request.json or {}
         from modules.rubric_builder import build_rubric_from_wizard
-        
+
         try:
             data = build_rubric_from_wizard(payload)
             update_course_rubric(course, data)
             db.session.commit()
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
-            
+
         return jsonify({"ok": True, "course_code": course.course_code})
 
 
-def can_manage_course(user, course):
-    """Whether the user may edit/delete/share a course (owner or tim_kurikulum of the program)."""
-    if not course:
-        return False
-    if user["role"] == "tim_kurikulum":
-        program = (user.get("study_program") or "").strip() or "RKS"
-        return course.study_program == program
-    return course.owner_id == user["id"]
-
-
-def can_manage_class(user, class_id):
-    """Whether the user may edit/delete a class (owner or tim_kurikulum of its course)."""
-    klass = db.session.get(Class, class_id)
-    if not klass or not klass.course:
-        return False
-    return can_manage_course(user, klass.course)
-
-
-@bp.route("/api/courses/<int:course_id>/share", methods=["PUT"])
+@bp.route("/api/users/lecturers")
 @api_login_required
-def api_course_share(course_id):
-    user = current_user()
-    course = db.session.get(Course, course_id)
-    if not course:
-        return jsonify({"error": "course not found"}), 404
-    if not can_manage_course(user, course):
-        return jsonify({"error": "not authorized"}), 403
+def api_lecturers():
+    """Return all user accounts for the class lecturer dropdown."""
+    users = User.query.order_by(User.name).all()
+    return jsonify(
+        [
+            {"id": u.id, "name": u.name, "email": u.email, "role": u.role}
+            for u in users
+        ]
+    )
 
-    payload = request.json or {}
-    user_ids = payload.get("user_ids")
-    if not isinstance(user_ids, list):
-        return jsonify({"error": "user_ids must be a list"}), 400
-    if any(not isinstance(i, int) for i in user_ids):
-        return jsonify({"error": "user_ids must be integers"}), 400
 
-    user_ids = list(dict.fromkeys(user_ids))
-    existing_ids = {u[0] for u in db.session.query(User.id).filter(User.id.in_(user_ids)).all()}
-    invalid = [i for i in user_ids if i not in existing_ids]
-    if invalid:
-        return jsonify({"error": f"user(s) not found: {', '.join(map(str, invalid))}"}), 400
+def _resolve_lecturer(payload):
+    """Validate optional lecturer_id from payload. Returns (lecturer_id, lecturer_name, error_response)."""
+    raw_id = payload.get("lecturer_id")
+    if raw_id in (None, "", 0, "0"):
+        return None, "", None
+    try:
+        uid = int(raw_id)
+    except (TypeError, ValueError):
+        return None, None, (jsonify({"error": "lecturer_id tidak valid"}), 400)
+    lecturer_user = db.session.get(User, uid)
+    if not lecturer_user:
+        return None, None, (jsonify({"error": "dosen tidak ditemukan"}), 404)
+    return lecturer_user.id, lecturer_user.name, None
 
-    course.shared_with = json.dumps(user_ids, ensure_ascii=False)
-    db.session.commit()
-    return jsonify({"ok": True, "shared_with": course.get_shared_with()})
+
+def _derive_academic_year(course, explicit=None):
+    val = (explicit or "").strip()
+    if val:
+        return val
+    if course and course.semester:
+        m = re.search(r"(\d{4}\s*/\s*\d{4})", course.semester)
+        if m:
+            return m.group(1).replace(" ", "")
+    return None
 
 
 @bp.route("/api/courses/<int:course_id>/classes", methods=["GET", "POST"])
 @api_login_required
 def api_classes(course_id):
     user = current_user()
+    course = db.session.get(Course, course_id)
     if request.method == "GET":
-        if not user_owns_course(user, course_id):
+        if not can_view_course(user, course):
             return jsonify({"error": "not authorized"}), 403
         structure = _get_course_structure(course_id)
         if not structure:
             return jsonify({"error": "course not found"}), 404
-        return jsonify({"course": structure["course"], "classes": structure["classes"]})
+        classes = structure["classes"]
+        if not can_edit_course(user, course):
+            # Assigned lecturer only sees classes assigned to them.
+            classes = [cl for cl in classes if cl["lecturer_id"] == user["id"]]
+        for cl in classes:
+            cl["can_edit"] = can_edit_course(user, course) or (cl["lecturer_id"] == user["id"])
+            cl["can_delete"] = is_admin(user) or (course.owner_id == user["id"])
+        return jsonify({"course": structure["course"], "classes": classes})
     if request.method == "POST":
-        course = db.session.get(Course, course_id)
-        if not can_manage_course(user, course):
+        if not can_edit_course(user, course):
             return jsonify({"error": "not authorized"}), 403
         payload = request.json or {}
         name = payload.get("name", "").strip()
-        lecturer = payload.get("lecturer", "").strip()
+        academic_year = _derive_academic_year(course, payload.get("academic_year"))
         if not name:
             return jsonify({"error": "class name is required"}), 400
+        lecturer_id, lecturer_name, err = _resolve_lecturer(payload)
+        if err:
+            return err
         existing = Class.query.filter_by(course_id=course_id, name=name).first()
         if existing:
             return jsonify({"error": f"class '{name}' already exists"}), 400
-        klass = Class(course_id=course_id, owner_id=user["id"], name=name, lecturer=lecturer)
+        klass = Class(
+            course_id=course_id,
+            owner_id=user["id"],
+            lecturer_id=lecturer_id,
+            name=name,
+            lecturer=lecturer_name,
+            academic_year=academic_year,
+        )
         db.session.add(klass)
         db.session.flush()
         for n in range(1, MAX_STUDENTS + 1):
@@ -500,51 +482,90 @@ def api_classes(course_id):
 @api_login_required
 def api_class(class_id):
     user = current_user()
+    klass = db.session.get(Class, class_id)
     if request.method == "GET":
-        if not user_owns_class(user, class_id):
+        if not can_view_class(user, klass):
             return jsonify({"error": "not authorized"}), 403
         data = _get_class_data(class_id)
         if not data:
             return jsonify({"error": "class not found"}), 404
         return jsonify(data)
     if request.method == "DELETE":
-        if not can_manage_class(user, class_id):
+        if not can_delete_class(user, klass):
             return jsonify({"error": "not authorized"}), 403
-        klass = db.session.get(Class, class_id)
         if klass:
             db.session.delete(klass)
             db.session.commit()
         return jsonify({"ok": True})
     if request.method == "PUT":
-        if not can_manage_class(user, class_id):
+        if not can_edit_class(user, klass):
             return jsonify({"error": "not authorized"}), 403
         payload = request.json or {}
         name = payload.get("name", "").strip()
-        lecturer = payload.get("lecturer", "").strip()
+        academic_year = _derive_academic_year(klass.course, payload.get("academic_year")) if "academic_year" in payload else (klass.academic_year or _derive_academic_year(klass.course))
         if not name:
             return jsonify({"error": "class name is required"}), 400
-        klass = db.session.get(Class, class_id)
         if not klass:
             return jsonify({"error": "class not found"}), 404
+        lecturer_id, lecturer_name, err = _resolve_lecturer(payload)
+        if err:
+            return err
         existing = Class.query.filter(
             Class.course_id == klass.course_id, Class.name == name, Class.id != class_id
         ).first()
         if existing:
             return jsonify({"error": f"class '{name}' already exists"}), 400
         klass.name = name
-        klass.lecturer = lecturer
+        klass.lecturer_id = lecturer_id
+        klass.lecturer = lecturer_name
+        klass.academic_year = academic_year
         db.session.commit()
         return jsonify({"ok": True})
+
+
+@bp.route("/api/classes/<int:class_id>/assessment-links", methods=["GET", "PUT"])
+@api_login_required
+def api_class_assessment_links(class_id):
+    user = current_user()
+    klass = db.session.get(Class, class_id)
+    if not can_edit_class(user, klass):
+        return jsonify({"error": "not authorized"}), 403
+
+    if request.method == "GET":
+        return jsonify({
+            "class_id": klass.id,
+            **klass.assessment_links_dict(),
+            "assessment_links_count": klass.assessment_links_count(),
+        })
+
+    payload = request.json or {}
+    fields = ("soal_ats_teori", "soal_ats_praktikum", "soal_aas_teori", "soal_aas_praktikum")
+    cleaned = {}
+    for field in fields:
+        val, err = validate_assessment_url(payload.get(field))
+        if err:
+            return jsonify({"error": err}), 400
+        cleaned[field] = val
+
+    for field, val in cleaned.items():
+        setattr(klass, field, val)
+    db.session.commit()
+    return jsonify({
+        "ok": True,
+        "class_id": klass.id,
+        **klass.assessment_links_dict(),
+        "assessment_links_count": klass.assessment_links_count(),
+    })
 
 
 @bp.route("/api/classes/<int:class_id>/save", methods=["POST"])
 @api_login_required
 def api_save(class_id):
     user = current_user()
-    if not user_owns_class(user, class_id):
+    klass = db.session.get(Class, class_id)
+    if not can_edit_class(user, klass):
         return jsonify({"error": "not authorized"}), 403
     payload = request.json
-    klass = db.session.get(Class, class_id)
     if not klass:
         return jsonify({"error": "class not found"}), 404
 
@@ -576,7 +597,8 @@ def api_save(class_id):
 @api_login_required
 def api_export(class_id):
     user = current_user()
-    if not user_owns_class(user, class_id):
+    klass = db.session.get(Class, class_id)
+    if not can_view_class(user, klass):
         return jsonify({"error": "not authorized"}), 403
     data = _get_class_data(class_id)
     if not data:
@@ -595,7 +617,8 @@ def api_export(class_id):
 @api_login_required
 def api_export_sid(class_id):
     user = current_user()
-    if not user_owns_class(user, class_id):
+    klass = db.session.get(Class, class_id)
+    if not can_view_class(user, klass):
         return jsonify({"error": "not authorized"}), 403
     data = _get_class_data(class_id)
     if not data:
@@ -614,7 +637,8 @@ def api_export_sid(class_id):
 @api_login_required
 def api_import(class_id):
     user = current_user()
-    if not user_owns_class(user, class_id):
+    klass = db.session.get(Class, class_id)
+    if not can_edit_class(user, klass):
         return jsonify({"error": "not authorized"}), 403
     file = request.files.get("file")
     if not file:
@@ -775,7 +799,8 @@ def api_import(class_id):
 @api_login_required
 def api_class_portfolio(class_id):
     user = current_user()
-    if not user_owns_class(user, class_id):
+    klass = db.session.get(Class, class_id)
+    if not can_view_class(user, klass):
         return jsonify({"error": "not authorized"}), 403
     data = _get_class_data(class_id)
     if not data:
@@ -792,7 +817,8 @@ def api_class_portfolio(class_id):
 @api_login_required
 def api_course_portfolio(course_id):
     user = current_user()
-    if not user_owns_course(user, course_id):
+    course = db.session.get(Course, course_id)
+    if not can_edit_course(user, course):
         return jsonify({"error": "not authorized"}), 403
     structure = _get_course_structure(course_id)
     if not structure:

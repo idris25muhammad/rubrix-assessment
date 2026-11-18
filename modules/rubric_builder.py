@@ -103,15 +103,22 @@ def build_rubric_from_wizard(payload):
             so_codes.append(so_code)
         if not so_codes:
             raise ValueError(f"CPL {code} harus memetakan minimal 1 SO")
-        cpls.append(
-            {
-                "code": code,
-                "description": str(cpl.get("description", "")).strip(),
-                "proficiency_level": level,
-                "so_codes": so_codes,
-            }
-        )
+        cpl_entry = {
+            "code": code,
+            "description": str(cpl.get("description", "")).strip(),
+            "proficiency_level": level,
+            "so_codes": so_codes,
+        }
+        if isinstance(cpl.get("assessment_rubric"), dict):
+            cpl_entry["assessment_rubric"] = cpl["assessment_rubric"]
+        cpls.append(cpl_entry)
         cpl_codes.add(code)
+
+    cpl_rubric_pis = {
+        c["code"]: set(c["assessment_rubric"].keys())
+        for c in cpls
+        if isinstance(c.get("assessment_rubric"), dict)
+    }
 
     # Build categories / components.
     cats_in = payload.get("categories") or {}
@@ -163,11 +170,12 @@ def build_rubric_from_wizard(payload):
                 if so_code not in so_map:
                     raise ValueError(f"Komponen '{name}' memilih SO '{so_code}' yang tidak dikenal")
                 valid_pis = {p["pi_code"] for p in so_map[so_code]["performance_indicator"]}
+                valid_pis |= cpl_rubric_pis.get(cpl_code, set())
                 if pi_code not in valid_pis:
                     raise ValueError(f"PI '{pi_code}' tidak valid untuk SO '{so_code}' pada komponen '{name}'")
                 mappings.append({"cpl": cpl_code, "so": so_code, "pi": pi_code})
             criteria_in = comp.get("criteria")
-            if isinstance(criteria_in, list) and len(criteria_in) == 5:
+            if isinstance(criteria_in, list) and len(criteria_in) >= 1:
                 criteria = []
                 for idx, cr in enumerate(criteria_in):
                     level = cr.get("level")
@@ -188,9 +196,10 @@ def build_rubric_from_wizard(payload):
                     else:
                         subjects = [str(s).strip() for s in subjects if str(s).strip()]
                         
+                    fallback_label = DEFAULT_CRITERIA[idx]["label"] if idx < len(DEFAULT_CRITERIA) else f"Level {idx + 1}"
                     criteria.append({
                         "level": level,
-                        "label": label_cr if label_cr else DEFAULT_CRITERIA[idx]["label"],
+                        "label": label_cr if label_cr else fallback_label,
                         "score_min": score_min,
                         "score_max": score_max,
                         "subjects": subjects
@@ -220,6 +229,36 @@ def build_rubric_from_wizard(payload):
         )
         if pbl_weight < 50:
             raise ValueError(f"Untuk PBL, Partisipatif + Proyek harus >= 50%, sekarang {pbl_weight:g}%")
+
+    # Finalization validation: every CPL/CLO and PI must be mapped to the rubric.
+    all_comps = [comp for cat in categories for comp in cat["components"]]
+    unmapped_weighted = [comp["name"] for comp in all_comps if comp["weight"] > 0 and not comp["cpl_pis"]]
+    if unmapped_weighted:
+        raise ValueError(
+            f"Komponen berbobot berikut belum dipetakan ke CPL/PI: {', '.join(unmapped_weighted)}. "
+            "Silakan kaji ulang sebelum membuat rubrik."
+        )
+
+    used_cpls = {m["cpl"] for comp in all_comps for m in comp["cpl_pis"]}
+    unmapped_cpls = [c["code"] for c in cpls if c["code"] not in used_cpls]
+    if unmapped_cpls:
+        raise ValueError(
+            f"CPL/CLO berikut belum dipetakan ke komponen rubrik: {', '.join(unmapped_cpls)}. "
+            "Silakan kaji ulang sebelum membuat rubrik."
+        )
+
+    used_cpl_pis = {(m["cpl"], m["pi"]) for comp in all_comps for m in comp["cpl_pis"]}
+    unmapped_pis = [
+        f"{c['code']}-{pi_code}"
+        for c in cpls
+        for pi_code in (c.get("assessment_rubric") or {}).keys()
+        if (c["code"], pi_code) not in used_cpl_pis
+    ]
+    if unmapped_pis:
+        raise ValueError(
+            f"PI berikut belum dipetakan ke komponen rubrik: {', '.join(unmapped_pis)}. "
+            "Silakan kaji ulang sebelum membuat rubrik."
+        )
 
     return {
         "course_code": course_code,

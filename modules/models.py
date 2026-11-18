@@ -46,20 +46,9 @@ class Course(db.Model):
     study_program = db.Column(String(120), default="")
     is_pbl = db.Column(Boolean, default=False)
     raw_json = db.Column(Text, nullable=False)
-    shared_with = db.Column(Text, nullable=True)
     created_at = db.Column(DateTime, default=datetime.utcnow)
 
     owner = relationship("User", backref="courses")
-
-    def get_shared_with(self):
-        """User ids this course is shared with (JSON list)."""
-        if not self.shared_with:
-            return []
-        try:
-            val = json.loads(self.shared_with)
-            return val if isinstance(val, list) else []
-        except (TypeError, ValueError):
-            return []
 
     def to_dict(self):
         try:
@@ -77,7 +66,6 @@ class Course(db.Model):
             "study_program": self.study_program,
             "is_pbl": bool(self.is_pbl),
             "target_attainment": target,
-            "shared_with": self.get_shared_with(),
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -89,20 +77,51 @@ class Class(db.Model):
     id = db.Column(Integer, primary_key=True)
     course_id = db.Column(Integer, ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
     owner_id = db.Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    lecturer_id = db.Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     name = db.Column(String(120), nullable=False)
     lecturer = db.Column(String(255), default="")
+    academic_year = db.Column(String(20), nullable=True)
+    soal_ats_teori = db.Column(String(500), nullable=True)
+    soal_ats_praktikum = db.Column(String(500), nullable=True)
+    soal_aas_teori = db.Column(String(500), nullable=True)
+    soal_aas_praktikum = db.Column(String(500), nullable=True)
     created_at = db.Column(DateTime, default=datetime.utcnow)
 
     course = relationship("Course", backref=db.backref("classes", passive_deletes=True))
-    owner = relationship("User", backref="owned_classes")
+    owner = relationship("User", foreign_keys=[owner_id], backref="owned_classes")
+    lecturer_user = relationship("User", foreign_keys=[lecturer_id], backref="assigned_classes")
+
+    def assessment_links_dict(self):
+        return {
+            "soal_ats_teori": self.soal_ats_teori or "",
+            "soal_ats_praktikum": self.soal_ats_praktikum or "",
+            "soal_aas_teori": self.soal_aas_teori or "",
+            "soal_aas_praktikum": self.soal_aas_praktikum or "",
+        }
+
+    def assessment_links_count(self):
+        return sum(
+            1 for v in (
+                self.soal_ats_teori,
+                self.soal_ats_praktikum,
+                self.soal_aas_teori,
+                self.soal_aas_praktikum,
+            )
+            if v and v.strip()
+        )
 
     def to_dict(self):
+        lecturer_name = self.lecturer_user.name if self.lecturer_user else (self.lecturer or "")
         return {
             "id": self.id,
             "course_id": self.course_id,
             "owner_id": self.owner_id,
+            "lecturer_id": self.lecturer_id,
             "name": self.name,
-            "lecturer": self.lecturer,
+            "lecturer": lecturer_name,
+            "academic_year": self.academic_year or "",
+            "assessment_links": self.assessment_links_dict(),
+            "assessment_links_count": self.assessment_links_count(),
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -312,6 +331,7 @@ class Pi(db.Model):
     so_id = db.Column(Integer, ForeignKey("so_pis.id", ondelete="CASCADE"), nullable=False)
     pi_code = db.Column(String(30), nullable=False)
     pi_description = db.Column(Text, nullable=True)
+    proficiency_level = db.Column(Integer, nullable=False, default=3, server_default="3")
     sort_order = db.Column(Integer, default=0)
 
     def to_dict(self):
@@ -320,6 +340,7 @@ class Pi(db.Model):
             "so_id": self.so_id,
             "pi_code": self.pi_code,
             "pi_description": self.pi_description,
+            "proficiency_level": self.proficiency_level if self.proficiency_level is not None else 3,
             "sort_order": self.sort_order,
         }
 

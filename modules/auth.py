@@ -9,7 +9,8 @@ from modules.models import User, db
 bp = Blueprint("auth", __name__)
 hasher = PasswordHasher()
 
-ROLE_TIM_KURIKULUM = "tim_kurikulum"
+ROLE_ADMIN = "admin"
+ROLE_KPS = "kps"
 ROLE_LECTURER = "lecturer"
 
 

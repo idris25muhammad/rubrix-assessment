@@ -69,6 +69,7 @@ def create_app():
             "sopi_levels": url_for("sopi.api_levels"),
             "sopi_statistics": url_for("sopi.statistics"),
             "sopi_api_statistics_semesters": url_for("sopi.api_statistics_semesters"),
+            "sopi_api_statistics_filters": url_for("sopi.api_statistics_filters"),
             "sopi_api_statistics": url_for("sopi.api_statistics"),
             "manage_classes": _url_pat("courses.manage_classes_page", "course_id"),
             "assess": _url_pat("courses.assess_page", "class_id"),
@@ -81,9 +82,9 @@ def create_app():
             "api_create": url_for("courses.api_create_course"),
             "api_course": _url_pat("courses.api_course", "course_id"),
             "api_course_editable": _url_pat("courses.api_course_editable", "course_id"),
-            "api_course_share": _url_pat("courses.api_course_share", "course_id"),
             "api_classes": _url_pat("courses.api_classes", "course_id"),
             "api_class": _url_pat("courses.api_class", "class_id"),
+            "api_class_assessment_links": _url_pat("courses.api_class_assessment_links", "class_id"),
             "api_save": _url_pat("courses.api_save", "class_id"),
             "api_export": _url_pat("courses.api_export", "class_id"),
             "api_export_sid": _url_pat("courses.api_export_sid", "class_id"),
@@ -92,7 +93,7 @@ def create_app():
             "api_course_portfolio": _url_pat("courses.api_course_portfolio", "course_id"),
             "api_users": url_for("users.api_users"),
             "api_user": _url_pat("users.api_user", "user_id"),
-            "share_options": url_for("users.api_share_options"),
+            "api_lecturers": url_for("courses.api_lecturers"),
         }
         return {"urls": urls}
 

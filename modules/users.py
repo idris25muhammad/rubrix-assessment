@@ -1,21 +1,29 @@
 from flask import Blueprint, jsonify, render_template, request
 
-from modules.auth import ROLE_LECTURER, ROLE_TIM_KURIKULUM, api_login_required, current_user, hash_password, role_required
+from modules.auth import ROLE_ADMIN, ROLE_KPS, ROLE_LECTURER, api_login_required, current_user, hash_password, role_required
 from modules.models import User, db
+from modules.permissions import is_admin, is_kps
 from modules.so_pi import PROGRAMS
 
 bp = Blueprint("users", __name__, url_prefix="/users")
 
+VALID_ROLES = (ROLE_ADMIN, ROLE_KPS, ROLE_LECTURER)
+
 
 def _normalize_study_program(payload, role):
-    """Return (study_program_code, None) or (None, error_response)."""
-    if role != ROLE_TIM_KURIKULUM:
-        return None, None  # keep existing / not relevant for lecturers
-    if "study_program" not in payload:
-        return None, None  # keep existing
+    """Return (study_program_code_or_None, error_response_or_None)."""
+    if role == ROLE_ADMIN:
+        return None, None
     value = (payload.get("study_program") or "").strip()
+    if role == ROLE_KPS:
+        if not value:
+            return None, (jsonify({"error": "program studi wajib diisi untuk KPS"}), 400)
+        if value not in PROGRAMS:
+            return None, (jsonify({"error": f"prodi tidak dikenal: {value}"}), 400)
+        return value, None
+    # lecturer: optional
     if not value:
-        return "RKS", None  # default
+        return None, None
     if value not in PROGRAMS:
         return None, (jsonify({"error": f"prodi tidak dikenal: {value}"}), 400)
     return value, None
@@ -23,29 +31,16 @@ def _normalize_study_program(payload, role):
 
 @bp.route("")
 @bp.route("/")
-@role_required(ROLE_TIM_KURIKULUM)
+@role_required(ROLE_ADMIN, ROLE_KPS)
 def index():
     return render_template("users.html")
-
-
-@bp.route("/api/share-options")
-@api_login_required
-def api_share_options():
-    """Lightweight user list for the course-share picker (any logged-in role)."""
-    users = User.query.order_by(User.name).all()
-    return jsonify(
-        [
-            {"id": u.id, "name": u.name, "email": u.email, "role": u.role}
-            for u in users
-        ]
-    )
 
 
 @bp.route("/api/users", methods=["GET", "POST"])
 @api_login_required
 def api_users():
     user = current_user()
-    if user["role"] != ROLE_TIM_KURIKULUM:
+    if not (is_admin(user) or is_kps(user)):
         return jsonify({"error": "not authorized"}), 403
 
     if request.method == "POST":
@@ -56,8 +51,10 @@ def api_users():
         password = payload.get("password", "")
         if not name or not email:
             return jsonify({"error": "name and email are required"}), 400
-        if role not in (ROLE_LECTURER, ROLE_TIM_KURIKULUM):
+        if role not in VALID_ROLES:
             return jsonify({"error": "invalid role"}), 400
+        if is_kps(user) and role == ROLE_ADMIN:
+            return jsonify({"error": "KPS tidak berwenang membuat akun admin"}), 403
         if len(password) < 6:
             return jsonify({"error": "password must be at least 6 characters"}), 400
         study_program, err = _normalize_study_program(payload, role)
@@ -66,8 +63,6 @@ def api_users():
         existing = User.query.filter_by(email=email).first()
         if existing:
             return jsonify({"error": "email already registered"}), 400
-        if study_program is None:
-            study_program = "RKS"  # default for tim_kurikulum
         db.session.add(User(
             name=name,
             email=email,
@@ -108,12 +103,14 @@ def api_users():
 @api_login_required
 def api_user(user_id):
     user = current_user()
-    if user["role"] != ROLE_TIM_KURIKULUM:
+    if not (is_admin(user) or is_kps(user)):
         return jsonify({"error": "not authorized"}), 403
 
+    u = db.session.get(User, user_id)
     if request.method == "DELETE":
-        u = db.session.get(User, user_id)
         if u:
+            if is_kps(user) and u.role == ROLE_ADMIN:
+                return jsonify({"error": "KPS tidak berwenang menghapus akun admin"}), 403
             db.session.delete(u)
             db.session.commit()
         return jsonify({"ok": True})
@@ -125,11 +122,12 @@ def api_user(user_id):
         role = payload.get("role", ROLE_LECTURER)
         if not name or not email:
             return jsonify({"error": "name and email are required"}), 400
-        if role not in (ROLE_LECTURER, ROLE_TIM_KURIKULUM):
+        if role not in VALID_ROLES:
             return jsonify({"error": "invalid role"}), 400
-        u = db.session.get(User, user_id)
         if not u:
             return jsonify({"error": "user not found"}), 404
+        if is_kps(user) and (u.role == ROLE_ADMIN or role == ROLE_ADMIN):
+            return jsonify({"error": "KPS tidak berwenang mengelola akun atau role admin"}), 403
         existing = User.query.filter(User.email == email, User.id != user_id).first()
         if existing:
             return jsonify({"error": "email already in use"}), 400
@@ -139,8 +137,7 @@ def api_user(user_id):
         u.name = name
         u.email = email
         u.role = role
-        if study_program is not None:
-            u.study_program = study_program
+        u.study_program = study_program
         if payload.get("password"):
             if len(payload["password"]) < 6:
                 return jsonify({"error": "password must be at least 6 characters"}), 400
