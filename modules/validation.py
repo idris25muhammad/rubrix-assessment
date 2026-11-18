@@ -25,11 +25,21 @@ def validate_course_json(data):
     sopi = _load_so_pi(program)
     so_map = {so["so_code"]: so for so in sopi["student_outcome"]}
 
-    cpl_rubric_pis = {
-        cpl.get("code"): set(cpl["assessment_rubric"].keys())
-        for cpl in (data.get("cpls") or [])
-        if isinstance(cpl, dict) and cpl.get("code") and isinstance(cpl.get("assessment_rubric"), dict)
-    }
+    cpl_rubric_pis = {}
+    for cpl in (data.get("cpls") or []):
+        if not isinstance(cpl, dict) or not cpl.get("code"):
+            continue
+        pis = set()
+        if isinstance(cpl.get("assessment_rubric"), dict):
+            pis |= set(cpl["assessment_rubric"].keys())
+        for p in (cpl.get("pi_codes") or []):
+            if str(p).strip():
+                pis.add(str(p).strip())
+        for pair in (cpl.get("so_pi_pairs") or []):
+            if isinstance(pair, dict) and pair.get("pi_code"):
+                pis.add(str(pair["pi_code"]).strip())
+        if pis:
+            cpl_rubric_pis[cpl["code"]] = pis
 
     # Collect component CPL-PI mappings.
     component_cpls = {}  # cpl_code -> set of pi codes used

@@ -26,3 +26,11 @@ if DB_ENGINE == "mysql":
     )
 else:
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{DB_FILE}"
+
+# ProdiSync REST API v1 (Read-Only)
+PRODISYNC_BASE_URL = os.environ.get(
+    "RKS_PRODISYNC_BASE_URL",
+    "https://rks.polibatam.ac.id/prodisync/prodisync/api/v1",
+)
+PRODISYNC_API_KEY = os.environ.get("RKS_PRODISYNC_API_KEY", "")
+PRODISYNC_TIMEOUT = int(os.environ.get("RKS_PRODISYNC_TIMEOUT", 15))

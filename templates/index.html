@@ -8,13 +8,8 @@
     <p>Set up courses, classes, and assessment components seamlessly via an interactive wizard or JSON file upload.</p>
   </div>
   <div class="head-actions">
+    <button class="btn btn-primary" id="btn-prodisync">Ambil dari ProdiSync</button>
     <button class="btn btn-outline" id="btn-create">+ Create Rubric</button>
-    <button class="btn btn-teal" id="btn-upload">
-      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-        <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z" />
-      </svg>
-      Upload Course JSON
-    </button>
   </div>
 </section>
 
@@ -55,92 +50,6 @@
   </div>
   <div class="pagination" id="course-pagination" style="margin-top: 16px;"></div>
 </section>
-
-<div class="modal-overlay" id="upload-modal" hidden>
-  <div class="modal modal-upload">
-    <div class="modal-head">
-      <h3>Upload Course JSON</h3>
-      <button class="modal-close" id="upload-close">&times;</button>
-    </div>
-    <div class="modal-body">
-      <p class="upload-help">
-        The course file is exported from the <b>ProdiSync</b> app - or you can create it manually
-        following the <a href="{{ url_for('courses.api_course_template') }}" class="link-download">example JSON
-          template</a>.
-        File JSON tidak selalu menyertakan pemetaan CPL/PI. Jika ada sub-komponen yang belum dipetakan,
-        upload akan membuka wizard untuk melengkapi pemetaannya sebelum course dibuat.
-        After uploading, create one or more classes to start assessing.
-      </p>
-
-      <div class="dropzone" id="dropzone">
-        <input type="file" id="upload-file" accept=".json,application/json" hidden>
-        <div class="dropzone-icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor"
-            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" y1="3" x2="12" y2="15" />
-          </svg></div>
-        <p class="dropzone-main">Drag &amp; drop your <b>.json</b> file here</p>
-        <p class="dropzone-sub">or click to browse files</p>
-      </div>
-
-      <div id="upload-status"></div>
-
-      <details class="upload-json-example">
-        <summary>See JSON structure example</summary>
-        <pre><code>{
-  "course_code": "RKS101",
-  "course_name": "Rubric Assesment 101",
-  "sks": 3,
-  "semester": "2026/2027 Ganjil",
-  "study_program": "RKS",
-  "is_pbl": false,
-  "target_attainment": 60,
-  "categories": [
-    {
-      "key": "partisipatif",
-      "label": "Partisipatif",
-      "components": [
-        {
-          "name": "Keaktifan Diskusi Kelas",
-          "weight": 10,
-          "cpl_pis": [
-            { "cpl": "CPL1", "so": "SO1", "pi": "PI-01.1" }
-          ],
-          "criteria": [
-            {
-              "level": 1, "label": "Sangat Kurang",
-              "score_min": 0, "score_max": 30,
-              "subjects": [
-                "Tidak pernah mengajukan pertanyaan atau menjawab pertanyaan dalam diskusi kelas.",
-                "Secara keseluruhan dinilai sangat kurang."
-              ]
-            },
-            { "level": 2, "label": "Kurang", "score_min": 31, "score_max": 55, "subjects": ["..."] },
-            { "level": 3, "label": "Cukup", "score_min": 56, "score_max": 70, "subjects": ["..."] },
-            { "level": 4, "label": "Baik", "score_min": 71, "score_max": 89, "subjects": ["..."] },
-            { "level": 5, "label": "Sangat Baik", "score_min": 90, "score_max": 100, "subjects": ["..."] }
-          ]
-        }
-      ]
-    }
-  ],
-  "cpls": [
-    {
-      "code": "CPL1",
-      "description": "Mampu menganalisis dan merancang solusi keamanan.",
-      "proficiency_level": 3,
-      "so_codes": ["SO1"],
-      "assessment_rubric": {
-        "PI-01.1": { "1": "...", "2": "...", "3": "...", "4": "...", "5": "..." }
-      }
-    }
-  ]
-}</code></pre>
-      </details>
-    </div>
-  </div>
-</div>
 
 <div class="modal-overlay" id="wizard-modal" hidden>
   <div class="modal modal-wizard">
@@ -233,6 +142,43 @@
           <button class="btn btn-ghost" id="wizard-back" hidden>Back</button>
           <button class="btn btn-primary" id="wizard-next">Next</button>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="prodisync-modal" hidden>
+  <div class="modal modal-wizard" style="max-width: 860px;">
+    <div class="modal-head">
+      <h3>Ambil Matakuliah dari ProdiSync</h3>
+      <button class="modal-close" id="prodisync-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="upload-help" style="margin-bottom: 12px;">
+        Pilih matakuliah yang RPS-nya sudah <b>approved</b> di <b>ProdiSync</b>. Identitas MK, CPL, SO-PI, bobot, dan kriteria akan terisi otomatis agar konsisten dengan RPS, lalu Anda tinggal melengkapi pemetaan sub-komponen ke CPL-PI.
+      </p>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;">
+        <select id="prodisync-program" class="search-input" style="width: 240px; height: 38px; border-radius: 8px; border: 1px solid var(--border); padding: 0 10px; background: var(--card); color: var(--text);"></select>
+        <input type="text" id="prodisync-search" class="search-input" placeholder="Cari kode atau nama matakuliah..." style="flex: 1; min-width: 200px;">
+        <button class="btn btn-outline" id="prodisync-refresh" type="button">Muat Ulang</button>
+      </div>
+      <div id="prodisync-meta" style="font-size: 13px; color: var(--muted); margin-bottom: 10px;"></div>
+      <div id="prodisync-status"></div>
+      <div class="table-wrap" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px;">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Kode</th>
+              <th>Matakuliah</th>
+              <th class="num">SKS</th>
+              <th>RPS / CPL</th>
+              <th class="actions">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="prodisync-list">
+            <tr><td colspan="5" class="empty">Memuat katalog ProdiSync…</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -377,6 +323,8 @@
   let wizardEditCourseId = null;
   let wizardFromUpload = false;
   let uploadCplRubric = {};
+  let uploadCplPis = {};
+  let uploadCplMeta = {};
 
   async function openEdit(id) {
     try {
@@ -402,6 +350,8 @@
     wizardEditCourseId = id;
     wizardFromUpload = false;
     uploadCplRubric = {};
+    uploadCplPis = {};
+    uploadCplMeta = {};
     applyStep1ReadOnly(false);
     wizardStep = 1;
     activeCriteriaIndex = 0;
@@ -594,168 +544,12 @@
   loadDashboard();
   loadDefaultInstruments();
 
-  const modal = document.getElementById('upload-modal');
-  const dropzone = document.getElementById('dropzone');
-  const fileInput = document.getElementById('upload-file');
-  const statusEl = document.getElementById('upload-status');
-
-  function openModal() {
-    modal.hidden = false;
-
-    statusEl.innerHTML = '';
-    dropzone.classList.remove('is-dragover');
-  }
-  function closeModal() {
-    modal.hidden = true;
-
-  }
-
-  document.getElementById('btn-upload').addEventListener('click', openModal);
-  document.getElementById('upload-close').addEventListener('click', closeModal);
-  modal.addEventListener('click', e => {
-    if (e.target === modal) closeModal();
-  });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { if (!modal.hidden) closeModal(); if (!document.getElementById('edit-modal').hidden) closeEdit(); }
+    if (e.key === 'Escape') {
+      if (!document.getElementById('edit-modal').hidden) closeEdit();
+      if (!document.getElementById('prodisync-modal').hidden) closeProdiSyncModal();
+    }
   });
-
-  dropzone.addEventListener('click', () => fileInput.click());
-  ['dragenter', 'dragover'].forEach(ev => dropzone.addEventListener(ev, e => {
-    e.preventDefault();
-    dropzone.classList.add('is-dragover');
-  }));
-  ['dragleave', 'drop'].forEach(ev => dropzone.addEventListener(ev, e => {
-    e.preventDefault();
-    dropzone.classList.remove('is-dragover');
-  }));
-  dropzone.addEventListener('drop', e => {
-    const files = e.dataTransfer.files;
-    if (files.length) handleFile(files[0]);
-  });
-  fileInput.addEventListener('change', e => {
-    if (e.target.files.length) handleFile(e.target.files[0]);
-    e.target.value = '';
-  });
-
-  function validateStructure(data, opts) {
-    const errors = [];
-    const strict = !opts || opts.requireCplPis !== false;
-    const top = ['course_code', 'course_name', 'categories'];
-    for (const k of top) if (!(k in data)) errors.push(`Missing required field "${k}"`);
-    const validCodes = new Set();
-    if (!Array.isArray(data.categories) || !data.categories.length) {
-      errors.push('"categories" must be a non-empty array');
-    } else {
-      let wsum = 0;
-      data.categories.forEach((cat, ci) => {
-        const label = cat && cat.label ? cat.label : `category #${ci + 1}`;
-        if (!cat || typeof cat !== 'object' || !cat.key || !cat.label) {
-          errors.push(`Category #${ci + 1} needs "key" and "label"`);
-          return;
-        }
-        if (!Array.isArray(cat.components) || !cat.components.length) {
-          errors.push(`Category "${label}" has no components`);
-          return;
-        }
-        cat.components.forEach((comp, ri) => {
-          const cname = comp && comp.name ? comp.name : `component #${ri + 1}`;
-          if (!comp || typeof comp !== 'object' || !('weight' in comp)) {
-            errors.push(`Component "${cname}" needs "weight"`);
-            return;
-          }
-          if (!String(comp.name || '').trim()) {
-            errors.push(`Component #${ri + 1} needs a "name"`);
-          }
-          if (typeof comp.weight !== 'number' || comp.weight <= 0) {
-            errors.push(`Component "${cname}" weight must be a positive number`);
-          }
-          if (strict && (!Array.isArray(comp.cpl_pis) || !comp.cpl_pis.length)) {
-            errors.push(`Component "${cname}" needs at least one "cpl_pis" mapping`);
-          }
-          wsum += comp.weight || 0;
-        });
-      });
-      if (strict && Math.abs(wsum - 100) > 0.001) errors.push(`Total weight is ${wsum.toFixed(1)}% - must be 100%`);
-    }
-    if (!Array.isArray(data.cpls) || !data.cpls.length) {
-      errors.push('Course must define at least one "cpls" entry');
-    } else {
-      (data.cpls || []).forEach(clo => {
-        if (!clo.code) errors.push('Each CPL needs "code"');
-        if (![1, 2, 3, 4, 5].includes(Number(clo.proficiency_level))) {
-          errors.push(`CPL ${clo.code} proficiency_level must be 1-5`);
-        }
-      });
-    }
-    if (strict && data.is_pbl) {
-      const byKey = {};
-      (data.categories || []).forEach(c => byKey[c.key] = c);
-      let pbl = 0;
-      ['partisipatif', 'proyek'].forEach(k => {
-        const cat = byKey[k];
-        if (cat) pbl += (cat.components || []).reduce((a, c) => a + (c.weight || 0), 0);
-      });
-      if (pbl < 50) errors.push(`PBL requires Partisipatif + Proyek >= 50%, currently ${pbl.toFixed(1)}%`);
-    }
-    return errors;
-  }
-
-  function countMissingPi(data) {
-    let n = 0;
-    (data.categories || []).forEach(cat => {
-      (cat.components || []).forEach(comp => {
-        if (!Array.isArray(comp.cpl_pis) || !comp.cpl_pis.length) n++;
-      });
-    });
-    return n;
-  }
-
-  async function handleFile(file) {
-    statusEl.innerHTML = '<p class="alert-info">Reading file…</p>';
-    try {
-      const text = await file.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (err) {
-        statusEl.innerHTML = `<p class="alert-err">✗ Not valid JSON: ${err.message}</p>`;
-        return;
-      }
-      const errors = validateStructure(data, { requireCplPis: false });
-      if (errors.length) {
-        statusEl.innerHTML = `<p class="alert-err">✗ Invalid structure:</p><ul class="err-list">${errors.map(x => `<li>${x}</li>`).join('')}</ul>`;
-        return;
-      }
-      const missingPi = countMissingPi(data);
-      if (missingPi > 0) {
-        closeModal();
-        openWizardFromUpload(data);
-        showToast(`JSON valid. ${missingPi} sub-komponen belum dipetakan ke CPL/PI - lengkapi pemetaannya lalu lanjutkan pembuatan.`, 'info');
-        return;
-      }
-      // All components already carry CPL/PI mappings: validate strictly then upload directly.
-      const strictErrors = validateStructure(data);
-      if (strictErrors.length) {
-        statusEl.innerHTML = `<p class="alert-err">✗ Invalid structure:</p><ul class="err-list">${strictErrors.map(x => `<li>${x}</li>`).join('')}</ul>`;
-        return;
-      }
-      statusEl.innerHTML = '<p class="alert-info">Uploading…</p>';
-      const fd = new FormData();
-      fd.append('file', new File([text], file.name, { type: 'application/json' }));
-      const res = await fetch(u('api_upload'), { method: 'POST', body: fd });
-      const out = await res.json();
-      if (res.ok) {
-        closeModal();
-        showToast(`Course ${out.course_code} uploaded. Now create a class.`, 'success');
-        loadCourses();
-        loadDashboard();
-      } else {
-        statusEl.innerHTML = `<p class="alert-err">✗ ${out.error || 'Upload failed'}</p>`;
-      }
-    } catch (err) {
-      statusEl.innerHTML = `<p class="alert-err">✗ ${err.message}</p>`;
-    }
-  }
 
   // ---------------- Create Rubric wizard (5 steps) ----------------
   const WIZARD_CATEGORIES = [
@@ -862,6 +656,8 @@
     wizardEditCourseId = null;
     wizardFromUpload = false;
     uploadCplRubric = {};
+    uploadCplPis = {};
+    uploadCplMeta = {};
     applyStep1ReadOnly(false);
     activeCriteriaIndex = 0;
     wizardCats = WIZARD_CATEGORIES;
@@ -906,21 +702,44 @@
     wizardEditCourseId = null;
   }
 
-  // Continue an uploaded JSON through the wizard: pre-fill everything the file already
-  // provides (course info, CPLs, components, weights, criteria) and jump to step 3 so the
-  // user manually maps each component to CPL/PI before the course is created.
-  async function openWizardFromUpload(data) {
+  // Continue an uploaded JSON or ProdiSync payload through the wizard: pre-fill everything
+  // the source provides (course info, CPLs, components, weights, criteria) so the user
+  // maps each component to CPL/PI before the course is created.
+  async function openWizardFromUpload(data, opts = {}) {
+    const fromProdiSync = !!opts.fromProdiSync;
     wizardEditCourseId = null;
     wizardFromUpload = true;
     uploadCplRubric = {};
+    uploadCplPis = {};
+    uploadCplMeta = {};
     (data.cpls || []).forEach(c => {
-      if (c && c.code && c.assessment_rubric && typeof c.assessment_rubric === 'object' && Object.keys(c.assessment_rubric).length) {
+      if (!c || !c.code) return;
+      const pis = new Set();
+      if (c.assessment_rubric && typeof c.assessment_rubric === 'object' && Object.keys(c.assessment_rubric).length) {
         uploadCplRubric[c.code] = c.assessment_rubric;
+        Object.keys(c.assessment_rubric).forEach(k => pis.add(k));
+      }
+      if (Array.isArray(c.pi_codes)) {
+        c.pi_codes.forEach(p => { if (p) pis.add(String(p).trim()); });
+      }
+      if (Array.isArray(c.so_pi_pairs)) {
+        c.so_pi_pairs.forEach(pair => { if (pair && pair.pi_code) pis.add(String(pair.pi_code).trim()); });
+      }
+      if (pis.size) {
+        uploadCplPis[c.code] = [...pis];
+      }
+      if ((c.pi_codes && c.pi_codes.length) || (c.so_pi_pairs && c.so_pi_pairs.length)) {
+        uploadCplMeta[c.code] = {
+          pi_codes: c.pi_codes || [...pis],
+          so_pi_pairs: c.so_pi_pairs || [],
+        };
       }
     });
     activeCriteriaIndex = 0;
     clearWizardDraft();
-    document.getElementById('wizard-title').textContent = 'Lanjutkan Upload - Pemetaan CPL/PI';
+    document.getElementById('wizard-title').textContent = fromProdiSync
+      ? 'Buat Rubrik dari ProdiSync — Pemetaan CPL/PI'
+      : 'Lanjutkan Upload - Pemetaan CPL/PI';
     document.getElementById('wizard-status').innerHTML = '';
     wizardStep = 1;
 
@@ -965,7 +784,39 @@
     buildWizardWeights();
     buildWizardCriteria();
 
-    applyStep1ReadOnly(true);
+    const catData = {};
+    (data.categories || []).forEach(cat => {
+      catData[cat.key] = cat.components || [];
+    });
+    wizardCats.forEach(cat => {
+      const card = document.querySelector(`.wizard-cat[data-cat="${cat.key}"]`);
+      if (!card) return;
+      const list = card.querySelector('.wizard-comp-list');
+      list.innerHTML = '';
+      const comps = catData[cat.key] || [];
+      if (!comps.length) addWizardComponent(cat.key);
+      else comps.forEach(c => addWizardComponent(cat.key, c));
+      renumberWizardComponents(card);
+    });
+    (data.categories || []).forEach(cat => {
+      (cat.components || []).forEach(comp => {
+        const ckey = `${cat.key}|${comp.name}`;
+        weightState[ckey] = comp.weight;
+        if (Array.isArray(comp.criteria) && comp.criteria.length) {
+          criteriaDraft[ckey] = comp.criteria.map(cr => {
+            const firstSubj = cr.subjects && cr.subjects.length ? cr.subjects[0] : '';
+            return {
+              label: cr.label,
+              score_min: cr.score_min,
+              score_max: cr.score_max,
+              subject: firstSubj,
+            };
+          });
+        }
+      });
+    });
+
+    applyStep1ReadOnly(true, !(Number(data.sks) > 0));
     wizardStep = 1;
     renderWizardStep();
     wizardModal.hidden = false;
@@ -1093,6 +944,10 @@
       if (uploadCplRubric[row.dataset.cpl]) {
         obj.assessment_rubric = uploadCplRubric[row.dataset.cpl];
       }
+      if (uploadCplMeta[row.dataset.cpl]) {
+        obj.pi_codes = uploadCplMeta[row.dataset.cpl].pi_codes || [];
+        obj.so_pi_pairs = uploadCplMeta[row.dataset.cpl].so_pi_pairs || [];
+      }
       cpls.push(obj);
     });
     return cpls;
@@ -1214,9 +1069,11 @@
 
     if (wizardFromUpload) {
       const rubricMap = uploadCplRubric[cplCode];
-      const rubricKeys = rubricMap ? Object.keys(rubricMap) : [];
+      const rubricKeys = (uploadCplPis[cplCode] && uploadCplPis[cplCode].length)
+        ? uploadCplPis[cplCode]
+        : (rubricMap ? Object.keys(rubricMap) : []);
       if (!rubricKeys.length) {
-        piList.innerHTML = `<span class="alert-err wz-pi-error" style="display:inline-block;font-size:12px;">Belum diisi — PI untuk ${esc(cplCode)} belum tersedia di JSON.</span>`;
+        piList.innerHTML = `<span class="alert-err wz-pi-error" style="display:inline-block;font-size:12px;">Belum diisi — PI untuk ${esc(cplCode)} belum tersedia.</span>`;
         return;
       }
       const keySet = new Set(rubricKeys);
@@ -1642,11 +1499,13 @@
     });
   }
 
-  function applyStep1ReadOnly(isReadOnly) {
+  function applyStep1ReadOnly(isReadOnly, sksEditable = false) {
     const step1 = document.getElementById('wizard-step-1');
     if (!step1) return;
     step1.querySelectorAll('input, select, textarea').forEach(el => {
       if (el.id === 'wizard-target-attainment') {
+        el.disabled = false;
+      } else if (el.id === 'wizard-sks' && sksEditable) {
         el.disabled = false;
       } else {
         el.disabled = isReadOnly;
@@ -1803,11 +1662,19 @@
     const usedCplPis = new Set(criteriaList.flatMap(item => (item.cpl_pis || []).map(m => `${m.cpl}|${m.pi}`)));
     const unmappedPis = [];
     cpls.forEach(c => {
+      const reqPis = new Set();
       if (c.assessment_rubric && typeof c.assessment_rubric === 'object') {
-        Object.keys(c.assessment_rubric).forEach(pi => {
-          if (!usedCplPis.has(`${c.code}|${pi}`)) unmappedPis.push(`${c.code}-${pi}`);
-        });
+        Object.keys(c.assessment_rubric).forEach(pi => reqPis.add(pi));
       }
+      if (Array.isArray(c.pi_codes)) {
+        c.pi_codes.forEach(pi => { if (pi) reqPis.add(pi); });
+      }
+      if (Array.isArray(c.so_pi_pairs)) {
+        c.so_pi_pairs.forEach(pair => { if (pair && pair.pi_code) reqPis.add(pair.pi_code); });
+      }
+      reqPis.forEach(pi => {
+        if (!usedCplPis.has(`${c.code}|${pi}`)) unmappedPis.push(`${c.code}-${pi}`);
+      });
     });
     if (unmappedPis.length) {
       status.innerHTML = `<p class="alert-err">✗ PI berikut belum dipetakan ke komponen rubrik: ${unmappedPis.map(esc).join(', ')}. Silakan kaji ulang sebelum membuat rubrik.</p>`;
@@ -1895,6 +1762,150 @@
   // Target Attainment slider listener
   document.getElementById('wizard-target-attainment').addEventListener('input', e => {
     document.getElementById('wizard-target-attainment-val').textContent = e.target.value;
+  });
+
+  // ---------------- ProdiSync Course Picker Modal ----------------
+  const prodisyncModal = document.getElementById('prodisync-modal');
+  let prodisyncCoursesCache = [];
+
+  async function openProdiSyncModal() {
+    document.getElementById('prodisync-status').innerHTML = '';
+    document.getElementById('prodisync-search').value = '';
+    const progSel = document.getElementById('prodisync-program');
+    prodisyncModal.hidden = false;
+    try {
+      const res = await fetch(u('api_prodisync_programs'));
+      const data = await res.json();
+      if (!res.ok) {
+        progSel.innerHTML = '';
+        document.getElementById('prodisync-list').innerHTML = '<tr><td colspan="5" class="empty">Gagal memuat daftar prodi ProdiSync.</td></tr>';
+        document.getElementById('prodisync-status').innerHTML = `<p class="alert-err">✗ ${esc(data.error || 'Gagal memuat prodi ProdiSync')}</p>`;
+        return;
+      }
+      const list = data.programs || [];
+      progSel.innerHTML = list.map(p => `<option value="${esc(p.code)}">${esc(p.label)}</option>`).join('');
+      const cu = window.CURRENT_USER || {};
+      const def = (cu.role === 'kps' && cu.study_program) ? cu.study_program : 'RKS';
+      if (list.some(p => p.code === def)) {
+        progSel.value = def;
+      } else if (list.length > 0) {
+        progSel.value = list[0].code;
+      }
+    } catch (e) {
+      progSel.innerHTML = '';
+      document.getElementById('prodisync-status').innerHTML = `<p class="alert-err">✗ ${esc(e.message)}</p>`;
+      return;
+    }
+    await loadProdiSyncCourses();
+  }
+
+  function closeProdiSyncModal() {
+    prodisyncModal.hidden = true;
+  }
+
+  async function loadProdiSyncCourses() {
+    const program = document.getElementById('prodisync-program').value || 'RKS';
+    const listEl = document.getElementById('prodisync-list');
+    const metaEl = document.getElementById('prodisync-meta');
+    const statusEl = document.getElementById('prodisync-status');
+    statusEl.innerHTML = '';
+    metaEl.textContent = '';
+    listEl.innerHTML = '<tr><td colspan="5" class="empty">Memuat katalog matakuliah dari ProdiSync…</td></tr>';
+    try {
+      const res = await fetch(`${u('api_prodisync_courses')}?program=${encodeURIComponent(program)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        listEl.innerHTML = `<tr><td colspan="5" class="empty">Gagal memuat data ProdiSync.</td></tr>`;
+        statusEl.innerHTML = `<p class="alert-err">✗ ${esc(data.error || 'Gagal memuat katalog ProdiSync')}</p>`;
+        return;
+      }
+      prodisyncCoursesCache = data.courses || [];
+      const meta = data.meta || {};
+      const ta = meta.tahun_ajaran ? `Tahun Ajaran: <b>${esc(meta.tahun_ajaran)}</b>` : '';
+      metaEl.innerHTML = `${ta}${ta ? ' · ' : ''}Ditemukan <b>${prodisyncCoursesCache.length}</b> matakuliah.`;
+      renderProdiSyncCourses();
+    } catch (e) {
+      listEl.innerHTML = `<tr><td colspan="5" class="empty">Gagal terhubung ke server.</td></tr>`;
+      statusEl.innerHTML = `<p class="alert-err">✗ ${esc(e.message)}</p>`;
+    }
+  }
+
+  function renderProdiSyncCourses() {
+    const q = (document.getElementById('prodisync-search').value || '').trim().toLowerCase();
+    const listEl = document.getElementById('prodisync-list');
+    const filtered = prodisyncCoursesCache.filter(c => {
+      if (!q) return true;
+      return (c.kode || '').toLowerCase().includes(q) || (c.nama || '').toLowerCase().includes(q);
+    });
+    if (!filtered.length) {
+      listEl.innerHTML = '<tr><td colspan="5" class="empty">Tidak ada matakuliah yang cocok.</td></tr>';
+      return;
+    }
+    listEl.innerHTML = filtered.map(c => {
+      const rps = c.rps || {};
+      const hasRps = rps && rps.status === 'approved' && (rps.clo_count || 0) > 0;
+      const soText = (rps.so_codes || []).join(', ');
+      const rpsBadge = hasRps
+        ? `<span class="chip" style="background:#dcfce7;color:#166534;">${rps.clo_count} CPL</span> ${soText ? `<small style="color:var(--muted);">${esc(soText)}</small>` : ''}`
+        : `<span class="chip" style="background:#f1f5f9;color:#64748b;">RPS belum approved</span>`;
+
+      let actionHtml = '';
+      if (c.already_exists) {
+        actionHtml = `<span class="chip" style="background:#eef2ff;color:#3730a3;" title="Sudah dibuat oleh ${esc(c.existing_owner || '-')}">Sudah Ada</span>`;
+      } else if (hasRps) {
+        actionHtml = `<button class="btn btn-primary btn-sm" type="button" data-ps-pick="${esc(c.kode)}">Buat Rubrik</button>`;
+      } else {
+        actionHtml = `<button class="btn btn-outline btn-sm" type="button" disabled>Tidak Tersedia</button>`;
+      }
+
+      return `
+        <tr>
+          <td class="mono">${esc(c.kode)}</td>
+          <td>
+            <div>${esc(c.nama)}</div>
+            ${c.kurikulum ? `<small style="color:var(--muted);">${esc(c.kurikulum)}</small>` : ''}
+          </td>
+          <td class="num">${c.sks}</td>
+          <td>${rpsBadge}</td>
+          <td class="actions">${actionHtml}</td>
+        </tr>`;
+    }).join('');
+
+    listEl.querySelectorAll('[data-ps-pick]').forEach(btn => {
+      btn.addEventListener('click', () => pickProdiSyncCourse(btn.dataset.psPick, btn));
+    });
+  }
+
+  async function pickProdiSyncCourse(kodeMk, btn) {
+    const program = document.getElementById('prodisync-program').value || 'RKS';
+    const statusEl = document.getElementById('prodisync-status');
+    statusEl.innerHTML = '<p class="alert-info">Menyinkronkan SO-PI &amp; mengunduh detail rubrik dari ProdiSync…</p>';
+    if (btn) btn.disabled = true;
+    try {
+      const url = `${u('api_prodisync_rubrik', encodeURIComponent(kodeMk))}?program=${encodeURIComponent(program)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        statusEl.innerHTML = `<p class="alert-err">✗ ${esc(data.error || 'Gagal memuat rubrik MK')}</p>`;
+        if (btn) btn.disabled = false;
+        return;
+      }
+      closeProdiSyncModal();
+      await openWizardFromUpload(data.rubrik, { fromProdiSync: true });
+      showToast(`Data ${data.rubrik.course_code} dimuat dari ProdiSync. Lengkapi pemetaan CPL/PI pada komponen.`, 'info');
+    } catch (e) {
+      statusEl.innerHTML = `<p class="alert-err">✗ ${esc(e.message)}</p>`;
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  document.getElementById('btn-prodisync').addEventListener('click', openProdiSyncModal);
+  document.getElementById('prodisync-close').addEventListener('click', closeProdiSyncModal);
+  document.getElementById('prodisync-refresh').addEventListener('click', loadProdiSyncCourses);
+  document.getElementById('prodisync-program').addEventListener('change', loadProdiSyncCourses);
+  document.getElementById('prodisync-search').addEventListener('input', renderProdiSyncCourses);
+  prodisyncModal.addEventListener('click', e => {
+    if (e.target === prodisyncModal) closeProdiSyncModal();
   });
 </script>
 {% endblock %}

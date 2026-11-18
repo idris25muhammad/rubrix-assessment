@@ -5,23 +5,40 @@
 <section class="page-head">
   <div>
     <h1>Manage SO-PI</h1>
-    <p>Kelola set Student Outcome (SO) dan Performance Indicator (PI) per program studi. Perubahan langsung dipakai oleh wizard rubrik.</p>
+    <p>Kelola set Student Outcome (SO) dan Performance Indicator (PI) per program studi. Prodi yang terhubung ke <b>ProdiSync</b> disinkronkan via API (Read-Only).</p>
   </div>
   <div class="head-actions">
     <button class="btn btn-outline" id="btn-levels">Proficiency Levels</button>
-    <button class="btn btn-primary" id="btn-add-so">Add SO</button>
+    <button class="btn btn-primary" id="btn-sync-prodisync" hidden>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px;">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Sync dari ProdiSync
+    </button>
+    <button class="btn btn-primary" id="btn-add-so" hidden>Add SO</button>
   </div>
 </section>
 
+<section class="card" style="margin-bottom: 16px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+  <div id="sopi-mode-banner" style="font-size: 13.5px; color: var(--muted);">
+    Memuat mode program studi…
+  </div>
+  <div id="prodisync-conn-status" style="font-size: 13px; color: var(--muted);">Memeriksa koneksi ProdiSync…</div>
+</section>
+
 <section class="card">
-  <div class="table-toolbar" style="margin-bottom: 16px; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
-    <label for="sopi-program">Program Studi</label>
-    <select id="sopi-program" class="search-input" style="width: 260px;"></select>
+  <div class="table-toolbar" style="margin-bottom: 16px; display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+    <div id="sopi-sync-result" style="font-size: 13px;"></div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <label for="sopi-program">Program Studi</label>
+      <select id="sopi-program" class="search-input" style="width: 260px;"></select>
+    </div>
   </div>
   <div id="sopi-list"></div>
 </section>
 
-<!-- SO modal -->
+<!-- SO modal (Manual mode only) -->
 <div class="modal-overlay" id="so-modal" hidden>
   <div class="modal modal-upload">
     <div class="modal-head">
@@ -45,7 +62,7 @@
   </div>
 </div>
 
-<!-- PI modal -->
+<!-- PI modal (Manual mode only) -->
 <div class="modal-overlay" id="pi-modal" hidden>
   <div class="modal modal-upload">
     <div class="modal-head">
@@ -73,19 +90,18 @@
   </div>
 </div>
 
-<!-- Proficiency levels modal -->
+<!-- Proficiency levels modal (Read-Only) -->
 <div class="modal-overlay" id="levels-modal" hidden>
   <div class="modal modal-upload">
     <div class="modal-head">
-      <h3>Proficiency Levels</h3>
+      <h3>Proficiency Levels (IABEE 1–5)</h3>
       <button class="modal-close" id="levels-close">&times;</button>
     </div>
     <div class="modal-body">
       <p class="sub">Label level dipakai wizard untuk CPL proficiency level.</p>
       <div id="levels-list"></div>
-      <div id="levels-status"></div>
       <div class="modal-actions">
-        <button class="btn btn-primary" id="levels-save">Save</button>
+        <button class="btn btn-outline" id="levels-ok">Tutup</button>
       </div>
     </div>
   </div>
@@ -95,7 +111,7 @@
 {% block scripts %}
 <script>
 let currentProgram = 'RKS';
-let soPiData = { student_outcome: [], proficiency_levels: [] };
+let soPiData = { student_outcome: [], proficiency_levels: [], is_prodisync: true };
 let soCache = {};
 let piCache = {};
 let editSoId = null;
@@ -109,6 +125,22 @@ function esc(s) {
 
 const ICON_EDIT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
 const ICON_TRASH = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+
+async function checkProdiSyncStatus() {
+  const el = document.getElementById('prodisync-conn-status');
+  try {
+    const res = await fetch(u('sopi_prodisync_status'));
+    const data = await res.json();
+    if (data.connected) {
+      const ta = data.tahun_ajaran_aktif && data.tahun_ajaran_aktif.label ? ` · TA Aktif: <b>${esc(data.tahun_ajaran_aktif.label)}</b>` : '';
+      el.innerHTML = `<span style="color:#16a34a;font-weight:600;">● Terhubung ke ProdiSync</span>${ta}`;
+    } else {
+      el.innerHTML = `<span style="color:#dc2626;font-weight:600;">● ProdiSync tidak terhubung</span> (${esc(data.error || 'Error')})`;
+    }
+  } catch (e) {
+    el.innerHTML = `<span style="color:#dc2626;font-weight:600;">● Gagal mengecek status ProdiSync</span>`;
+  }
+}
 
 async function loadPrograms() {
   try {
@@ -127,24 +159,43 @@ async function loadPrograms() {
   }
 }
 
+function updateModeUI() {
+  const isPs = !!soPiData.is_prodisync;
+  document.getElementById('btn-sync-prodisync').hidden = !isPs;
+  document.getElementById('btn-add-so').hidden = isPs;
+  const banner = document.getElementById('sopi-mode-banner');
+  if (isPs) {
+    banner.innerHTML = `<span class="chip" style="background:#eef2ff;color:#3730a3;margin-right:6px;">ProdiSync · Read-Only</span> Prodi <b>${esc(currentProgram)}</b> terdaftar di ProdiSync. Data SO-PI wajib disinkronkan melalui tombol <b>Sync dari ProdiSync</b>.`;
+  } else {
+    banner.innerHTML = `<span class="chip" style="background:#dcfce7;color:#166534;margin-right:6px;">Mode Manual</span> Prodi <b>${esc(currentProgram)}</b> belum terdaftar di ProdiSync. Anda dapat menambah, mengubah, atau menghapus SO-PI secara manual.`;
+  }
+}
+
 async function loadSoPi() {
   try {
     const res = await fetch(`${u('sopi_api')}?program=${encodeURIComponent(currentProgram)}`);
     soPiData = await res.json();
   } catch (e) {
-    soPiData = { student_outcome: [], proficiency_levels: [] };
+    soPiData = { student_outcome: [], proficiency_levels: [], is_prodisync: true };
   }
   soCache = {};
   piCache = {};
-  soPiData.student_outcome.forEach(so => { soCache[so.id] = so; (so.performance_indicator || []).forEach(p => piCache[p.id] = p); });
+  (soPiData.student_outcome || []).forEach(so => {
+    soCache[so.id] = so;
+    (so.performance_indicator || []).forEach(p => piCache[p.id] = p);
+  });
+  updateModeUI();
   renderSoPi();
 }
 
 function renderSoPi() {
   const wrap = document.getElementById('sopi-list');
   const sos = soPiData.student_outcome || [];
+  const isPs = !!soPiData.is_prodisync;
   if (!sos.length) {
-    wrap.innerHTML = '<p class="empty">Belum ada SO untuk prodi ini. Klik "Add SO" untuk membuatnya.</p>';
+    wrap.innerHTML = isPs
+      ? '<p class="empty">Belum ada data SO-PI untuk prodi ini di RubriX. Klik <b>Sync dari ProdiSync</b> untuk menarik data.</p>'
+      : '<p class="empty">Belum ada SO untuk prodi ini. Klik <b>Add SO</b> untuk membuatnya.</p>';
     return;
   }
   wrap.innerHTML = sos.map(so => `
@@ -152,10 +203,11 @@ function renderSoPi() {
       <div class="sopi-so-head">
         <b class="sopi-so-code">${esc(so.so_code)}</b>
         <span class="sopi-so-desc">${esc(so.so_description || '')}</span>
+        ${!isPs ? `
         <div class="sopi-so-actions">
           <button class="icon-btn" title="Edit SO" data-so-edit="${so.id}">${ICON_EDIT}</button>
           <button class="icon-btn icon-danger" title="Delete SO" data-so-del="${so.id}">${ICON_TRASH}</button>
-        </div>
+        </div>` : ''}
       </div>
       <div class="sopi-pi-list">
         ${(so.performance_indicator || []).map(pi => {
@@ -167,24 +219,67 @@ function renderSoPi() {
             <span class="chip">${esc(pi.pi_code)}</span>
             <span class="chip" style="background:#eef2ff;color:#3730a3;" title="${esc(lvlLabel)}">Lv ${lvl}</span>
             <span class="sopi-pi-desc">${esc(pi.pi_description || '')}</span>
+            ${!isPs ? `
             <div class="sopi-pi-actions">
               <button class="icon-btn" title="Edit PI" data-pi-edit="${pi.id}">${ICON_EDIT}</button>
               <button class="icon-btn icon-danger" title="Delete PI" data-pi-del="${pi.id}">${ICON_TRASH}</button>
-            </div>
+            </div>` : ''}
           </div>`;
         }).join('') || '<p class="empty">Belum ada PI.</p>'}
       </div>
-      <button class="btn btn-outline btn-sm" data-pi-add="${so.id}">+ Tambah PI</button>
+      ${!isPs ? `<button class="btn btn-outline btn-sm" data-pi-add="${so.id}">+ Tambah PI</button>` : ''}
     </div>`).join('');
 
-  document.querySelectorAll('[data-so-edit]').forEach(b => b.addEventListener('click', () => openSoModal(parseInt(b.dataset.soEdit, 10))));
-  document.querySelectorAll('[data-so-del]').forEach(b => b.addEventListener('click', () => deleteSo(parseInt(b.dataset.soDel, 10))));
-  document.querySelectorAll('[data-pi-add]').forEach(b => b.addEventListener('click', () => openPiModal(null, parseInt(b.dataset.piAdd, 10))));
-  document.querySelectorAll('[data-pi-edit]').forEach(b => b.addEventListener('click', () => openPiModal(parseInt(b.dataset.piEdit, 10))));
-  document.querySelectorAll('[data-pi-del]').forEach(b => b.addEventListener('click', () => deletePi(parseInt(b.dataset.piDel, 10))));
+  if (!isPs) {
+    document.querySelectorAll('[data-so-edit]').forEach(b => b.addEventListener('click', () => openSoModal(parseInt(b.dataset.soEdit, 10))));
+    document.querySelectorAll('[data-so-del]').forEach(b => b.addEventListener('click', () => deleteSo(parseInt(b.dataset.soDel, 10))));
+    document.querySelectorAll('[data-pi-add]').forEach(b => b.addEventListener('click', () => openPiModal(null, parseInt(b.dataset.piAdd, 10))));
+    document.querySelectorAll('[data-pi-edit]').forEach(b => b.addEventListener('click', () => openPiModal(parseInt(b.dataset.piEdit, 10))));
+    document.querySelectorAll('[data-pi-del]').forEach(b => b.addEventListener('click', () => deletePi(parseInt(b.dataset.piDel, 10))));
+  }
 }
 
-// ---- SO ----
+// ---- Sync from ProdiSync ----
+async function syncFromProdiSync() {
+  const btn = document.getElementById('btn-sync-prodisync');
+  const resultEl = document.getElementById('sopi-sync-result');
+  btn.disabled = true;
+  const origHtml = btn.innerHTML;
+  btn.textContent = 'Menyinkronkan…';
+  resultEl.innerHTML = '';
+  try {
+    const res = await fetch(u('sopi_sync'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ study_program: currentProgram }),
+    });
+    const out = await res.json();
+    if (res.ok && out.ok) {
+      const s = out.sync || {};
+      soPiData = { ...(out.sopi || soPiData), is_prodisync: true };
+      updateModeUI();
+      renderSoPi();
+      const msg = `Sinkronisasi ${currentProgram} selesai: ${s.total_so || 0} SO (${s.so_created || 0} baru, ${s.so_updated || 0} diperbarui), ${s.total_pi || 0} PI (${s.pi_created || 0} baru, ${s.pi_updated || 0} diperbarui).`;
+      showToast(msg, 'success');
+      let warn = '';
+      if (s.kept_referenced && s.kept_referenced.length) {
+        warn = `<div style="margin-top:4px;color:#b45309;">Catatan: item lama yang masih dipakai course dipertahankan (${esc(s.kept_referenced.join('; '))}).</div>`;
+      }
+      resultEl.innerHTML = `<span style="color:#16a34a;font-weight:600;">✓ ${esc(msg)}</span>${warn}`;
+    } else {
+      showToast(out.error || 'Gagal sinkronisasi dari ProdiSync.', 'error');
+      resultEl.innerHTML = `<span style="color:#dc2626;">✗ ${esc(out.error || 'Gagal sinkronisasi')}</span>`;
+    }
+  } catch (e) {
+    showToast('Gagal terhubung ke server.', 'error');
+    resultEl.innerHTML = `<span style="color:#dc2626;">✗ Gagal terhubung ke server.</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+  }
+}
+
+// ---- Manual SO ----
 function openSoModal(id) {
   editSoId = id || null;
   document.getElementById('so-modal-title').textContent = id ? 'Edit SO' : 'Add SO';
@@ -224,8 +319,9 @@ async function deleteSo(id) {
   const so = soCache[id];
   if (!confirm(`Hapus SO '${so ? so.so_code : id}' beserta semua PI-nya?`)) return;
   const res = await fetch(u('sopi_so', id), { method: 'DELETE' });
+  const out = await res.json().catch(() => ({}));
   if (res.ok) { showToast('SO dihapus.', 'success'); loadSoPi(); }
-  else { showToast('Gagal menghapus SO.', 'error'); }
+  else { showToast(out.error || 'Gagal menghapus SO.', 'error'); }
 }
 
 function renderPiProficiencyOptions(selected) {
@@ -243,7 +339,7 @@ function renderPiProficiencyOptions(selected) {
   sel.value = String(selected || 3);
 }
 
-// ---- PI ----
+// ---- Manual PI ----
 function openPiModal(id, soId) {
   editPiId = id || null;
   editPiSoId = soId || (id && piCache[id] ? piCache[id].so_id : null);
@@ -288,51 +384,39 @@ async function deletePi(id) {
   const pi = piCache[id];
   if (!confirm(`Hapus PI '${pi ? pi.pi_code : id}'?`)) return;
   const res = await fetch(u('sopi_pi', id), { method: 'DELETE' });
+  const out = await res.json().catch(() => ({}));
   if (res.ok) { showToast('PI dihapus.', 'success'); loadSoPi(); }
-  else { showToast('Gagal menghapus PI.', 'error'); }
+  else { showToast(out.error || 'Gagal menghapus PI.', 'error'); }
 }
 
-// ---- Proficiency levels ----
-async function openLevelsModal() {
+function openLevelsModal() {
   const wrap = document.getElementById('levels-list');
   const levels = soPiData.proficiency_levels && soPiData.proficiency_levels.length
     ? soPiData.proficiency_levels
-    : [{ level: 1 }, { level: 2 }, { level: 3 }, { level: 4 }, { level: 5 }];
+    : [
+        { level: 1, label: 'to have experienced or been exposed to' },
+        { level: 2, label: 'to be able to participate in and contribute to' },
+        { level: 3, label: 'to be able to understand and explain' },
+        { level: 4, label: 'to be skilled in the practice or implementation of' },
+        { level: 5, label: 'to be able to lead or innovate in' },
+      ];
   wrap.innerHTML = levels.map(l => `
     <div class="sopi-pi" style="margin-bottom: 8px;">
       <span class="chip">Level ${l.level}</span>
-      <input type="text" class="search-input" data-level="${l.level}" value="${esc(l.label || '')}" placeholder="Label level ${l.level}" style="flex: 1; min-width: 200px;">
+      <span class="sopi-pi-desc">${esc(l.label || '')}</span>
     </div>`).join('');
-  document.getElementById('levels-status').innerHTML = '';
   document.getElementById('levels-modal').hidden = false;
 }
 
-async function saveLevels() {
-  const levels = [...document.querySelectorAll('#levels-list input[data-level]')].map(inp => ({
-    level: parseInt(inp.dataset.level, 10),
-    label: inp.value.trim(),
-  }));
-  const res = await fetch(u('sopi_levels'), {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ proficiency_levels: levels })
-  });
-  const out = await res.json();
-  if (res.ok) {
-    document.getElementById('levels-modal').hidden = true;
-    showToast('Proficiency levels disimpan.', 'success');
-    loadSoPi();
-  } else {
-    document.getElementById('levels-status').innerHTML = `<p class="alert-err">✗ ${esc(out.error)}</p>`;
-  }
-}
-
-// ---- modal helpers ----
 function closeSoModal() { document.getElementById('so-modal').hidden = true; }
 function closePiModal() { document.getElementById('pi-modal').hidden = true; }
 
 document.getElementById('sopi-program').addEventListener('change', e => {
   currentProgram = e.target.value || 'RKS';
+  document.getElementById('sopi-sync-result').innerHTML = '';
   loadSoPi();
 });
+document.getElementById('btn-sync-prodisync').addEventListener('click', syncFromProdiSync);
 document.getElementById('btn-add-so').addEventListener('click', () => openSoModal());
 document.getElementById('btn-levels').addEventListener('click', openLevelsModal);
 document.getElementById('so-close').addEventListener('click', closeSoModal);
@@ -342,16 +426,17 @@ document.getElementById('pi-close').addEventListener('click', closePiModal);
 document.getElementById('pi-save').addEventListener('click', savePi);
 document.getElementById('pi-modal').addEventListener('click', e => { if (e.target === document.getElementById('pi-modal')) closePiModal(); });
 document.getElementById('levels-close').addEventListener('click', () => document.getElementById('levels-modal').hidden = true);
-document.getElementById('levels-save').addEventListener('click', saveLevels);
+document.getElementById('levels-ok').addEventListener('click', () => document.getElementById('levels-modal').hidden = true);
 document.getElementById('levels-modal').addEventListener('click', e => { if (e.target === document.getElementById('levels-modal')) document.getElementById('levels-modal').hidden = true; });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   ['so-modal', 'pi-modal', 'levels-modal'].forEach(id => {
     const el = document.getElementById(id);
-    if (!el.hidden) el.hidden = true;
+    if (el && !el.hidden) el.hidden = true;
   });
 });
 
+checkProdiSyncStatus();
 loadPrograms().then(loadSoPi);
 </script>
 {% endblock %}

@@ -73,6 +73,10 @@ Let lecturers grade students against a two-level hierarchical rubric (categories
 | GET/PUT | `/api/classes/<id>/assessment-links` | get / save 4 assessment question links per class |
 | GET | `/sopi/api/statistics/filters` | available angkatan, academic years, and programs |
 | GET | `/sopi/api/statistics` | curriculum statistics (`mode=angkatan|tahun_ajaran`, `value`, `study_program`) |
+| GET | `/sopi/api/prodisync-status` | check ProdiSync API v1 connection and active term |
+| POST | `/sopi/api/sync` | sync SO-PI & proficiency levels from ProdiSync (`admin`, `kps`) |
+| GET | `/api/prodisync/courses` | list ProdiSync course catalog with RPS status |
+| GET | `/api/prodisync/courses/<kode_mk>/rubrik` | sync SO-PI & fetch normalized rubric payload from ProdiSync |
 
 ## 5. Non-functional
 

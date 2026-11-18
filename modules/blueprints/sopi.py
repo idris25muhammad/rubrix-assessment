@@ -10,6 +10,13 @@ from modules.auth import ROLE_ADMIN, ROLE_KPS, api_login_required, current_user,
 from modules.helpers import angkatan_from_nim, cpl_pis_of, grade_of_score
 from modules.models import Category, Class, Component, Course, Cpl, Pi, ProficiencyLevel, Score, So, Student, db
 from modules.permissions import is_admin, is_kps, user_program
+from modules.prodisync import (
+    ProdiSyncError,
+    fetch_prodi_list,
+    is_prodisync_program,
+    ping as prodisync_ping,
+    sync_so_pi_from_prodisync,
+)
 from modules.so_pi import PROGRAMS, get_pi_by_id, get_so_by_id, get_so_pi, pi_references, so_references
 
 bp = Blueprint("sopi", __name__, url_prefix="/sopi")
@@ -69,15 +76,66 @@ def api_sopi():
     if err:
         return err
     data = get_so_pi(program)
+    is_ps = is_prodisync_program(program)
     if data is None:
         return jsonify(
             {
                 "study_program": program,
+                "is_prodisync": is_ps,
                 "student_outcome": [],
                 "proficiency_levels": [],
             }
         )
+    data["is_prodisync"] = is_ps
     return jsonify(data)
+
+
+READONLY_SOPI_ERROR = (
+    "Data SO-PI untuk prodi ini dikelola terpusat di ProdiSync (Read-Only). "
+    "Gunakan tombol 'Sync dari ProdiSync' untuk memperbarui data."
+)
+
+
+@bp.route("/api/prodisync-status")
+@api_login_required
+def api_prodisync_status():
+    _, _, err = _require_admin_or_kps()
+    if err:
+        return err
+    try:
+        ping_res = prodisync_ping()
+        prodi_res = fetch_prodi_list()
+        return jsonify({
+            "connected": True,
+            "client": ping_res.get("client"),
+            "api_version": ping_res.get("api_version"),
+            "prodisync_prodis": prodi_res.get("prodi") or [],
+            "tahun_ajaran_aktif": prodi_res.get("tahun_ajaran_aktif") or {},
+        })
+    except ProdiSyncError as e:
+        return jsonify({"connected": False, "error": str(e)})
+
+
+@bp.route("/api/sync", methods=["POST"])
+@api_login_required
+def api_sopi_sync():
+    _, allowed, err = _require_admin_or_kps()
+    if err:
+        return err
+    payload = request.json or {}
+    program = str(payload.get("study_program") or "").strip() or (allowed[0] if allowed else "RKS")
+    err = _check_program(allowed, program)
+    if err:
+        return err
+    try:
+        summary = sync_so_pi_from_prodisync(program)
+    except ProdiSyncError as e:
+        return jsonify({"error": str(e)}), e.status_code
+    return jsonify({
+        "ok": True,
+        "sync": summary,
+        "sopi": get_so_pi(program),
+    })
 
 
 @bp.route("/api/so", methods=["POST"])
@@ -96,6 +154,8 @@ def api_create_so():
     err = _check_program(allowed, program)
     if err:
         return err
+    if is_prodisync_program(program):
+        return jsonify({"error": READONLY_SOPI_ERROR}), 403
     if not so_code:
         return jsonify({"error": "so_code is required"}), 400
     if So.query.filter_by(study_program=program, so_code=so_code).first():
@@ -130,6 +190,8 @@ def api_so(so_id):
     err = _check_program(allowed, so.study_program)
     if err:
         return err
+    if is_prodisync_program(so.study_program):
+        return jsonify({"error": READONLY_SOPI_ERROR}), 403
 
     if request.method == "DELETE":
         refs = so_references(so.study_program, so.so_code)
@@ -181,6 +243,8 @@ def api_create_pi():
     err = _check_program(allowed, so.study_program)
     if err:
         return err
+    if is_prodisync_program(so.study_program):
+        return jsonify({"error": READONLY_SOPI_ERROR}), 403
     pi_code = str(payload.get("pi_code", "")).strip()
     if not pi_code:
         return jsonify({"error": "pi_code is required"}), 400
@@ -219,6 +283,8 @@ def api_pi(pi_id):
     err = _check_program(allowed, pi.so.study_program)
     if err:
         return err
+    if is_prodisync_program(pi.so.study_program):
+        return jsonify({"error": READONLY_SOPI_ERROR}), 403
 
     if request.method == "DELETE":
         refs = pi_references(pi.so.study_program, pi.so.so_code, pi.pi_code)
@@ -261,28 +327,7 @@ def api_levels():
     _, _, err = _require_admin_or_kps()
     if err:
         return err
-
-    payload = request.json or {}
-    levels = payload.get("proficiency_levels") or []
-    if not levels:
-        return jsonify({"error": "proficiency_levels is required"}), 400
-    seen = set()
-    for item in levels:
-        try:
-            level = int(item.get("level"))
-        except (TypeError, ValueError):
-            return jsonify({"error": "level harus angka"}), 400
-        if level in seen:
-            return jsonify({"error": f"level {level} duplikat"}), 400
-        seen.add(level)
-        label = str(item.get("label", "")).strip()
-        if not label:
-            return jsonify({"error": f"label level {level} kosong"}), 400
-        row = ProficiencyLevel.query.filter_by(level=level).first()
-        if row:
-            row.label = label
-    db.session.commit()
-    return jsonify({"ok": True})
+    return jsonify({"error": READONLY_SOPI_ERROR}), 403
 
 
 # -------------------------------------------------------------

@@ -156,37 +156,6 @@ def api_create_course():
     return jsonify({"ok": True, "course_id": course_id, "course_code": data["course_code"]})
 
 
-@bp.route("/api/courses/upload", methods=["POST"])
-@api_login_required
-def api_upload_course():
-    user = current_user()
-    file = request.files.get("file")
-    if not file:
-        return jsonify({"error": "no file uploaded"}), 400
-    try:
-        raw = file.read()
-        data = json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as e:
-        return jsonify({"error": f"invalid JSON: {e}"}), 400
-    try:
-        course_id = seed_course_data(data, owner_id=user["id"])
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    return jsonify({"ok": True, "course_id": course_id, "course_code": data["course_code"]})
-
-
-@bp.route("/api/course-template")
-def api_course_template():
-    from config import DATA_FILE
-
-    return send_file(
-        DATA_FILE,
-        as_attachment=True,
-        download_name="course_template.json",
-        mimetype="application/json",
-    )
-
-
 @bp.route("/api/so-pi")
 def api_so_pi():
     from modules.so_pi import get_so_pi
@@ -210,6 +179,108 @@ def api_programs():
     from modules.so_pi import PROGRAMS
 
     return jsonify([{"code": code, "label": label} for code, label in PROGRAMS.items()])
+
+
+@bp.route("/api/prodisync/programs")
+@api_login_required
+def api_prodisync_programs():
+    from modules.prodisync import ProdiSyncError, fetch_prodi_list
+
+    try:
+        res = fetch_prodi_list()
+    except ProdiSyncError as e:
+        return jsonify({"error": str(e)}), e.status_code
+
+    items = [
+        {
+            "code": p["rubrix_code"],
+            "prodisync_code": p["prodisync_code"],
+            "label": f"{p['jenjang']} {p['nama']}".strip() or p["rubrix_code"],
+        }
+        for p in (res.get("prodi") or [])
+    ]
+    return jsonify({
+        "programs": items,
+        "tahun_ajaran_aktif": res.get("tahun_ajaran_aktif") or {},
+    })
+
+
+@bp.route("/api/prodisync/courses")
+@api_login_required
+def api_prodisync_courses():
+    from modules.prodisync import ProdiSyncError, fetch_matakuliah
+
+    user = current_user()
+    default_prog = user_program(user) if is_kps(user) else "RKS"
+    program = request.args.get("program", "").strip() or default_prog or "RKS"
+    ta = request.args.get("ta", "").strip() or None
+    semester = request.args.get("semester", "").strip() or None
+    rps_status = request.args.get("rps_status", "approved").strip() or "approved"
+
+    try:
+        items, meta = fetch_matakuliah(program, rps_status=rps_status, ta=ta, semester=semester)
+    except ProdiSyncError as e:
+        return jsonify({"error": str(e)}), e.status_code
+
+    existing_rows = Course.query.filter_by(study_program=program).all()
+    existing_by_code_sem = {
+        (c.course_code, c.semester or ""): c for c in existing_rows
+    }
+    meta_ta = (meta or {}).get("tahun_ajaran") or ""
+
+    courses_out = []
+    for item in items:
+        rps = item.get("rps") or {}
+        kode = str(item.get("kode") or "").strip()
+        item_ta = rps.get("tahun_ajaran") or meta_ta
+        existing = existing_by_code_sem.get((kode, item_ta))
+        courses_out.append({
+            "kode": kode,
+            "nama": item.get("nama") or "",
+            "sks": item.get("sks") or 0,
+            "semester": item.get("semester"),
+            "kurikulum": item.get("kurikulum") or "",
+            "tipe": item.get("tipe") or "",
+            "rps": rps,
+            "already_exists": bool(existing),
+            "existing_course_id": existing.id if existing else None,
+            "existing_owner": existing.owner.name if (existing and existing.owner) else None,
+        })
+
+    return jsonify({
+        "study_program": program,
+        "meta": meta,
+        "courses": courses_out,
+    })
+
+
+@bp.route("/api/prodisync/courses/<path:kode_mk>/rubrik")
+@api_login_required
+def api_prodisync_course_rubrik(kode_mk):
+    from modules.prodisync import (
+        ProdiSyncError,
+        fetch_matakuliah_rubrik,
+        normalize_prodisync_rubrik,
+        sync_so_pi_from_prodisync,
+    )
+
+    user = current_user()
+    default_prog = user_program(user) if is_kps(user) else "RKS"
+    program = request.args.get("program", "").strip() or default_prog or "RKS"
+    ta = request.args.get("ta", "").strip() or None
+
+    try:
+        sync_so_pi_from_prodisync(program)
+        raw_data, meta = fetch_matakuliah_rubrik(program, kode_mk, ta=ta)
+        normalized = normalize_prodisync_rubrik(raw_data, requested_program=program)
+    except ProdiSyncError as e:
+        return jsonify({"error": str(e)}), e.status_code
+
+    return jsonify({
+        "ok": True,
+        "rubrik": normalized,
+        "meta": meta,
+    })
 
 
 @bp.route("/api/dashboard")

@@ -111,14 +111,26 @@ def build_rubric_from_wizard(payload):
         }
         if isinstance(cpl.get("assessment_rubric"), dict):
             cpl_entry["assessment_rubric"] = cpl["assessment_rubric"]
+        pi_codes = [str(p).strip() for p in (cpl.get("pi_codes") or []) if str(p).strip()]
+        if pi_codes:
+            cpl_entry["pi_codes"] = pi_codes
+        if isinstance(cpl.get("so_pi_pairs"), list):
+            cpl_entry["so_pi_pairs"] = cpl["so_pi_pairs"]
         cpls.append(cpl_entry)
         cpl_codes.add(code)
 
-    cpl_rubric_pis = {
-        c["code"]: set(c["assessment_rubric"].keys())
-        for c in cpls
-        if isinstance(c.get("assessment_rubric"), dict)
-    }
+    cpl_rubric_pis = {}
+    for c in cpls:
+        pis = set()
+        if isinstance(c.get("assessment_rubric"), dict):
+            pis |= set(c["assessment_rubric"].keys())
+        if c.get("pi_codes"):
+            pis |= set(c["pi_codes"])
+        for pair in (c.get("so_pi_pairs") or []):
+            if isinstance(pair, dict) and pair.get("pi_code"):
+                pis.add(str(pair["pi_code"]).strip())
+        if pis:
+            cpl_rubric_pis[c["code"]] = pis
 
     # Build categories / components.
     cats_in = payload.get("categories") or {}
@@ -251,7 +263,7 @@ def build_rubric_from_wizard(payload):
     unmapped_pis = [
         f"{c['code']}-{pi_code}"
         for c in cpls
-        for pi_code in (c.get("assessment_rubric") or {}).keys()
+        for pi_code in sorted(cpl_rubric_pis.get(c["code"], set()))
         if (c["code"], pi_code) not in used_cpl_pis
     ]
     if unmapped_pis:
