@@ -1,7 +1,7 @@
 import json
 import re
 
-from flask import Blueprint, jsonify, render_template, request, send_file
+from flask import Blueprint, current_app, jsonify, render_template, request, send_file
 
 from modules.auth import api_login_required, current_user, login_required
 from modules.data import _get_class_data, _get_course_structure
@@ -274,7 +274,12 @@ def api_prodisync_course_rubrik(kode_mk):
         raw_data, meta = fetch_matakuliah_rubrik(program, kode_mk, ta=ta)
         normalized = normalize_prodisync_rubrik(raw_data, requested_program=program)
     except ProdiSyncError as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), e.status_code
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Error fetching ProdiSync rubric for %s (%s)", kode_mk, program)
+        return jsonify({"error": f"Gagal memproses rubrik ({type(e).__name__}: {e})"}), 500
 
     return jsonify({
         "ok": True,

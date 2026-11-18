@@ -353,10 +353,17 @@ def normalize_prodisync_rubrik(payload, requested_program=None):
         else:
             assessment_rubric = None
 
+        try:
+            prof_lvl = int(cpl.get("proficiency_level") or 3)
+        except (TypeError, ValueError):
+            prof_lvl = 3
+        if prof_lvl not in (1, 2, 3, 4, 5):
+            prof_lvl = 3
+
         cpl_entry = {
             "code": str(cpl.get("code") or "").strip(),
             "description": str(cpl.get("description") or "").strip(),
-            "proficiency_level": int(cpl.get("proficiency_level") or 3),
+            "proficiency_level": prof_lvl,
             "so_codes": [str(s).strip() for s in (cpl.get("so_codes") or []) if str(s).strip()],
             "pi_codes": pi_codes,
             "so_pi_pairs": cpl.get("so_pi_pairs") or [],

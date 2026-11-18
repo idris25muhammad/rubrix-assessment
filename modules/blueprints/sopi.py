@@ -4,7 +4,7 @@ All writes require a logged-in user with role "admin" or "kps".
 Admin manages all study programs; KPS manages only their own study program.
 """
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, current_app, jsonify, render_template, request
 
 from modules.auth import ROLE_ADMIN, ROLE_KPS, api_login_required, current_user, role_required
 from modules.helpers import angkatan_from_nim, cpl_pis_of, grade_of_score
@@ -130,7 +130,12 @@ def api_sopi_sync():
     try:
         summary = sync_so_pi_from_prodisync(program)
     except ProdiSyncError as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), e.status_code
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Error syncing SO-PI for %s", program)
+        return jsonify({"error": f"Gagal sinkronisasi ({type(e).__name__}: {e})"}), 500
     return jsonify({
         "ok": True,
         "sync": summary,

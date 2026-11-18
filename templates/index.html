@@ -1904,7 +1904,13 @@
     try {
       const url = `${u('api_prodisync_rubrik', encodeURIComponent(kodeMk))}?program=${encodeURIComponent(program)}`;
       const res = await fetch(url);
-      const data = await res.json();
+      const rawText = await res.text();
+      let data = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch (_) {
+        throw new Error(`HTTP ${res.status}: Respons server bukan JSON.`);
+      }
       if (!res.ok || !data.ok) {
         statusEl.innerHTML = `<p class="alert-err">✗ ${esc(data.error || 'Gagal memuat rubrik MK')}</p>`;
         if (btn) btn.disabled = false;
