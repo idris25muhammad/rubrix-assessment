@@ -61,6 +61,7 @@ def _courses_for_user(user, q_param="", semester="", page=1, per_page=10):
                 "component_count": Component.query.join(Category)
                 .filter(Category.course_id == c.id).count(),
                 "class_count": Class.query.filter_by(course_id=c.id).count(),
+                "assessment_links_count": c.assessment_links_count(),
                 "owner_name": c.owner.name if c.owner else "-",
                 "can_edit": can_edit_course(user, c),
                 "can_delete": can_delete_course(user, c),
@@ -599,20 +600,22 @@ def api_class(class_id):
         return jsonify({"ok": True})
 
 
-@bp.route("/api/classes/<int:class_id>/assessment-links", methods=["GET", "PUT"])
+@bp.route("/api/courses/<int:course_id>/assessment-links", methods=["GET", "PUT"])
 @api_login_required
-def api_class_assessment_links(class_id):
+def api_course_assessment_links(course_id):
     user = current_user()
-    klass = db.session.get(Class, class_id)
-    if not can_edit_class(user, klass):
-        return jsonify({"error": "not authorized"}), 403
-
+    course = db.session.get(Course, course_id)
     if request.method == "GET":
+        if not can_view_course(user, course):
+            return jsonify({"error": "not authorized"}), 403
         return jsonify({
-            "class_id": klass.id,
-            **klass.assessment_links_dict(),
-            "assessment_links_count": klass.assessment_links_count(),
+            "course_id": course.id,
+            **course.assessment_links_dict(),
+            "assessment_links_count": course.assessment_links_count(),
         })
+
+    if not can_edit_course(user, course):
+        return jsonify({"error": "not authorized"}), 403
 
     payload = request.json or {}
     fields = ("soal_ats_teori", "soal_ats_praktikum", "soal_aas_teori", "soal_aas_praktikum")
@@ -624,13 +627,13 @@ def api_class_assessment_links(class_id):
         cleaned[field] = val
 
     for field, val in cleaned.items():
-        setattr(klass, field, val)
+        setattr(course, field, val)
     db.session.commit()
     return jsonify({
         "ok": True,
-        "class_id": klass.id,
-        **klass.assessment_links_dict(),
-        "assessment_links_count": klass.assessment_links_count(),
+        "course_id": course.id,
+        **course.assessment_links_dict(),
+        "assessment_links_count": course.assessment_links_count(),
     })
 
 

@@ -254,17 +254,17 @@ class RoleAndFeatureTests(unittest.TestCase):
         self.assertEqual(roles, {"admin", "kps", "lecturer"})
 
     def test_assessment_links(self):
-        self._login("assigned@polibatam.ac.id")
+        self._login("owner@polibatam.ac.id")
         # Invalid URL rejected
         res = self.client.put(
-            f"/api/classes/{self.ids['cl_assigned']}/assessment-links",
+            f"/api/courses/{self.ids['c_rks']}/assessment-links",
             json={"soal_ats_teori": "ftp://invalid.com/file"},
         )
         self.assertEqual(res.status_code, 400)
 
         # Valid URLs saved
         res = self.client.put(
-            f"/api/classes/{self.ids['cl_assigned']}/assessment-links",
+            f"/api/courses/{self.ids['c_rks']}/assessment-links",
             json={
                 "soal_ats_teori": "https://drive.google.com/file/d/abc",
                 "soal_aas_praktikum": "https://drive.google.com/file/d/xyz",
@@ -275,17 +275,40 @@ class RoleAndFeatureTests(unittest.TestCase):
         self.assertEqual(data["assessment_links_count"], 2)
         self.assertEqual(data["soal_ats_teori"], "https://drive.google.com/file/d/abc")
 
+        # Dashboard course list includes assessment_links_count
+        courses_res = self.client.get("/api/courses").get_json()["courses"]
+        c_rks_row = next(c for c in courses_res if c["id"] == self.ids["c_rks"])
+        self.assertEqual(c_rks_row["assessment_links_count"], 2)
+
         # Clear one link
         res = self.client.put(
-            f"/api/classes/{self.ids['cl_assigned']}/assessment-links",
+            f"/api/courses/{self.ids['c_rks']}/assessment-links",
             json={"soal_ats_teori": "", "soal_aas_praktikum": "https://drive.google.com/file/d/xyz"},
         )
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.get_json()["assessment_links_count"], 1)
 
-        # Unassigned lecturer gets 403
+        # Assigned lecturer (non-owner) can GET but cannot PUT (403)
+        self._login("assigned@polibatam.ac.id")
+        self.assertEqual(self.client.get(f"/api/courses/{self.ids['c_rks']}/assessment-links").status_code, 200)
+        self.assertEqual(
+            self.client.put(
+                f"/api/courses/{self.ids['c_rks']}/assessment-links",
+                json={"soal_ats_teori": "https://drive.google.com/file/d/other"},
+            ).status_code,
+            403,
+        )
+
+        # Unassigned lecturer gets 403 on GET and PUT
         self._login("other@polibatam.ac.id")
-        self.assertEqual(self.client.get(f"/api/classes/{self.ids['cl_assigned']}/assessment-links").status_code, 403)
+        self.assertEqual(self.client.get(f"/api/courses/{self.ids['c_rks']}/assessment-links").status_code, 403)
+        self.assertEqual(
+            self.client.put(
+                f"/api/courses/{self.ids['c_rks']}/assessment-links",
+                json={"soal_ats_teori": "https://drive.google.com/file/d/other"},
+            ).status_code,
+            403,
+        )
 
     def test_statistics_angkatan_tahun_ajaran_and_scoping(self):
         # Lecturer cannot access statistics

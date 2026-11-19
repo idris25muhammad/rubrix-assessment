@@ -45,51 +45,14 @@ class Course(db.Model):
     semester = db.Column(String(60), default="")
     study_program = db.Column(String(120), default="")
     is_pbl = db.Column(Boolean, default=False)
-    raw_json = db.Column(Text, nullable=False)
-    created_at = db.Column(DateTime, default=datetime.utcnow)
-
-    owner = relationship("User", backref="courses")
-
-    def to_dict(self):
-        try:
-            data = json.loads(self.raw_json)
-            target = int(data.get("target_attainment", 80))
-        except Exception:
-            target = 80
-        return {
-            "id": self.id,
-            "owner_id": self.owner_id,
-            "course_code": self.course_code,
-            "course_name": self.course_name,
-            "sks": self.sks,
-            "semester": self.semester,
-            "study_program": self.study_program,
-            "is_pbl": bool(self.is_pbl),
-            "target_attainment": target,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-        }
-
-
-class Class(db.Model):
-    __tablename__ = "classes"
-    __table_args__ = (UniqueConstraint("course_id", "name", name="uq_classes_course_name"),)
-
-    id = db.Column(Integer, primary_key=True)
-    course_id = db.Column(Integer, ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
-    owner_id = db.Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    lecturer_id = db.Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    name = db.Column(String(120), nullable=False)
-    lecturer = db.Column(String(255), default="")
-    academic_year = db.Column(String(20), nullable=True)
     soal_ats_teori = db.Column(String(500), nullable=True)
     soal_ats_praktikum = db.Column(String(500), nullable=True)
     soal_aas_teori = db.Column(String(500), nullable=True)
     soal_aas_praktikum = db.Column(String(500), nullable=True)
+    raw_json = db.Column(Text, nullable=False)
     created_at = db.Column(DateTime, default=datetime.utcnow)
 
-    course = relationship("Course", backref=db.backref("classes", passive_deletes=True))
-    owner = relationship("User", foreign_keys=[owner_id], backref="owned_classes")
-    lecturer_user = relationship("User", foreign_keys=[lecturer_id], backref="assigned_classes")
+    owner = relationship("User", backref="courses")
 
     def assessment_links_dict(self):
         return {
@@ -111,6 +74,45 @@ class Class(db.Model):
         )
 
     def to_dict(self):
+        try:
+            data = json.loads(self.raw_json)
+            target = int(data.get("target_attainment", 80))
+        except Exception:
+            target = 80
+        return {
+            "id": self.id,
+            "owner_id": self.owner_id,
+            "course_code": self.course_code,
+            "course_name": self.course_name,
+            "sks": self.sks,
+            "semester": self.semester,
+            "study_program": self.study_program,
+            "is_pbl": bool(self.is_pbl),
+            "target_attainment": target,
+            "assessment_links": self.assessment_links_dict(),
+            "assessment_links_count": self.assessment_links_count(),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class Class(db.Model):
+    __tablename__ = "classes"
+    __table_args__ = (UniqueConstraint("course_id", "name", name="uq_classes_course_name"),)
+
+    id = db.Column(Integer, primary_key=True)
+    course_id = db.Column(Integer, ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    owner_id = db.Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    lecturer_id = db.Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    name = db.Column(String(120), nullable=False)
+    lecturer = db.Column(String(255), default="")
+    academic_year = db.Column(String(20), nullable=True)
+    created_at = db.Column(DateTime, default=datetime.utcnow)
+
+    course = relationship("Course", backref=db.backref("classes", passive_deletes=True))
+    owner = relationship("User", foreign_keys=[owner_id], backref="owned_classes")
+    lecturer_user = relationship("User", foreign_keys=[lecturer_id], backref="assigned_classes")
+
+    def to_dict(self):
         lecturer_name = self.lecturer_user.name if self.lecturer_user else (self.lecturer or "")
         return {
             "id": self.id,
@@ -120,8 +122,6 @@ class Class(db.Model):
             "name": self.name,
             "lecturer": lecturer_name,
             "academic_year": self.academic_year or "",
-            "assessment_links": self.assessment_links_dict(),
-            "assessment_links_count": self.assessment_links_count(),
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 

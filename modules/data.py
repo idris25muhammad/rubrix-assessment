@@ -83,8 +83,6 @@ def _get_course_structure(course_id):
                 "lecturer": cl.lecturer_user.name if cl.lecturer_user else (cl.lecturer or ""),
                 "academic_year": cl.academic_year or "",
                 "owner_id": cl.owner_id,
-                "assessment_links": cl.assessment_links_dict(),
-                "assessment_links_count": cl.assessment_links_count(),
                 "student_count": Student.query.filter(
                     Student.class_id == cl.id,
                     db.func.trim(Student.nim) != "",
